@@ -49,7 +49,7 @@ def get_app_data():
 def home():
     return "Bot Server is Live 24/7!"
 
-# /start কমান্ড (ইউজারদের ট্র্যাক করবে ইনবক্সে নোটিশ পাঠানোর জন্য)
+# /start কমান্ড (ডিপলিংক ও সাধারণ স্টার্ট)
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -60,6 +60,31 @@ def send_welcome(message):
         data["users"].append(user_id)
         save_data(data)
 
+    # যদি ভিডিও ডাউনলোডের রিকোয়েস্ট নিয়ে স্টার্ট আসে
+    text_parts = message.text.split()
+    if len(text_parts) > 1 and text_parts[1].startswith("vid_"):
+        video_id = text_parts[1].replace("vid_", "")
+        target_video = None
+        for v in data.get("videos", []):
+            if str(v.get("id")) == str(video_id):
+                target_video = v
+                break
+
+        if target_video:
+            bot.send_message(message.chat.id, f"🎬 **{target_video['title']}**\n⏳ আপনার ভিডিওটি পাঠানো হচ্ছে...")
+            try:
+                bot.send_video(message.chat.id, target_video['file_id'])
+            except Exception:
+                try:
+                    bot.send_document(message.chat.id, target_video['file_id'])
+                except Exception:
+                    bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে। অ্যাডমিনের সাথে যোগাযোগ করুন।")
+            return
+        else:
+            bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি খুঁজে পাওয়া যায়নি!")
+            return
+
+    # সাধারণ /start হলে মেনু দেখানো
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
         types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html/")),
