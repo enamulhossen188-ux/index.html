@@ -113,7 +113,7 @@ def start_upload(message):
 # অ্যাডমিন প্রসেস কন্ট্রোলার
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
 def handle_admin_inputs(message):
-    chat_id = message.chat.id
+    chat_id = message.chat.id 
     if chat_id != ADMIN_ID or chat_id not in admin_state:
         return
 
