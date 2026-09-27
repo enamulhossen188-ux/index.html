@@ -6,7 +6,7 @@ import threading
 import json
 import os
 from datetime import datetime
-
+import time
 # আপনার বটের টোকেন এবং টেলিগ্রাম আইডি
 BOT_TOKEN = "8995171178:AAGNwil6GNUEVDSvN3XbneR9CZFYhtZleWw"
 ADMIN_ID = 7255626228  # আপনার সংখ্যাযুক্ত টেলিগ্রাম আইডি
@@ -49,7 +49,7 @@ def get_app_data():
 def home():
     return "Bot Server is Live 24/7!"
 
-# /start কমান্ড (ডিপলিংক ও সাধারণ স্টার্ট)
+# /start কমান্ড (ডিপলিংক, ২৪ ঘণ্টা লক ও সাধারণ স্টার্ট)
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -59,6 +59,10 @@ def send_welcome(message):
     if user_id not in data["users"]:
         data["users"].append(user_id)
         save_data(data)
+
+    # ভিডিও হিস্ট্রি ও টাইমার ট্র্যাকিং ডাটাবেজ
+    if "download_history" not in data:
+        data["download_history"] = {}
 
     # যদি ভিডিও ডাউনলোডের রিকোয়েস্ট নিয়ে স্টার্ট আসে
     text_parts = message.text.split()
@@ -71,12 +75,36 @@ def send_welcome(message):
                 break
 
         if target_video:
+            user_key = f"{user_id}_{video_id}"
+            current_time = time.time()
+            last_download_time = data["download_history"].get(user_key, 0)
+            
+            # ২৪ ঘণ্টা = ৮৬৪০০ সেকেন্ড
+            lock_duration = 24 * 3600
+            time_left = lock_duration - (current_time - last_download_time)
+
+            if time_left > 0:
+                hours = int(time_left // 3600)
+                minutes = int((time_left % 3600) // 60)
+                bot.send_message(
+                    message.chat.id,
+                    f"🔒 **ভিডিওটি সাময়িকভাবে লক করা আছে!**\n\n"
+                    f"আপনি ইতিমধ্যে **{target_video['title']}** ভিডিওটি পেয়েছেন।\n"
+                    f"⏳ পুনরায় ডাউনলোড করতে অপেক্ষা করুন: **{hours} ঘণ্টা {minutes} মিনিট**।"
+                )
+                return
+
+            # প্রথমবার বা ২৪ ঘণ্টা পর ভিডিও ডেলিভারি
             bot.send_message(message.chat.id, f"🎬 **{target_video['title']}**\n⏳ আপনার ভিডিওটি পাঠানো হচ্ছে...")
             try:
                 bot.send_video(message.chat.id, target_video['file_id'])
+                data["download_history"][user_key] = current_time
+                save_data(data)
             except Exception:
                 try:
                     bot.send_document(message.chat.id, target_video['file_id'])
+                    data["download_history"][user_key] = current_time
+                    save_data(data)
                 except Exception:
                     bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে। অ্যাডমিনের সাথে যোগাযোগ করুন।")
             return
@@ -97,7 +125,6 @@ def send_welcome(message):
         "আমাদের বট ২৪ ঘণ্টা সচল। ভিডিও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন।"
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
-
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     if call.data == "btn_update":
