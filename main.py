@@ -137,7 +137,7 @@ def handle_callbacks(call):
 # ইনবক্সে সব ইউজারকে মেসেজ/আপডেট পাঠানোর কমান্ড
 @bot.message_handler(commands=['broadcast'])
 def broadcast_start(message):
-    if message.from_user.id != ADMIN_ID:
+    if message.chat.id != ADMIN_ID:
         bot.reply_to(message, "দুঃখিত, আপনি অ্যাডমিন নন!")
         return
     admin_state[message.chat.id] = {'step': 'broadcast_msg'}
@@ -146,15 +146,15 @@ def broadcast_start(message):
 # অ্যাডমিন এড লিংক সেট করা
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
-    if message.from_user.id != ADMIN_ID:
-        return
+    if message.chat.id != ADMIN_ID:
     admin_state[message.chat.id] = {'step': 'ad1'}
     bot.send_message(message.chat.id, "🎯 **Task 1 এর এড লিংক পাঠান:**")
 
 # নতুন ভিডিও আপলোড
 @bot.message_handler(commands=['upload'])
 def start_upload(message):
-    if message.from_user.id != ADMIN_ID:
+
+    if message.chat.id != ADMIN_ID:
         return
     admin_state[message.chat.id] = {'step': 'category'}
     
