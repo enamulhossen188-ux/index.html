@@ -147,9 +147,9 @@ def broadcast_start(message):
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
     if message.chat.id != ADMIN_ID:
+        return
     admin_state[message.chat.id] = {'step': 'ad1'}
     bot.send_message(message.chat.id, "🎯 **Task 1 এর এড লিংক পাঠান:**")
-
 # নতুন ভিডিও আপলোড
 @bot.message_handler(commands=['upload'])
 def start_upload(message):
