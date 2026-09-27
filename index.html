@@ -214,7 +214,24 @@
 
             resetBtn('t1-btn', 't1-status');
             resetBtn('t2-btn', 't2-status');
-            document.getElementById('download-trigger').className = 'dl-btn';
+            
+            // ২৪ ঘণ্টার লক চেক
+            const lockKey = `lock_${video.id}`;
+            const unlockTime = localStorage.getItem(lockKey);
+            const dlBtn = document.getElementById('download-trigger');
+            const notice = document.getElementById("inbox-notice");
+            if (notice) notice.style.display = "none";
+
+            if (unlockTime && Date.now() < parseInt(unlockTime)) {
+                const diffHours = Math.ceil((parseInt(unlockTime) - Date.now()) / (1000 * 60 * 60));
+                dlBtn.className = 'dl-btn';
+                dlBtn.innerText = `🔒 লক আছে (${diffHours} ঘণ্টা পর আনলক হবে)`;
+                dlBtn.style.pointerEvents = "none";
+            } else {
+                dlBtn.className = 'dl-btn';
+                dlBtn.innerText = "📥 ডাউনলোড ভিডিও";
+                dlBtn.style.pointerEvents = "auto";
+            }
 
             document.getElementById('list-view').style.display = 'none';
             document.getElementById('task-view').style.display = 'block';
@@ -289,7 +306,7 @@
             if (document.visibilityState === 'visible') verifyTaskOnReturn();
         });
 
-       function sendDownload() {
+function sendDownload() {
             if (!t1Done || !t2Done) {
                 alert("দয়া করে দুটি টাস্কই সম্পূর্ণ করুন!");
                 return;
@@ -297,7 +314,7 @@
 
             if (!activeVideo) return;
 
-            // বাটনের নিচে সবুজ লেখা দেখানো
+            // বাটনের নিচে নোটিশ দেখানো
             const notice = document.getElementById("inbox-notice");
             if (notice) {
                 notice.style.display = "block";
@@ -310,19 +327,21 @@
                 dlBtn.style.pointerEvents = "none";
             }
 
+            // লোকাল স্টোরেজে ২৪ ঘণ্টার লক সেট করা
+            localStorage.setItem(`lock_${activeVideo.id}`, Date.now() + (24 * 60 * 60 * 1000));
+
             const botUsername = "BanglaTRXNatok_bot";
             const downloadUrl = `https://t.me/${botUsername}?start=vid_${activeVideo.id}`;
 
             if (tg && tg.openTelegramLink) {
                 tg.openTelegramLink(downloadUrl);
-                // ২ সেকেন্ড পর স্বয়ংক্রিয়ভাবে মিনি অ্যাপ ক্লোজ হয়ে ইনবক্স দেখাবে
                 setTimeout(() => {
                     tg.close();
                 }, 2000);
             } else {
                 window.location.href = downloadUrl;
             }
-       }
+}       
         fetchContent();
     </script>
 </body>
