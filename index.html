@@ -124,8 +124,9 @@
             </div>
         </div>
 
-        <button id="download-trigger" class="dl-btn" onclick="sendDownload()">📥 ডাউনলোড ভিডিও</button>
-    </div>
+        <div id="inbox-notice" style="display:none; text-align:center; color:#22c55e; font-weight:bold; margin-top:12px; font-size:15px;">
+    ✅ ভিডিও পাঠানো হয়েছে! আপনার ইনবক্স চেক করুন...
+        </div>
 
     <script>
         const tg = window.Telegram?.WebApp;
@@ -296,16 +297,32 @@
 
             if (!activeVideo) return;
 
+            // বাটনের নিচে সবুজ লেখা দেখানো
+            const notice = document.getElementById("inbox-notice");
+            if (notice) {
+                notice.style.display = "block";
+            }
+
+            // বাটনের টেক্সট পরিবর্তন
+            const dlBtn = document.getElementById("download-trigger");
+            if (dlBtn) {
+                dlBtn.innerText = "⏳ পাঠানো হচ্ছে...";
+                dlBtn.style.pointerEvents = "none";
+            }
+
             const botUsername = "BanglaTRXNatok_bot";
             const downloadUrl = `https://t.me/${botUsername}?start=vid_${activeVideo.id}`;
 
             if (tg && tg.openTelegramLink) {
                 tg.openTelegramLink(downloadUrl);
+                // ২ সেকেন্ড পর স্বয়ংক্রিয়ভাবে মিনি অ্যাপ ক্লোজ হয়ে ইনবক্স দেখাবে
+                setTimeout(() => {
+                    tg.close();
+                }, 2000);
             } else {
                 window.location.href = downloadUrl;
             }
-       } 
-
+       }
         fetchContent();
     </script>
 </body>
