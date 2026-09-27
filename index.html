@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bachelor Point Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d0f12;
+            --card-bg: #16191f;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-card: #a855f7;
+            --accent: #e11d48;
+            --input-bg: #1e232d;
+        }
+
+        /* লাইট মোড ভেরিয়েবল */
+        body.light-theme {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --border-card: #8b5cf6;
+            --accent: #e11d48;
+            --input-bg: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 12px; transition: 0.3s background; }
+
+        /* Top Header */
+        .top-nav { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 14px; }
+        .logo { font-size: 19px; font-weight: bold; }
+        .logo span { color: #ef4444; }
+        .settings-btn { width: 38px; height: 38px; border-radius: 50%; background: #ec4899; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #f43f5e; box-shadow: 0 0 10px rgba(236,72,153,0.5); font-size: 18px; }
+
+        /* Category Tabs */
+        .category-scroll { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+        .cat-btn { flex: 1; min-width: 90px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: #1e222b; color: #94a3b8; font-weight: bold; font-size: 13px; text-align: center; cursor: pointer; }
+        body.light-theme .cat-btn { background: #e2e8f0; color: #475569; }
+        .cat-btn.active { background: #dc2626; color: #fff; border-color: #ef4444; }
+
+        /* Search Bar */
+        .search-box { position: relative; margin-bottom: 16px; }
+        .search-box input { width: 100%; padding: 12px 14px 12px 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: var(--input-bg); color: var(--text-main); font-size: 14px; outline: none; }
+        .search-icon { position: absolute; left: 12px; top: 12px; color: var(--text-sub); }
+
+        /* Video List Cards */
+        .video-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 2px solid var(--border-card); cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+        .thumb-box { position: relative; width: 100%; height: 230px; background: #000; }
+        .thumb-box img { width: 100%; height: 100%; object-fit: cover; }
+        .card-details { padding: 12px 14px; }
+        .card-title { font-size: 15px; font-weight: bold; line-height: 1.4; margin-bottom: 6px; }
+        .card-date { font-size: 12px; color: #ef4444; display: flex; align-items: center; gap: 4px; }
+
+        /* Task View */
+        #task-view { display: none; }
+        .back-btn { background: #334155; color: #fff; border: none; padding: 8px 14px; border-radius: 8px; margin-bottom: 14px; cursor: pointer; }
+        .task-card { background: var(--card-bg); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 14px; }
+        .task-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .visit-btn { background: #0284c7; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .visit-btn.done { background: #10b981; pointer-events: none; }
+        .timer-badge { color: #f59e0b; font-weight: bold; font-size: 13px; }
+        .dl-btn { width: 100%; padding: 14px; background: #334155; color: #94a3b8; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: not-allowed; margin-top: 10px; }
+        .dl-btn.active { background: #10b981; color: #fff; cursor: pointer; box-shadow: 0 4px 14px rgba(16,185,129,0.4); }
+        .notice-box { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 14px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <!-- Top Bar -->
+    <div class="top-nav">
+        <div class="logo"><span>Bachelor</span> Point</div>
+        <div class="settings-btn" onclick="toggleTheme()" title="থিম পরিবর্তন">⚙️</div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="list-view">
+        <!-- Categories -->
+        <div class="category-scroll">
+            <button class="cat-btn active" onclick="setCategory('BPS5')">BPS5</button>
+            <button class="cat-btn" onclick="setCategory('Web Series')">Web Series</button>
+            <button class="cat-btn" onclick="setCategory('Movie')">Movie</button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="ভিডিও নাম বা এপিসোড লিখে সার্চ দিন" oninput="filterVideos()">
+        </div>
+
+        <div id="video-container">
+            <div style="text-align:center; padding:40px; color:#94a3b8;">লোড হচ্ছে...</div>
+        </div>
+    </div>
+
+    <!-- Task View -->
+    <div id="task-view">
+        <button class="back-btn" onclick="showList()">⬅ ফিরে যান</button>
+        <div class="thumb-box" style="border-radius: 14px; margin-bottom: 14px;">
+            <img id="detail-thumb" src="" alt="Thumbnail">
+        </div>
+        <h2 id="detail-title" style="font-size: 16px; margin-bottom: 14px; color: #38bdf8;"></h2>
+
+        <div class="notice-box">
+            ⚠️ সতর্কবার্তা: এডে ক্লিক করে অবশ্যই সাইটে পুরো ১০ সেকেন্ড থাকতে হবে। আগে ফিরে আসলে আনলক হবে না।
+        </div>
+
+        <div class="task-card">
+            <div style="font-weight: 600;">Task 1: এডে ক্লিক করে ১০ সেকেন্ড ভিজিট করুন</div>
+            <div class="task-row">
+                <span id="t1-status" class="timer-badge">অসম্পূর্ণ</span>
+                <button id="t1-btn" class="visit-btn" onclick="startTask(1)">VISIT</button>
+            </div>
+        </div>
+
+        <div class="task-card">
+            <div style="font-weight: 600;">Task 2: এডে ক্লিক করে ১০ সেকেন্ড ভিজিট করুন</div>
+            <div class="task-row">
+                <span id="t2-status" class="timer-badge">অসম্পূর্ণ</span>
+                <button id="t2-btn" class="visit-btn" onclick="startTask(2)">VISIT</button>
+            </div>
+        </div>
+
+        <button id="download-trigger" class="dl-btn" onclick="sendDownload()">📥 ডাউনলোড ভিডিও</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) tg.expand();
+
+        const BACKEND_URL = "https://my-bot-server.onrender.com";
+
+        let allVideos = [];
+        let currentAds = { ad1: "https://google.com", ad2: "https://google.com" };
+        let activeCategory = "BPS5";
+        let activeVideo = null;
+        let t1Done = false, t2Done = false;
+
+        let activeTaskNum = null;
+        let taskStartTime = null;
+
+        // ডার্ক/লাইট মোড টগল
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+        }
+
+        async function fetchContent() {
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/data`);
+                const data = await res.json();
+                allVideos = data.videos || [];
+                if (data.ads && data.ads.ad1) currentAds = data.ads;
+                renderVideos();
+            } catch (e) {
+                document.getElementById('video-container').innerHTML = "<div style='text-align:center; color:#94a3b8; padding:30px;'>লোড হচ্ছে...</div>";
+            }
+        }
+
+        function setCategory(cat) {
+            activeCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText === cat);
+            });
+            renderVideos();
+        }
+
+        function filterVideos() {
+            renderVideos();
+        }
+
+        function renderVideos() {
+            const container = document.getElementById('video-container');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            container.innerHTML = '';
+
+            const filtered = allVideos.filter(v => {
+                const matchesCat = (v.category || "BPS5") === activeCategory;
+                const matchesSearch = v.title.toLowerCase().includes(searchVal);
+                return matchesCat && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#64748b; margin-top:30px;">কোনো ভিডিও পাওয়া যায়নি!</div>';
+                return;
+            }
+
+            filtered.forEach(v => {
+                const card = document.createElement('div');
+                card.className = 'video-card';
+                card.onclick = () => openTask(v);
+                card.innerHTML = `
+                    <div class="thumb-box">
+                        <img src="${v.thumb}" onerror="this.src='https://placehold.co/600x400/0f172a/38bdf8?text=Natok'">
+                    </div>
+                    <div class="card-details">
+                        <div class="card-title">${v.title}</div>
+                        <div class="card-date">🕒 ${v.date || 'Sep 27, 2026'}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openTask(video) {
+            activeVideo = video;
+            t1Done = false; t2Done = false;
+            activeTaskNum = null;
+            document.getElementById('detail-thumb').src = video.thumb;
+            document.getElementById('detail-title').innerText = video.title;
+
+            resetBtn('t1-btn', 't1-status');
+            resetBtn('t2-btn', 't2-status');
+            document.getElementById('download-trigger').className = 'dl-btn';
+
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('task-view').style.display = 'block';
+        }
+
+        function resetBtn(btnId, statusId) {
+            const btn = document.getElementById(btnId);
+            btn.innerText = 'VISIT';
+            btn.className = 'visit-btn';
+            btn.style.pointerEvents = 'auto';
+            document.getElementById(statusId).innerText = 'অসম্পূর্ণ';
+            document.getElementById(statusId).style.color = '#f59e0b';
+        }
+
+        function showList() {
+            activeTaskNum = null;
+            document.getElementById('task-view').style.display = 'none';
+            document.getElementById('list-view').style.display = 'block';
+        }
+
+        function startTask(taskNum) {
+            activeTaskNum = taskNum;
+            taskStartTime = Date.now();
+
+            const btn = document.getElementById(`t${taskNum}-btn`);
+            const status = document.getElementById(`t${taskNum}-status`);
+
+            btn.style.pointerEvents = 'none';
+            btn.innerText = 'ভিজিট চলছে...';
+            status.innerText = 'যাচাই হচ্ছে...';
+            status.style.color = '#38bdf8';
+
+            const adUrl = taskNum === 1 ? currentAds.ad1 : currentAds.ad2;
+            if (tg && tg.openLink) tg.openLink(adUrl);
+            else window.open(adUrl, '_blank');
+        }
+
+        function verifyTaskOnReturn() {
+            if (!activeTaskNum || !taskStartTime) return;
+
+            const timeSpentSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
+            const currentNum = activeTaskNum;
+            const btn = document.getElementById(`t${currentNum}-btn`);
+            const status = document.getElementById(`t${currentNum}-status`);
+
+            if (timeSpentSeconds >= 10) {
+                status.innerText = 'সম্পন্ন ✅';
+                status.style.color = '#10b981';
+                btn.innerText = 'DONE';
+                btn.className = 'visit-btn done';
+
+                if (currentNum === 1) t1Done = true;
+                if (currentNum === 2) t2Done = true;
+
+                if (t1Done && t2Done) {
+                    document.getElementById('download-trigger').className = 'dl-btn active';
+                }
+            } else {
+                status.innerText = `ব্যর্থ (${timeSpentSeconds}s ছিল)`;
+                status.style.color = '#ef4444';
+                btn.innerText = 'আবার করুন';
+                btn.style.pointerEvents = 'auto';
+                alert(`⚠️ আপনি মাত্র ${timeSpentSeconds} সেকেন্ড ছিলেন! পুরো ১০ সেকেন্ড সাইটে থাকতে হবে।`);
+            }
+
+            activeTaskNum = null;
+            taskStartTime = null;
+        }
+
+        window.addEventListener('focus', verifyTaskOnReturn);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') verifyTaskOnReturn();
+        });
+
+        function sendDownload() {
+            if (!t1Done || !t2Done || !activeVideo) return;
+            const payload = { action: 'send_video', file_id: activeVideo.file_id };
+            if (tg && tg.sendData) {
+                tg.sendData(JSON.stringify(payload));
+                tg.close();
+            }
+        }
+
+        fetchContent();
+    </script>
+</body>
+  </html>
