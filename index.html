@@ -288,14 +288,23 @@
             if (document.visibilityState === 'visible') verifyTaskOnReturn();
         });
 
-        function sendDownload() {
-            if (!t1Done || !t2Done || !activeVideo) return;
-            const payload = { action: 'send_video', file_id: activeVideo.file_id };
-            if (tg && tg.sendData) {
-                tg.sendData(JSON.stringify(payload));
-                tg.close();
+       function sendDownload() {
+            if (!t1Done || !t2Done) {
+                alert("দয়া করে দুটি টাস্কই সম্পূর্ণ করুন!");
+                return;
             }
-        }
+
+            if (!activeVideo) return;
+
+            const botUsername = "BanglaTRXNatok_bot";
+            const downloadUrl = `https://t.me/${botUsername}?start=vid_${activeVideo.id}`;
+
+            if (tg && tg.openTelegramLink) {
+                tg.openTelegramLink(downloadUrl);
+            } else {
+                window.location.href = downloadUrl;
+            }
+       } 
 
         fetchContent();
     </script>
