@@ -153,14 +153,12 @@ def set_ads_start(message):
 # নতুন ভিডিও আপলোড
 @bot.message_handler(commands=['upload'])
 def start_upload(message):
-
     if message.chat.id != ADMIN_ID:
         return
     admin_state[message.chat.id] = {'step': 'category'}
-    
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
     markup.add("BPS5", "Web Series", "Movie")
-    bot.send_message(message.chat.id, "📂 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup)
+    bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
 # অ্যাডমিন প্রসেস কন্ট্রোলার
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
