@@ -5,7 +5,7 @@ from flask_cors import CORS
 import threading
 
 # এখানে আপনার বটের টোকেন এবং টেলিগ্রাম ইউজার আইডি বসাবেন
-BOT_TOKEN = "8995171178:AAG9WcQYnHPoCpFbso1zbvVCDSLqLjC-ZP8"
+BOT_TOKEN = "8995171178:AAGNwil6GNUEVDSvN3XbneR9CZFYhtZleWw"
 ADMIN_ID = 7255626228  # আপনার সংখ্যাযুক্ত আইডি
 
 bot = telebot.TeleBot(BOT_TOKEN)
