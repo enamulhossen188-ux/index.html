@@ -2,115 +2,149 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bangla TRX Natok</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-color: #0b111e;
-            --card-bg: #151f32;
-            --text-main: #ffffff;
-            --text-sub: #94a3b8;
-            --primary: #0284c7;
-            --primary-light: #38bdf8;
-            --border: #1e293b;
-            --notice-bg: rgba(239, 68, 68, 0.1);
-            --notice-border: #ef4444;
-            --notice-text: #fca5a5;
+            --bg-color: #0b0f19;
+            --surface-color: rgba(22, 30, 49, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #0088cc;
+            --primary-gradient: linear-gradient(135deg, #0088cc 0%, #00b4d8 100%);
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: rgba(15, 23, 42, 0.6);
+            --badge-bg: rgba(0, 136, 204, 0.15);
+            --badge-text: #38bdf8;
         }
 
         body.light-mode {
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-sub: #64748b;
-            --primary: #0284c7;
-            --primary-light: #0284c7;
-            --border: #e2e8f0;
-            --notice-bg: #fee2e2;
-            --notice-border: #ef4444;
-            --notice-text: #b91c1c;
+            --bg-color: #f1f5f9;
+            --surface-color: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --input-bg: #e2e8f0;
+            --badge-bg: #e0f2fe;
+            --badge-text: #0284c7;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
 
         body {
             background-color: var(--bg-color);
-            color: var(--text-main);
-            padding: 12px;
-            padding-bottom: 40px;
-            transition: background-color 0.2s, color 0.2s;
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 14px;
+            transition: background 0.3s ease;
         }
 
+        /* হেডার */
         .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 0 14px 0;
-            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
             margin-bottom: 14px;
         }
 
         .header h1 {
             font-size: 19px;
             font-weight: 700;
-            color: var(--primary-light);
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .theme-toggle-btn {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 6px 14px;
+        .theme-toggle {
+            background: var(--surface-color);
+            border: 1px solid var(--card-border);
+            color: var(--text-color);
+            padding: 6px 12px;
             border-radius: 20px;
             font-size: 12px;
-            font-weight: 600;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            backdrop-filter: blur(8px);
         }
 
-        .category-tabs {
+        /* সার্চ বক্স */
+        .search-container {
+            position: relative;
+            margin-bottom: 14px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 42px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            color: var(--text-color);
+            font-size: 14px;
+            outline: none;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(0, 136, 204, 0.3);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        /* ক্যাটাগরি ট্যাব */
+        .category-scroll {
             display: flex;
             gap: 8px;
             overflow-x: auto;
-            margin-bottom: 16px;
-            padding-bottom: 4px;
+            padding-bottom: 12px;
             scrollbar-width: none;
         }
-        .category-tabs::-webkit-scrollbar { display: none; }
+        .category-scroll::-webkit-scrollbar {
+            display: none;
+        }
 
-        .tab-btn {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            color: var(--text-sub);
-            padding: 8px 18px;
+        .category-chip {
+            padding: 7px 15px;
+            background: var(--surface-color);
+            border: 1px solid var(--card-border);
             border-radius: 20px;
             font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
             white-space: nowrap;
-            transition: all 0.2s ease;
+            color: var(--text-muted);
+            cursor: pointer;
+            backdrop-filter: blur(8px);
         }
 
-        .tab-btn.active {
-            background: var(--primary);
+        .category-chip.active {
+            background: var(--primary-gradient);
             color: #ffffff;
-            border-color: var(--primary-light);
+            font-weight: 600;
+            border: none;
+            box-shadow: 0 3px 10px rgba(0, 136, 204, 0.4);
         }
 
+        /* ভিডিও কার্ড গ্রিড */
         .video-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -118,431 +152,334 @@
         }
 
         .video-card {
-            background: var(--card-bg);
-            border-radius: 12px;
+            background: var(--surface-color);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
             overflow: hidden;
-            border: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .video-card:active {
             transform: scale(0.97);
         }
 
-        .video-card img {
+        .thumb-wrapper {
+            position: relative;
             width: 100%;
-            height: 140px;
-            object-fit: cover;
-            display: block;
+            padding-top: 100%;
+            background: #000;
         }
 
-        .video-info {
+        .thumb-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .card-details {
             padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .video-title {
             font-size: 13px;
             font-weight: 600;
-            margin-bottom: 6px;
+            line-height: 1.3;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            line-height: 1.3;
+            color: var(--text-color);
         }
 
         .video-meta {
-            font-size: 11px;
-            color: var(--text-sub);
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 4px;
         }
 
-        #detail-view {
+        .category-tag {
+            background: var(--badge-bg);
+            color: var(--badge-text);
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        /* ডিটেইল ভিউ ও এড সেকশন */
+        .detail-view {
             display: none;
+            padding: 8px 0;
         }
 
         .back-btn {
-            background: var(--card-bg);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            padding: 6px 14px;
-            border-radius: 8px;
-            margin-bottom: 12px;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 15px;
             cursor: pointer;
+            margin-bottom: 12px;
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            font-size: 13px;
         }
 
-        .detail-banner {
-            width: 100%;
+        .detail-card {
+            background: var(--surface-color);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            backdrop-filter: blur(12px);
+        }
+
+        .task-box {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
             border-radius: 12px;
-            max-height: 230px;
-            object-fit: cover;
-            margin-bottom: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .detail-title {
-            font-size: 17px;
-            font-weight: 700;
-            color: var(--primary-light);
-            margin-bottom: 14px;
-        }
-
-        .notice-box {
-            background: var(--notice-bg);
-            border: 1px solid var(--notice-border);
-            color: var(--notice-text);
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            margin-bottom: 16px;
-            line-height: 1.4;
-        }
-
-        .task-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .task-title {
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .task-status {
-            font-size: 11px;
-            color: #f59e0b;
-        }
-
-        .task-status.done {
-            color: #10b981;
-            font-weight: 600;
-        }
-
-        .visit-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 8px 18px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 13px;
-        }
-
-        .visit-btn:disabled {
-            background: #475569;
-            color: #94a3b8;
-            cursor: not-allowed;
-        }
-
-        .download-btn {
-            width: 100%;
-            padding: 14px;
-            border-radius: 10px;
-            border: none;
-            font-size: 15px;
-            font-weight: 700;
+            padding: 12px;
             margin-top: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            background: #334155;
-            color: #94a3b8;
-        }
-
-        .download-btn.unlocked {
-            background: #10b981;
-            color: white;
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
-        }
-
-        .loader {
             text-align: center;
-            padding: 40px 0;
-            color: var(--primary-light);
-            font-size: 15px;
+        }
+
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-ad {
+            background: var(--primary-gradient);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 136, 204, 0.35);
+        }
+
+        .btn-download {
+            background: #10b981;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        }
+
+        .btn-disabled {
+            background: var(--card-border);
+            color: var(--text-muted);
+            pointer-events: none;
+            box-shadow: none;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 40px;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
 
-    <div id="home-view">
-        <div class="header">
-            <h1><i class="fas fa-play-circle"></i> Bangla TRX Natok</h1>
-            <button class="theme-toggle-btn" onclick="toggleTheme()">
-                <i id="theme-icon" class="fas fa-sun"></i> <span id="theme-text">White</span>
-            </button>
-        </div>
-
-        <div class="category-tabs">
-            <button class="tab-btn active" onclick="filterCategory('All', this)">সবগুলো</button>
-            <button class="tab-btn" onclick="filterCategory('BPS5', this)">BPS5</button>
-            <button class="tab-btn" onclick="filterCategory('Web Series', this)">Web Series</button>
-            <button class="tab-btn" onclick="filterCategory('Movie', this)">Movie</button>
-        </div>
-
-        <div id="loader" class="loader">
-            <i class="fas fa-spinner fa-spin fa-2x"></i><br><br>ভিডিও লোড হচ্ছে...
-        </div>
-
-        <div class="video-grid" id="video-grid"></div>
+    <!-- হেডার -->
+    <div class="header">
+        <h1><i class="fa-solid fa-circle-play"></i> Bangla TRX Natok</h1>
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn"><i class="fa-solid fa-moon"></i> Dark</button>
     </div>
 
-    <div id="detail-view">
-        <button class="back-btn" onclick="goBack()"><i class="fas fa-arrow-left"></i> ফিরে যান</button>
-        <img id="detail-img" class="detail-banner" src="" alt="Banner">
-        <h2 id="detail-title" class="detail-title"></h2>
-
-        <div class="notice-box">
-            ⚠️ <b>সতর্কবার্তা:</b> এডে ক্লিক করে অবশ্যই সাইটে পুরো ১০ সেকেন্ড থাকতে হবে। আগে ফিরে আসলে আনলক হবে না।
+    <!-- মেইন ভিউ -->
+    <div id="mainView">
+        <!-- প্রফেশনাল সার্চ বার -->
+        <div class="search-container">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="নাটকের নাম বা পর্ব খুঁজুন..." oninput="handleSearch()">
         </div>
 
-        <div class="task-card">
-            <div>
-                <div class="task-title">Task 1: এডে ক্লিক করে ১০ সেকেন্ড ভিজিট করুন</div>
-                <div id="status-task-1" class="task-status">অসম্পূর্ণ</div>
+        <!-- ক্যাটাগরি বাটন -->
+        <div class="category-scroll" id="categoryTabs">
+            <div class="category-chip active" onclick="filterCategory('all', this)">সবগুলো</div>
+            <div class="category-chip" onclick="filterCategory('BPS5', this)">BPS5</div>
+            <div class="category-chip" onclick="filterCategory('Web Series', this)">Web Series</div>
+            <div class="category-chip" onclick="filterCategory('Movie', this)">Movie</div>
+        </div>
+
+        <!-- ভিডিও গ্রিড -->
+        <div class="video-grid" id="videoContainer"></div>
+        <div class="empty-msg" id="emptyMessage" style="display: none;">কোনো ভিডিও খুঁজে পাওয়া যায়নি!</div>
+    </div>
+
+    <!-- ডিটেইল ভিউ (এড দেখার পেজ) -->
+    <div class="detail-view" id="detailView">
+        <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
+        <div class="detail-card">
+            <img id="detailThumb" src="" style="width: 100%; border-radius: 12px; margin-bottom: 12px;">
+            <h2 id="detailTitle" style="font-size: 16px; margin-bottom: 6px;"></h2>
+            <span id="detailCategory" class="category-tag"></span>
+
+            <div class="task-box">
+                <p style="font-size: 12px; color: var(--text-muted);">ভিডিওটি ইনবক্সে পাওয়ার জন্য নিচের এডে ক্লিক করে ১০ সেকেন্ড অপেক্ষা করুন:</p>
+                <button id="adBtn" class="action-btn btn-ad" onclick="startAd()">👉 অ্যাড দেখুন (১০ সেকেন্ড)</button>
+                <button id="downloadBtn" class="action-btn btn-download btn-disabled" onclick="sendToInbox()">📥 ইনবক্সে ভিডিও নিন</button>
             </div>
-            <button id="btn-task-1" class="visit-btn" onclick="startTask(1)">VISIT</button>
         </div>
-
-        <div class="task-card">
-            <div>
-                <div class="task-title">Task 2: এডে ক্লিক করে ১০ সেকেন্ড ভিজিট করুন</div>
-                <div id="status-task-2" class="task-status">অসম্পূর্ণ</div>
-            </div>
-            <button id="btn-task-2" class="visit-btn" onclick="startTask(2)">VISIT</button>
-        </div>
-
-        <button id="final-download-btn" class="download-btn" disabled onclick="requestDownload()">
-            <i class="fas fa-lock"></i> টাস্ক পূরণ করে আনলক করুন
-        </button>
     </div>
 
     <script>
         const tg = window.Telegram?.WebApp;
-        if (tg) {
-            tg.expand();
-            tg.ready();
-        }
-
-        const API_BASE = "https://my-bot-server-bnj8.onrender.com";
+        if (tg) tg.expand();
 
         let appData = { videos: [], ads: {} };
-        let currentVideo = null;
-        let task1Done = false;
-        let task2Done = false;
-
-        function toggleTheme() {
-            document.body.classList.toggle('light-mode');
-            const isLight = document.body.classList.contains('light-mode');
-            document.getElementById('theme-icon').className = isLight ? 'fas fa-moon' : 'fas fa-sun';
-            document.getElementById('theme-text').innerText = isLight ? 'Dark' : 'White';
-        }
+        let activeCategory = 'all';
+        let currentSelectedVideo = null;
+        let adClickedTime = 0;
 
         async function initData() {
             try {
-                // সরাসরি ব্যাকএন্ড থেকে ডেটা নেওয়া
-                const res = await fetch(`${API_BASE}/api/data?t=${Date.now()}`);
-                if (!res.ok) throw new Error("Offline");
+                const res = await fetch("https://my-bot-server-bnj8.onrender.com/api/data?t=" + Date.now());
                 appData = await res.json();
-                showContent();
+                renderVideos();
             } catch (err) {
-                // সার্ভার চালু হতে দেরি হলে সরাসরি লোকাল রিপোজিটরি ডেটা লোড
-                try {
-                    const localRes = await fetch(`./database.json?t=${Date.now()}`);
-                    appData = await localRes.json();
-                    showContent();
-                } catch (e) {
-                    document.getElementById('loader').innerHTML = '⚠️ পেজটি একবার বন্ধ করে আবার ওপেন করুন!';
-                }
+                console.error("ডাটা লোড ত্রুটি:", err);
             }
         }
 
-        function showContent() {
-            document.getElementById('loader').style.display = 'none';
-            renderVideos(appData.videos || []);
-        }
+        function renderVideos() {
+            const container = document.getElementById("videoContainer");
+            const empty = document.getElementById("emptyMessage");
+            const query = document.getElementById("searchInput").value.toLowerCase().trim();
 
-        function renderVideos(videos) {
-            const grid = document.getElementById('video-grid');
-            grid.innerHTML = '';
-            if (!videos || videos.length === 0) {
-                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: var(--text-sub); padding: 30px;">কোনো ভিডিও পাওয়া যায়নি</div>';
-                return;
+            let list = appData.videos || [];
+
+            // ক্যাটাগরি অনুযায়ী ফিল্টার
+            if (activeCategory !== 'all') {
+                list = list.filter(v => (v.category || '').toLowerCase() === activeCategory.toLowerCase());
             }
-            videos.forEach(v => {
-                const card = document.createElement('div');
-                card.className = 'video-card';
-                card.onclick = () => openDetail(v);
-                card.innerHTML = `
-                    <img src="${v.thumb || 'https://placehold.co/400x250/151f32/38bdf8?text=Natok'}" alt="${v.title}">
-                    <div class="video-info">
-                        <div class="video-title">${v.title}</div>
-                        <div class="video-meta">
-                            <span><i class="fas fa-folder"></i> ${v.category || 'Natok'}</span>
-                            <span>${v.date || ''}</span>
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
 
-        function filterCategory(cat, btn) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            if (cat === 'All') {
-                renderVideos(appData.videos || []);
+            // সার্চ কোয়েরি ফিল্টার
+            if (query) {
+                list = list.filter(v => (v.title || '').toLowerCase().includes(query));
+            }
+
+            container.innerHTML = "";
+            if (list.length === 0) {
+                empty.style.display = "block";
             } else {
-                renderVideos((appData.videos || []).filter(v => v.category === cat));
+                empty.style.display = "none";
+                list.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "video-card";
+                    card.onclick = () => openDetail(item);
+                    card.innerHTML = `
+                        <div class="thumb-wrapper">
+                            <img class="thumb-img" src="${item.thumb || 'https://via.placeholder.com/300x300?text=Natok'}" alt="Thumb">
+                        </div>
+                        <div class="card-details">
+                            <div class="video-title">${item.title}</div>
+                            <div class="video-meta">
+                                <span class="category-tag">${item.category || 'নাটক'}</span>
+                                <span><i class="fa-regular fa-clock"></i> ${item.date || ''}</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
             }
+        }
+
+        function handleSearch() {
+            renderVideos();
+        }
+
+        function filterCategory(cat, el) {
+            activeCategory = cat;
+            document.querySelectorAll(".category-chip").forEach(c => c.classList.remove("active"));
+            el.classList.add("active");
+            renderVideos();
         }
 
         function openDetail(video) {
-            currentVideo = video;
-            task1Done = false;
-            task2Done = false;
+            currentSelectedVideo = video;
+            document.getElementById("mainView").style.display = "none";
+            document.getElementById("detailView").style.display = "block";
 
-            document.getElementById('detail-img').src = video.thumb || 'https://placehold.co/600x300/151f32/38bdf8?text=Natok';
-            document.getElementById('detail-title').innerText = video.title;
+            document.getElementById("detailThumb").src = video.thumb || 'https://via.placeholder.com/300x300';
+            document.getElementById("detailTitle").innerText = video.title;
+            document.getElementById("detailCategory").innerText = video.category || 'নাটক';
 
-            resetTaskUI(1);
-            resetTaskUI(2);
-            updateDownloadBtn();
-
-            document.getElementById('home-view').style.display = 'none';
-            document.getElementById('detail-view').style.display = 'block';
-            window.scrollTo(0,0);
+            // এড ও ডাউনলোড বাটন রিসেট
+            const dlBtn = document.getElementById("downloadBtn");
+            dlBtn.className = "action-btn btn-download btn-disabled";
+            dlBtn.innerText = "📥 ইনবক্সে ভিডিও নিন";
+            adClickedTime = 0;
         }
 
         function goBack() {
-            document.getElementById('detail-view').style.display = 'none';
-            document.getElementById('home-view').style.display = 'block';
+            document.getElementById("detailView").style.display = "none";
+            document.getElementById("mainView").style.display = "block";
         }
 
-        function resetTaskUI(num) {
-            const st = document.getElementById(`status-task-${num}`);
-            const btn = document.getElementById(`btn-task-${num}`);
-            st.className = 'task-status';
-            st.innerText = 'অসম্পূর্ণ';
-            btn.disabled = false;
-            btn.innerText = 'VISIT';
-        }
-
-      let activeTask = null;
-        let taskStartTime = 0;
-
-        function startTask(num) {
-            const adUrl = num === 1 ? (appData.ads?.ad1 || 'https://google.com') : (appData.ads?.ad2 || 'https://google.com');
-            const btn = document.getElementById(`btn-task-${num}`);
-            const st = document.getElementById(`status-task-${num}`);
-
-            activeTask = num;
-            taskStartTime = Date.now();
-
-            btn.disabled = true;
-            st.className = 'task-status';
-            st.innerText = 'এডে ভিজিট চলছে...';
-
+        function startAd() {
+            adClickedTime = Date.now();
+            const adUrl = appData.ads?.ad1 || "https://google.com";
             if (tg && tg.openLink) {
                 tg.openLink(adUrl);
             } else {
-                window.open(adUrl, '_blank');
+                window.open(adUrl, "_blank");
+            }
+
+            const dlBtn = document.getElementById("downloadBtn");
+            let remaining = 10;
+            dlBtn.innerText = `⏳ অপেক্ষা করুন (${remaining}s)`;
+            
+            const timer = setInterval(() => {
+                remaining--;
+                if (remaining > 0) {
+                    dlBtn.innerText = `⏳ অপেক্ষা করুন (${remaining}s)`;
+                } else {
+                    clearInterval(timer);
+                    dlBtn.innerText = "📥 ইনবক্সে ভিডিও নিন";
+                    dlBtn.className = "action-btn btn-download";
+                }
+            }, 1000);
+        }
+
+        function sendToInbox() {
+            if (Date.now() - adClickedTime < 10000) {
+                alert("অনুগ্রহ করে অন্তত ১০ সেকেন্ড অ্যাডটি দেখে অপেক্ষা করুন!");
+                return;
+            }
+            if (currentSelectedVideo && tg) {
+                tg.openTelegramLink(`https://t.me/Bangla_TRX_Natok_bot?start=vid_${currentSelectedVideo.id}`);
+                tg.close();
             }
         }
 
-        window.addEventListener('focus', verifyTaskCompletion);
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                verifyTaskCompletion();
-            }
-        });
-
-        function verifyTaskCompletion() {
-            if (!activeTask || taskStartTime === 0) return;
-
-            const timeSpent = (Date.now() - taskStartTime) / 1000;
-            const currentNum = activeTask;
-            const btn = document.getElementById(`btn-task-${currentNum}`);
-            const st = document.getElementById(`status-task-${currentNum}`);
-
-            activeTask = null;
-            taskStartTime = 0;
-
-            if (timeSpent >= 10) {
-                st.className = 'task-status done';
-                st.innerHTML = '<i class="fas fa-check-circle"></i> সম্পন্ন!';
-                btn.innerText = 'DONE';
-                btn.disabled = true;
-
-                if (currentNum === 1) task1Done = true;
-                if (currentNum === 2) task2Done = true;
-
-                updateDownloadBtn();
+        function toggleTheme() {
+            document.body.classList.toggle("light-mode");
+            const btn = document.getElementById("themeBtn");
+            if (document.body.classList.contains("light-mode")) {
+                btn.innerHTML = `<i class="fa-solid fa-sun"></i> Light`;
             } else {
-                const remain = Math.ceil(10 - timeSpent);
-                st.className = 'task-status';
-                st.style.color = '#ef4444';
-                st.innerText = `❌ ${remain} সেকেন্ড বাকি ছিল! আবার ভিজিট করুন।`;
-                btn.disabled = false;
-                btn.innerText = 'RETRY';
-
-                if (tg && tg.showAlert) {
-                    tg.showAlert('⚠️ আপনি ১০ সেকেন্ড শেষ হওয়ার আগেই ফিরে এসেছেন! পুরো ১০ সেকেন্ড সাইটে থাকুন।');
-                } else {
-                    alert('⚠️ আপনি ১০ সেকেন্ড শেষ হওয়ার আগেই ফিরে এসেছেন! পুরো ১০ সেকেন্ড সাইটে থাকুন।');
-                }
+                btn.innerHTML = `<i class="fa-solid fa-moon"></i> Dark`;
             }
-                }  
-        function updateDownloadBtn() {
-            const btn = document.getElementById('final-download-btn');
-            if (task1Done && task2Done) {
-                btn.disabled = false;
-                btn.className = 'download-btn unlocked';
-                btn.innerHTML = '<i class="fas fa-download"></i> ডাউনলোড করুন (ইনবক্সে ভিডিও যাবে)';
-            } else {
-                btn.disabled = true;
-                btn.className = 'download-btn';
-                btn.innerHTML = '<i class="fas fa-lock"></i> টাস্ক পূরণ করে আনলক করুন';
-            }
-        }
-
-        function requestDownload() {
-            if (!currentVideo) return;
-            const btn = document.getElementById('final-download-btn');
-            btn.disabled = true;
-            btn.innerHTML = '✅ আপনার ইনবক্স চেক করুন!';
-
-            const botUsername = "BanglaTRXNatok_bot";
-            const deepLink = `https://t.me/${botUsername}?start=vid_${currentVideo.id}`;
-
-            setTimeout(() => {
-                if (tg && tg.openTelegramLink) {
-                    tg.openTelegramLink(deepLink);
-                    tg.close();
-                } else {
-                    window.location.href = deepLink;
-                }
-            }, 400);
         }
 
         initData();
     </script>
 </body>
-</html>
+    </html>
