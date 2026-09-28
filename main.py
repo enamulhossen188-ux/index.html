@@ -9,7 +9,6 @@ from datetime import datetime
 
 BOT_TOKEN = "8995171178:AAGNwil6GNUEVDSvN3XbneR9CZFYhtZleWw"
 ADMIN_ID = 7255626228
-BACKUP_CHANNEL_ID = -1003902807907
 
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
@@ -39,15 +38,10 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    try:
-        with open(DB_FILE, "rb") as f:
-            bot.send_document(BACKUP_CHANNEL_ID, f, caption="#DATABASE_BACKUP", disable_notification=True)
-    except Exception as e:
-        print(f"Cloud Backup Error: {e}")
 
 admin_state = {}
 
-# CORS ও সম্পূর্ণ হেডারযুক্ত API
+# অতি দ্রুত রেসপন্স দেওয়ার জন্য API
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
     data = load_data()
@@ -98,7 +92,6 @@ def start_upload(message):
     markup.add("BPS5", "Web Series", "Movie")
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
-# /start হ্যান্ডলার
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -126,10 +119,9 @@ def send_welcome(message):
                     bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে।")
             return
         else:
-            bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি খুঁজে পাওয়া যায়নি!")
+            bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি পাওয়া যায়নি!")
             return
 
-    # ফ্রেশ টাইমস্ট্যাম্পযুক্ত মিনি অ্যাপ বাটন
     fresh_url = f"https://enamulhossen188-ux.github.io/index.html?ts={int(datetime.now().timestamp())}"
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
@@ -224,21 +216,10 @@ def handle_admin_inputs(message):
             "date": datetime.now().strftime("%b %d, %Y")
         }
         
-        # ডাটাবেজে নতুন ভিডিও সবার শুরুতে যুক্ত করা
         if "videos" not in data:
             data["videos"] = []
         data['videos'].insert(0, new_video)
         save_data(data)
-
-        # প্রাইভেট চ্যানেলে ভিডিও পাঠানো
-        try:
-            bot.send_video(
-                BACKUP_CHANNEL_ID,
-                file_id,
-                caption=f"🎬 **Backup**\nTitle: {new_video['title']}\nID: {new_video['id']}"
-            )
-        except Exception as e:
-            print(f"Backup Error: {e}")
 
         title_done = admin_state[chat_id]['title']
         del admin_state[chat_id]
