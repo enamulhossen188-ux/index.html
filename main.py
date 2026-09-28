@@ -148,8 +148,13 @@ def start_upload(message):
         return
         
     admin_state[message.chat.id] = {'step': 'category'}
+    data = load_data()
+    cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-    markup.add("BPS5", "Web Series", "Movie")
+    for i in range(0, len(cats), 2):
+        row = [types.KeyboardButton(c) for c in cats[i:i+2]]
+        markup.row(*row)
+    markup.row(types.KeyboardButton("/cancel"))
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
 # /start এবং সরাসরি ইনবক্সে ভিডিও ডেলিভারি
@@ -314,7 +319,110 @@ def handle_admin_inputs(message):
         title_done = admin_state[chat_id]['title']
         del admin_state[chat_id]
         bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\nমিনি অ্যাপে এখনই দেখতে পাবেন।")
+# --- ক্যাটাগরি ম্যানেজমেন্ট (Add, Edit/Rename, Delete) ---
 
+@bot.message_handler(commands=['setcategory'])
+def manage_categories_menu(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        return
+    data = load_data()
+    cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
+    if "categories" not in data:
+        data["categories"] = cats
+        save_data(data)
+
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    buttons = []
+    for c in cats:
+        buttons.append(types.InlineKeyboardButton(f"✏️ {c}", callback_data=f"editcat_{c}"))
+        buttons.append(types.InlineKeyboardButton(f"🗑️ {c}", callback_data=f"delcat_{c}"))
+    markup.add(*buttons)
+    markup.add(types.InlineKeyboardButton("➕ নতুন ক্যাটাগরি যোগ করুন", callback_data="add_new_cat"))
+
+    text = "📁 **ক্যাটাগরি কন্ট্রোল প্যানেল:**\n\n"
+    text += "• নাম বদলাতে **✏️ বাটনে** চাপুন।\n"
+    text += "• মুছে ফেলতে **🗑️ বাটনে** চাপুন।\n"
+    text += "• নতুন ক্যাটাগরি আনতে **➕ বাটনে** চাপুন।"
+    
+    bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode="Markdown")
+
+@bot.callback_query_handler(func=lambda call: call.data == "add_new_cat")
+def callback_add_cat(call):
+    if str(call.message.chat.id) != str(ADMIN_ID):
+        return
+    bot.answer_callback_query(call.id)
+    msg = bot.send_message(call.message.chat.id, "✍️ নতুন ক্যাটাগরির নাম লিখে পাঠান (অথবা বাতিল করতে /cancel লিখুন):")
+    bot.register_next_step_handler(msg, process_add_category)
+
+def process_add_category(message):
+    if message.text == '/cancel':
+        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
+        return
+    new_cat = message.text.strip()
+    data = load_data()
+    cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
+    if new_cat in cats:
+        bot.send_message(message.chat.id, "❌ এই ক্যাটাগরিটি ইতিমধ্যে রয়েছে!")
+        return
+    cats.append(new_cat)
+    data["categories"] = cats
+    save_data(data)
+    bot.send_message(message.chat.id, f"✅ নতুন ক্যাটাগরি **'{new_cat}'** সফলভাবে যোগ হয়েছে!", parse_mode="Markdown")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("delcat_"))
+def callback_del_cat(call):
+    if str(call.message.chat.id) != str(ADMIN_ID):
+        return
+    target_cat = call.data.replace("delcat_", "")
+    data = load_data()
+    cats = data.get("categories", [])
+    if target_cat in cats:
+        cats.remove(target_cat)
+        data["categories"] = cats
+        save_data(data)
+        bot.answer_callback_query(call.id, f"মুছে ফেলা হয়েছে: {target_cat}")
+        bot.send_message(call.message.chat.id, f"🗑️ ক্যাটাগরি **'{target_cat}'** মুছে ফেলা হয়েছে!", parse_mode="Markdown")
+    else:
+        bot.answer_callback_query(call.id, "ক্যাটাগরি পাওয়া যায়নি!")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("editcat_"))
+def callback_edit_cat(call):
+    if str(call.message.chat.id) != str(ADMIN_ID):
+        return
+    old_cat = call.data.replace("editcat_", "")
+    bot.answer_callback_query(call.id)
+    msg = bot.send_message(
+        call.message.chat.id, 
+        f"✏️ **'{old_cat}'** এর নতুন নাম কী দিতে চান? নাম লিখে পাঠান (অথবা /cancel দিন):", 
+        parse_mode="Markdown"
+    )
+    bot.register_next_step_handler(msg, lambda m: process_rename_category(m, old_cat))
+
+def process_rename_category(message, old_cat):
+    if message.text == '/cancel':
+        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
+        return
+    new_cat = message.text.strip()
+    data = load_data()
+    cats = data.get("categories", [])
+
+    if old_cat in cats:
+        idx = cats.index(old_cat)
+        cats[idx] = new_cat
+        data["categories"] = cats
+        
+        for v in data.get("videos", []):
+            if v.get("category") == old_cat:
+                v["category"] = new_cat
+                
+        save_data(data)
+        bot.send_message(
+            message.chat.id, 
+            f"✅ ক্যাটাগরি **'{old_cat}'** পরিবর্তন করে **'{new_cat}'** করা হয়েছে!\n(এই ক্যাটাগরির ভিডিওগুলোও স্বয়ংক্রিয়ভাবে নতুন নামে পরিবর্তিত হয়েছে)", 
+            parse_mode="Markdown"
+        )
+    else:
+        bot.send_message(message.chat.id, "❌ মূল ক্যাটাগরি খুঁজে পাওয়া যায়নি।")
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
