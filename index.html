@@ -13,8 +13,22 @@
             --text-main: #ffffff;
             --text-sub: #94a3b8;
             --primary: #0284c7;
-            --primary-light: #38bdf8;
             --border: #1e293b;
+            --notice-bg: rgba(239, 68, 68, 0.1);
+            --notice-border: #ef4444;
+            --notice-text: #fca5a5;
+        }
+
+        body.light-mode {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --primary: #0284c7;
+            --border: #cbd5e1;
+            --notice-bg: #fee2e2;
+            --notice-border: #ef4444;
+            --notice-text: #b91c1c;
         }
 
         * {
@@ -31,11 +45,13 @@
             color: var(--text-main);
             padding: 12px;
             padding-bottom: 40px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .header {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             padding: 8px 0 14px 0;
             border-bottom: 1px solid var(--border);
             margin-bottom: 14px;
@@ -44,10 +60,24 @@
         .header h1 {
             font-size: 19px;
             font-weight: 700;
-            color: var(--primary-light);
+            color: #38bdf8;
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .theme-toggle-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .category-tabs {
@@ -70,13 +100,13 @@
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
 
         .tab-btn.active {
             background: var(--primary);
             color: #ffffff;
-            border-color: var(--primary-light);
+            border-color: #38bdf8;
         }
 
         .video-grid {
@@ -91,6 +121,7 @@
             overflow: hidden;
             border: 1px solid var(--border);
             cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: transform 0.2s;
         }
 
@@ -133,7 +164,7 @@
 
         .back-btn {
             background: var(--card-bg);
-            color: #ffffff;
+            color: var(--text-main);
             border: 1px solid var(--border);
             padding: 6px 14px;
             border-radius: 8px;
@@ -157,14 +188,14 @@
         .detail-title {
             font-size: 17px;
             font-weight: 700;
-            color: var(--primary-light);
+            color: #38bdf8;
             margin-bottom: 14px;
         }
 
         .notice-box {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            color: #fca5a5;
+            background: var(--notice-bg);
+            border: 1px solid var(--notice-border);
+            color: var(--notice-text);
             padding: 10px 12px;
             border-radius: 8px;
             font-size: 12px;
@@ -211,8 +242,8 @@
         }
 
         .visit-btn:disabled {
-            background: #1e293b;
-            color: #64748b;
+            background: #64748b;
+            color: #cbd5e1;
             cursor: not-allowed;
         }
 
@@ -229,8 +260,8 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            background: #1e293b;
-            color: #64748b;
+            background: #334155;
+            color: #94a3b8;
         }
 
         .download-btn.unlocked {
@@ -242,7 +273,7 @@
         .loader {
             text-align: center;
             padding: 40px 0;
-            color: var(--primary-light);
+            color: #38bdf8;
             font-size: 15px;
         }
     </style>
@@ -252,6 +283,9 @@
     <div id="home-view">
         <div class="header">
             <h1><i class="fas fa-play-circle"></i> Bangla TRX Natok</h1>
+            <button class="theme-toggle-btn" onclick="toggleTheme()">
+                <i id="theme-icon" class="fas fa-sun"></i> <span id="theme-text">White</span>
+            </button>
         </div>
 
         <div class="category-tabs">
@@ -312,26 +346,26 @@
         let task1Done = false;
         let task2Done = false;
 
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            document.getElementById('theme-icon').className = isLight ? 'fas fa-moon' : 'fas fa-sun';
+            document.getElementById('theme-text').innerText = isLight ? 'Dark' : 'White';
+        }
+
         async function initData() {
             try {
-                // ১. সরাসরি রেন্ডার এপিআই থেকে কল
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-                const res = await fetch(`${API_BASE}/api/data?t=${Date.now()}`, { signal: controller.signal });
-                clearTimeout(timeoutId);
-                
-                if (!res.ok) throw new Error("API Offline");
+                const res = await fetch(`${API_BASE}/api/data?t=${Date.now()}`);
+                if (!res.ok) throw new Error("Offline");
                 appData = await res.json();
                 showContent();
             } catch (err) {
-                // ২. রেন্ডার বন্ধ বা দেরি হলে সরাসরি লোকাল রিপোজিটরির database.json থেকে লোড
                 try {
                     const fallbackRes = await fetch(`./database.json?t=${Date.now()}`);
                     appData = await fallbackRes.json();
                     showContent();
                 } catch (e) {
-                    document.getElementById('loader').innerHTML = '⚠️ ভিডিও রিফ্রেশ হচ্ছে, অনুগ্রহ করে ৫ সেকেন্ড পর আবার ওপেন করুন।';
+                    document.getElementById('loader').innerHTML = 'লোড হচ্ছে... ৫ সেকেন্ড পর আবার চেষ্টা করুন।';
                 }
             }
         }
@@ -345,7 +379,7 @@
             const grid = document.getElementById('video-grid');
             grid.innerHTML = '';
             if (!videos || videos.length === 0) {
-                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #64748b; padding: 30px;">কোনো ভিডিও পাওয়া যায়নি</div>';
+                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: var(--text-sub); padding: 30px;">কোনো ভিডিও পাওয়া যায়নি</div>';
                 return;
             }
             videos.forEach(v => {
