@@ -16,7 +16,35 @@ CORS(app)
 
 DB_FILE = "database.json"
 
+import base64
+import requests
+
+GITHUB_TOKEN = "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"
+REPO_NAME = "enamulhossen188-ux/index.html"
+FILE_PATH = "database.json"
+
+def get_github_db():
+    try:
+        url = f"https://api.github.com/repos/{REPO_NAME}/contents/{FILE_PATH}"
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            content = base64.b64decode(r.json()['content']).decode('utf-8')
+            return json.loads(content), r.json()['sha']
+    except Exception as e:
+        print("GitHub Read Error:", e)
+    return None, None
+
 def load_data():
+    data, _ = get_github_db()
+    if data:
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return data
+
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -26,43 +54,35 @@ def load_data():
 
     default_data = {
         "users": [],
-        "ads": {
-            "ad1": "https://google.com",
-            "ad2": "https://google.com"
-        },
+        "ads": {"ad1": "https://google.com", "ad2": "https://google.com"},
         "videos": []
     }
-    
-    # সার্ভার রিস্টার্ট হলেও অ্যাডমিন ইনবক্সের ব্যাকআপ থেকে ডেটা ফিরিয়ে আনা
-    try:
-        if os.path.exists("backup_msg.txt"):
-            with open("backup_msg.txt", "r") as f:
-                last_msg_id = int(f.read().strip())
-            file_info = bot.get_file(bot.forward_message(ADMIN_ID, ADMIN_ID, last_msg_id).document.file_id)
-            downloaded = bot.download_file(file_info.file_path)
-            data = json.loads(downloaded.decode('utf-8'))
-            with open(DB_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            return data
-    except Exception:
-        pass
-
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(default_data, f, ensure_ascii=False, indent=2)
     return default_data
 
 def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    
-    # প্রতিবার আপলোড বা এডিটের পর অ্যাডমিনের ইনবক্সে নিরাপদ ক্লাউড ব্যাকআপ রাখা
+
     try:
-        with open(DB_FILE, "rb") as f:
-            msg = bot.send_document(ADMIN_ID, f, caption="💾 Auto Database Backup (DO NOT DELETE)")
-            with open("backup_msg.txt", "w") as bf:
-                bf.write(str(msg.message_id))
-    except Exception:
-        pass
+        url = f"https://api.github.com/repos/{REPO_NAME}/contents/{FILE_PATH}"
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        _, sha = get_github_db()
+        content_str = json.dumps(data, ensure_ascii=False, indent=2)
+        content_b64 = base64.b64encode(content_str.encode('utf-8')).decode('utf-8')
+
+        payload = {
+            "message": "Auto update database [Bot Cloud]",
+            "content": content_b64
+        }
+        if sha:
+            payload["sha"] = sha
+
+        requests.put(url, headers=headers, json=payload)
+    except Exception as e:
+        print("GitHub Save Error:", e)
             
 admin_state = {}
 
