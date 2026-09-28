@@ -189,20 +189,23 @@
             }
 
             filtered.forEach(v => {
-                const card = document.createElement('div');
-                card.className = 'video-card';
-                card.onclick = () => openTask(v);
-                card.innerHTML = `
-                    <div class="thumb-box">
-                        <img src="${v.thumb}" onerror="this.src='https://placehold.co/600x400/0f172a/38bdf8?text=Natok'">
-                    </div>
-                    <div class="card-details">
-                        <div class="card-title">${v.title}</div>
-                        <div class="card-date">🕒 ${v.date || 'Sep 27, 2026'}</div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.style.cursor = 'pointer';
+        card.onclick = function() {
+            openTask(v);
+        };
+        card.innerHTML = `
+            <div class="thumb-box" style="pointer-events: none;">
+                <img src="${v.thumb}" onerror="this.src='https://placehold.co/600x400/0f172a/38bdf8?text=Natok'">
+            </div>
+            <div class="card-details" style="pointer-events: none;">
+                <div class="card-title">${v.title}</div>
+                <div class="card-date">🕒 ${v.date || 'Sep 27, 2026'}</div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
         }
 
       function openTask(video) {
