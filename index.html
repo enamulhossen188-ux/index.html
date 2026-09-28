@@ -8,14 +8,12 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0d1117;
-            --card-bg: #161b22;
-            --text-main: #f0f6fc;
-            --text-sub: #8b949e;
-            --accent: #ff4757;
-            --accent-hover: #e84118;
-            --btn-blue: #1e90ff;
-            --border: #30363d;
+            --bg-color: #0b111e;
+            --card-bg: #151f32;
+            --text-main: #ffffff;
+            --text-sub: #94a3b8;
+            --primary: #0284c7;
+            --border: #1e293b;
         }
 
         * {
@@ -31,30 +29,26 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             padding: 12px;
-            padding-bottom: 30px;
+            padding-bottom: 40px;
         }
 
-        /* হেডার */
         .header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 10px 0;
-            margin-bottom: 12px;
+            padding: 8px 0 14px 0;
             border-bottom: 1px solid var(--border);
+            margin-bottom: 14px;
         }
 
         .header h1 {
             font-size: 19px;
-            font-weight: 800;
-            color: var(--accent);
+            font-weight: 700;
+            color: #38bdf8;
             display: flex;
             align-items: center;
             gap: 8px;
-            letter-spacing: 0.5px;
         }
 
-        /* ক্যাটাগরি বাটন */
         .category-tabs {
             display: flex;
             gap: 8px;
@@ -63,30 +57,26 @@
             padding-bottom: 4px;
             scrollbar-width: none;
         }
-        .category-tabs::-webkit-scrollbar {
-            display: none;
-        }
+        .category-tabs::-webkit-scrollbar { display: none; }
 
         .tab-btn {
             background: var(--card-bg);
             border: 1px solid var(--border);
             color: var(--text-sub);
-            padding: 8px 16px;
+            padding: 8px 18px;
             border-radius: 20px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
-            transition: all 0.2s;
         }
 
         .tab-btn.active {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent);
+            background: var(--primary);
+            color: #ffffff;
+            border-color: #38bdf8;
         }
 
-        /* ভিডিও কার্ড গ্রিড */
         .video-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -95,11 +85,10 @@
 
         .video-card {
             background: var(--card-bg);
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border);
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             transition: transform 0.2s;
         }
 
@@ -109,7 +98,7 @@
 
         .video-card img {
             width: 100%;
-            height: 135px;
+            height: 140px;
             object-fit: cover;
             display: block;
         }
@@ -120,14 +109,13 @@
 
         .video-title {
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 600;
             margin-bottom: 6px;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             line-height: 1.3;
-            color: #ffffff;
         }
 
         .video-meta {
@@ -137,22 +125,15 @@
             justify-content: space-between;
         }
 
-        /* ডিটেইল পেজ */
         #detail-view {
             display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         .back-btn {
             background: var(--card-bg);
-            color: var(--text-main);
+            color: #ffffff;
             border: 1px solid var(--border);
-            padding: 7px 14px;
+            padding: 6px 14px;
             border-radius: 8px;
             margin-bottom: 12px;
             cursor: pointer;
@@ -160,7 +141,6 @@
             align-items: center;
             gap: 6px;
             font-size: 13px;
-            font-weight: 600;
         }
 
         .detail-banner {
@@ -174,24 +154,22 @@
 
         .detail-title {
             font-size: 17px;
-            font-weight: 800;
-            color: #ffffff;
+            font-weight: 700;
+            color: #38bdf8;
             margin-bottom: 14px;
-            line-height: 1.4;
         }
 
-        .alert-box {
-            background: rgba(255, 71, 87, 0.1);
-            border: 1px solid var(--accent);
-            color: #ff6b81;
+        .notice-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
             padding: 10px 12px;
             border-radius: 8px;
             font-size: 12px;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
             line-height: 1.4;
         }
 
-        /* টাস্ক বক্স */
         .task-card {
             background: var(--card-bg);
             border: 1px solid var(--border);
@@ -205,81 +183,70 @@
 
         .task-title {
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 600;
             margin-bottom: 4px;
-            color: #ffffff;
         }
 
         .task-status {
             font-size: 11px;
-            color: #ffa502;
-            font-weight: 600;
+            color: #f59e0b;
         }
 
         .task-status.done {
-            color: #2ed573;
+            color: #10b981;
+            font-weight: 600;
         }
 
         .visit-btn {
-            background: var(--btn-blue);
+            background: var(--primary);
             color: white;
             border: none;
-            padding: 8px 18px;
+            padding: 8px 16px;
             border-radius: 6px;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
             font-size: 13px;
         }
 
         .visit-btn:disabled {
-            background: #2f3542;
-            color: #747d8c;
+            background: #1e293b;
+            color: #64748b;
             cursor: not-allowed;
         }
 
-        /* ডাউনলোড বাটন */
         .download-btn {
             width: 100%;
-            padding: 15px;
+            padding: 14px;
             border-radius: 10px;
             border: none;
             font-size: 15px;
-            font-weight: 800;
+            font-weight: 700;
             margin-top: 14px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            background: #2f3542;
-            color: #747d8c;
-            transition: all 0.3s;
+            background: #1e293b;
+            color: #64748b;
         }
 
         .download-btn.unlocked {
-            background: #2ed573;
+            background: #10b981;
             color: white;
-            box-shadow: 0 4px 15px rgba(46, 213, 115, 0.4);
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
         }
 
         .loader {
             text-align: center;
-            padding: 50px 0;
-            color: var(--accent);
+            padding: 40px 0;
+            color: #38bdf8;
             font-size: 15px;
         }
     </style>
 </head>
 <body>
 
-    <!-- হোম ভিউ -->
     <div id="home-view">
         <div class="header">
             <h1><i class="fas fa-play-circle"></i> Bangla TRX Natok</h1>
@@ -299,17 +266,15 @@
         <div class="video-grid" id="video-grid"></div>
     </div>
 
-    <!-- ডিটেইল ও টাস্ক ভিউ -->
     <div id="detail-view">
         <button class="back-btn" onclick="goBack()"><i class="fas fa-arrow-left"></i> ফিরে যান</button>
         <img id="detail-img" class="detail-banner" src="" alt="Banner">
         <h2 id="detail-title" class="detail-title"></h2>
 
-        <div class="alert-box">
+        <div class="notice-box">
             ⚠️ <b>সতর্কবার্তা:</b> এডে ক্লিক করে অবশ্যই সাইটে পুরো ১০ সেকেন্ড থাকতে হবে। আগে ফিরে আসলে আনলক হবে না।
         </div>
 
-        <!-- Task 1 -->
         <div class="task-card">
             <div>
                 <div class="task-title">Task 1: এডে ক্লিক করে ১০ সেকেন্ড ভিজিট করুন</div>
@@ -318,7 +283,6 @@
             <button id="btn-task-1" class="visit-btn" onclick="startTask(1)">VISIT</button>
         </div>
 
-        <!-- Task 2 -->
         <div class="task-card">
             <div>
                 <div class="task-title">Task 2: এডে ক্লিক করে ১০ সেকেন্ড ভিজিট করুন</div>
@@ -327,7 +291,6 @@
             <button id="btn-task-2" class="visit-btn" onclick="startTask(2)">VISIT</button>
         </div>
 
-        <!-- Download Button -->
         <button id="final-download-btn" class="download-btn" disabled onclick="requestDownload()">
             <i class="fas fa-lock"></i> টাস্ক পূরণ করে আনলক করুন
         </button>
@@ -340,7 +303,7 @@
             tg.ready();
         }
 
-        // রেন্ডার ব্যাকএন্ড এপিআই
+        // রেন্ডার এপিআই লিংক
         const API_BASE = "https://bangla-trx-natok-bot.onrender.com"; 
 
         let appData = { videos: [], ads: {} };
@@ -350,32 +313,32 @@
 
         async function initData() {
             try {
-                // ক্যাশ এড়ানোর জন্য টাইমস্ট্যাম্প যোগ করা হয়েছে
                 const res = await fetch(`${API_BASE}/api/data?t=${Date.now()}`);
-                if (!res.ok) throw new Error("Network response was not ok");
+                if (!res.ok) throw new Error("API Offline");
                 appData = await res.json();
-                document.getElementById('loader').style.display = 'none';
-                renderVideos(appData.videos || []);
+                showContent();
             } catch (err) {
-                // যদি রেন্ডার স্লিপ মোডে থাকে তবে ৫ সেকেন্ড পর আবার চেষ্টা করবে
-                setTimeout(async () => {
-                    try {
-                        const retryRes = await fetch(`${API_BASE}/api/data?t=${Date.now()}`);
-                        appData = await retryRes.json();
-                        document.getElementById('loader').style.display = 'none';
-                        renderVideos(appData.videos || []);
-                    } catch (e) {
-                        document.getElementById('loader').innerHTML = '<div style="color:#ff4757;">⚠️ সার্ভার চালু হতে ১০-১৫ সেকেন্ড সময় নিচ্ছে। অনুগ্রহ করে পেজটি আবার ওপেন করুন।</div>';
-                    }
-                }, 4000);
+                // রেন্ডার স্লিপ মোডে থাকলে সরাসরি GitHub database.json ব্যাকআপ থেকে দ্রুত লোড করবে
+                try {
+                    const fallbackRes = await fetch(`database.json?t=${Date.now()}`);
+                    appData = await fallbackRes.json();
+                    showContent();
+                } catch (e) {
+                    document.getElementById('loader').innerHTML = '⚠️ সার্ভার চালু হচ্ছে, ৫ সেকেন্ড পর রিফ্রেশ দিন!';
+                }
             }
+        }
+
+        function showContent() {
+            document.getElementById('loader').style.display = 'none';
+            renderVideos(appData.videos || []);
         }
 
         function renderVideos(videos) {
             const grid = document.getElementById('video-grid');
             grid.innerHTML = '';
             if (!videos || videos.length === 0) {
-                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #8b949e; padding: 30px;">কোনো ভিডিও পাওয়া যায়নি</div>';
+                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #64748b; padding: 30px;">কোনো ভিডিও পাওয়া যায়নি</div>';
                 return;
             }
             videos.forEach(v => {
@@ -383,11 +346,11 @@
                 card.className = 'video-card';
                 card.onclick = () => openDetail(v);
                 card.innerHTML = `
-                    <img src="${v.thumb || 'https://placehold.co/400x250/161b22/ff4757?text=Natok'}" alt="${v.title}">
+                    <img src="${v.thumb || 'https://placehold.co/400x250/151f32/38bdf8?text=Natok'}" alt="${v.title}">
                     <div class="video-info">
                         <div class="video-title">${v.title}</div>
                         <div class="video-meta">
-                            <span><i class="fas fa-folder" style="color:var(--accent);"></i> ${v.category || 'Natok'}</span>
+                            <span><i class="fas fa-folder"></i> ${v.category || 'Natok'}</span>
                             <span>${v.date || ''}</span>
                         </div>
                     </div>
@@ -411,7 +374,7 @@
             task1Done = false;
             task2Done = false;
 
-            document.getElementById('detail-img').src = video.thumb || 'https://placehold.co/600x300/161b22/ff4757?text=Natok';
+            document.getElementById('detail-img').src = video.thumb || 'https://placehold.co/600x300/151f32/38bdf8?text=Natok';
             document.getElementById('detail-title').innerText = video.title;
 
             resetTaskUI(1);
@@ -487,7 +450,6 @@
             btn.disabled = true;
             btn.innerHTML = '✅ আপনার ইনবক্স চেক করুন!';
 
-            // টেলিগ্রাম বটের ইনবক্সে ডিপলিংক পাঠিয়ে ভিডিও ডেলিভারি করা
             const botUsername = "BanglaTRXNatok_bot";
             const deepLink = `https://t.me/${botUsername}?start=vid_${currentVideo.id}`;
 
