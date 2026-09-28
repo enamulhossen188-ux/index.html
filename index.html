@@ -301,7 +301,15 @@
                 if (currentNum === 2) t2Done = true;
 
                 if (t1Done && t2Done) {
-                    document.getElementById('download-trigger').className = 'dl-btn active';
+                const dlBtn = document.getElementById('download-trigger');
+                if (dlBtn) {
+                    dlBtn.className = 'dl-btn active';
+                    dlBtn.innerText = '📥 ডাউনলোড ভিডিও (ইনবক্সে পান)';
+                    dlBtn.style.pointerEvents = 'auto';
+                    dlBtn.style.display = 'block';
+                    dlBtn.style.background = '#22c55e';
+                    dlBtn.style.color = '#ffffff';
+                }
                 }
             } else {
                 status.innerText = `ব্যর্থ (${timeSpentSeconds}s ছিল)`;
@@ -320,7 +328,7 @@
             if (document.visibilityState === 'visible') verifyTaskOnReturn();
         });
 
-function sendDownload() {
+        function triggerDownload() {
             if (!t1Done || !t2Done) {
                 alert("দয়া করে দুটি টাস্কই সম্পূর্ণ করুন!");
                 return;
