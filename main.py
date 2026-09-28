@@ -64,14 +64,16 @@ def cancel_process(message):
         bot.send_message(chat_id, "🔄 আগের অসমাপ্ত কাজ বাতিল করা হয়েছে।", reply_markup=types.ReplyKeyboardRemove())
     else:
         bot.send_message(chat_id, "বর্তমানে কোনো কাজ চালু নেই।")
-
 @bot.message_handler(commands=['broadcast'])
 def broadcast_start(message):
     if str(message.chat.id) != str(ADMIN_ID):
         bot.reply_to(message, "❌ আপনি অ্যাডমিন নন!")
         return
-    admin_state[message.chat.id] = {'step': 'broadcast_msg'}
-    bot.send_message(message.chat.id, "📢 **সকল ইউজারের ইনবক্সে কী পাঠাতে চান, তা লিখুন:**")
+    admin_state[message.chat.id] = {'step': 'broadcast_content'}
+    bot.send_message(
+        message.chat.id, 
+        "📢 **ব্রডকাস্ট পোস্টটি পাঠান:**\n\nআপনি যে ছবিটি পাঠাতে চান সেটি ক্যাপশন সহ পাঠান। বট নিজে থেকেই নিচে **WATCH NOW** বাটন যুক্ত করে সবার ইনবক্সে পাঠিয়ে দেবে।"
+    )
 
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
@@ -154,21 +156,31 @@ def handle_admin_inputs(message):
 
     step = admin_state[chat_id].get('step')
 
-    if step == 'broadcast_msg' and message.text:
-        text_to_send = message.text
+    if step == 'broadcast_content':
         data = load_data()
         user_list = data.get("users", [])
-        bot.send_message(chat_id, f"🚀 {len(user_list)} জনের কাছে নোটিশ পাঠানো হচ্ছে...")
+        bot.send_message(chat_id, f"🚀 {len(user_list)} জনের ইনবক্সে পোস্ট পাঠানো হচ্ছে...")
         sent_count = 0
+
+        # ওয়াচ নাও বাটন তৈরি
+        fresh_url = f"https://enamulhossen188-ux.github.io/index.html?ts={int(datetime.now().timestamp())}"
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)))
+
         for uid in user_list:
             try:
-                bot.send_message(uid, f"📢 **ভিডিও আপডেট:**\n\n{text_to_send}", parse_mode="Markdown")
+                if message.photo:
+                    bot.send_photo(uid, message.photo[-1].file_id, caption=message.caption or "", reply_markup=markup, parse_mode="Markdown")
+                elif message.video:
+                    bot.send_video(uid, message.video.file_id, caption=message.caption or "", reply_markup=markup, parse_mode="Markdown")
+                elif message.text:
+                    bot.send_message(uid, message.text, reply_markup=markup, parse_mode="Markdown")
                 sent_count += 1
             except Exception:
                 pass
-        del admin_state[chat_id]
-        bot.send_message(chat_id, f"✅ সফলভাবে {sent_count} জনের কাছে নোটিশ পৌঁছে গেছে!")
 
+        del admin_state[chat_id]
+        bot.send_message(chat_id, f"✅ সফলভাবে {sent_count} জনের ইনবক্সে WATCH NOW বাটনসহ পোস্ট চলে গেছে!")
     elif step == 'ad1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
         admin_state[chat_id]['step'] = 'ad2'
