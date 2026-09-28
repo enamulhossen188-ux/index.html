@@ -6,7 +6,6 @@ import threading
 import json
 import os
 from datetime import datetime
-import time
 
 BOT_TOKEN = "8995171178:AAGNwil6GNUEVDSvN3XbneR9CZFYhtZleWw"
 ADMIN_ID = 7255626228
@@ -40,11 +39,11 @@ def load_data():
         return {"users": [], "ads": {"ad1": "https://google.com", "ad2": "https://google.com"}, "videos": [], "download_history": {}}
 
 def save_data(data):
-    # সার্ভারে ডাটা সেভ
+    # সার্ভারে লোকাল ফাইল সেভ
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     
-    # প্রাইভেট চ্যানেলে ক্লাউড ব্যাকআপ পাঠানো (ইনবক্সে কোনো ফাইল যাবে না)
+    # প্রাইভেট চ্যানেলে ক্লাউড ব্যাকআপ (ইনবক্সে কোনো ফাইল যাবে না)
     try:
         with open(DB_FILE, "rb") as f:
             bot.send_document(BACKUP_CHANNEL_ID, f, caption="#DATABASE_BACKUP", disable_notification=True)
@@ -68,15 +67,15 @@ def cancel_process(message):
     chat_id = message.chat.id
     if chat_id in admin_state:
         del admin_state[chat_id]
-        bot.send_message(chat_id, "🔄 আগের অসমাপ্ত প্রসেস বাতিল করা হয়েছে। এখন নতুন কমান্ড দিন।", reply_markup=types.ReplyKeyboardRemove())
+        bot.send_message(chat_id, "🔄 আগের অসমাপ্ত কাজ বাতিল করা হয়েছে।", reply_markup=types.ReplyKeyboardRemove())
     else:
-        bot.send_message(chat_id, "বর্তমানে কোনো প্রসেস চালু নেই।")
+        bot.send_message(chat_id, "বর্তমানে কোনো কাজ চালু নেই।")
 
 # ব্রডকাস্ট কমান্ড
 @bot.message_handler(commands=['broadcast'])
 def broadcast_start(message):
     if str(message.chat.id) != str(ADMIN_ID):
-        bot.reply_to(message, "❌ দুঃখিত, আপনি অ্যাডমিন নন!")
+        bot.reply_to(message, "❌ আপনি অ্যাডমিন নন!")
         return
     admin_state[message.chat.id] = {'step': 'broadcast_msg'}
     bot.send_message(message.chat.id, "📢 **সকল ইউজারের ইনবক্সে কী আপডেট পাঠাতে চান, তা লিখে পাঠান:**")
@@ -85,7 +84,7 @@ def broadcast_start(message):
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
     if str(message.chat.id) != str(ADMIN_ID):
-        bot.reply_to(message, "❌ দুঃখিত, আপনি অ্যাডমিন নন!")
+        bot.reply_to(message, "❌ আপনি অ্যাডমিন নন!")
         return
     admin_state[message.chat.id] = {'step': 'ad1'}
     bot.send_message(message.chat.id, "🎯 **Task 1 এর এড লিংক পাঠান:**")
@@ -94,7 +93,7 @@ def set_ads_start(message):
 @bot.message_handler(commands=['upload'])
 def start_upload(message):
     if str(message.chat.id) != str(ADMIN_ID):
-        bot.reply_to(message, f"❌ দুঃখিত! আপনি অ্যাডমিন নন।\nআপনার আইডি: `{message.chat.id}`\nঅ্যাডমিন আইডি: `{ADMIN_ID}`", parse_mode="Markdown")
+        bot.reply_to(message, f"❌ আপনি অ্যাডমিন নন!\nআপনার আইডি: `{message.chat.id}`\nঅ্যাডমিন আইডি: `{ADMIN_ID}`", parse_mode="Markdown")
         return
         
     admin_state[message.chat.id] = {'step': 'category'}
@@ -102,7 +101,7 @@ def start_upload(message):
     markup.add("BPS5", "Web Series", "Movie")
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
-# /start কমান্ড (ইউজার ভিত্তিক ২৪ ঘণ্টা লক)
+# /start কমান্ড (২৪ ঘণ্টার লক মুক্ত - যতবার খুশি নিতে পারবে)
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -113,44 +112,19 @@ def send_welcome(message):
         data["users"].append(user_id)
         save_data(data)
 
-    if "download_history" not in data:
-        data["download_history"] = {}
-
     text_parts = message.text.split()
     if len(text_parts) > 1 and text_parts[1].startswith("vid_"):
         video_id = text_parts[1].replace("vid_", "")
         target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
 
         if target_video:
-            user_key = f"{user_id}_{video_id}"
-            current_time = time.time()
-            last_download_time = data["download_history"].get(user_key, 0)
-            
-            lock_duration = 24 * 3600  # ২৪ ঘণ্টা
-            time_left = lock_duration - (current_time - last_download_time)
-
-            if time_left > 0:
-                hours = int(time_left // 3600)
-                minutes = int((time_left % 3600) // 60)
-                bot.send_message(
-                    message.chat.id,
-                    f"🔒 **ভিডিওটি সাময়িকভাবে লক করা আছে!**\n\n"
-                    f"আপনি ইতিমধ্যে **{target_video['title']}** ভিডিওটি সংগ্রহ করেছেন।\n"
-                    f"⏳ পুনরায় ইনবক্সে পেতে অপেক্ষা করুন: **{hours} ঘণ্টা {minutes} মিনিট**।"
-                )
-                return
-
             bot.send_message(message.chat.id, f"🎬 **{target_video['title']}**\n⏳ আপনার ভিডিওটি পাঠানো হচ্ছে...")
             try:
                 caption = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
                 bot.send_video(message.chat.id, target_video['file_id'], caption=caption, parse_mode="Markdown")
-                data["download_history"][user_key] = current_time
-                save_data(data)
             except Exception:
                 try:
                     bot.send_document(message.chat.id, target_video['file_id'])
-                    data["download_history"][user_key] = current_time
-                    save_data(data)
                 except Exception:
                     bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে। অ্যাডমিনের সাথে যোগাযোগ করুন।")
             return
@@ -160,7 +134,7 @@ def send_welcome(message):
 
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html?v=8")),
+        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html?v=11")),
         types.InlineKeyboardButton("🔔 VIDEO UPDATE", callback_data="btn_update"),
         types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
     )       
@@ -180,7 +154,7 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         bot.send_message(call.message.chat.id, "💡 **টিউটোরিয়াল:**\nWatch Now বাটনে ক্লিক করে পছন্দের ভিডিওতে চাপুন। দুটি টাস্ক ১০ সেকেন্ড ভিজিট করে ডাউনলোড বাটনে চাপ দিলেই ইনবক্সে ভিডিও চলে আসবে।")
 
-# ডাটাবেজ ব্যাকআপ থেকে রিস্টোর
+# ডাটাবেজ ব্যাকআপ রিস্টোর হ্যান্ডলার
 @bot.message_handler(content_types=['document'])
 def handle_db_restore(message):
     if (str(message.chat.id) == str(ADMIN_ID) or message.chat.id == BACKUP_CHANNEL_ID) and message.document.file_name == "database.json":
@@ -196,7 +170,7 @@ def handle_db_restore(message):
             return
     handle_admin_inputs(message)
 
-# অ্যাডমিন প্রসেস কন্ট্রোলার
+# অ্যাডমিন ইনপুট কন্ট্রোলার
 @bot.message_handler(content_types=['text', 'photo', 'video'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id 
@@ -275,7 +249,7 @@ def handle_admin_inputs(message):
         data['videos'].insert(0, new_video)
         save_data(data)
 
-        # প্রাইভেট ব্যাকআপ চ্যানেলে ভিডিওটি পার্মানেন্ট সেভ পাঠানো
+        # প্রাইভেট ব্যাকআপ চ্যানেলে পার্মানেন্ট সেভ
         try:
             bot.send_video(
                 BACKUP_CHANNEL_ID,
@@ -283,7 +257,7 @@ def handle_admin_inputs(message):
                 caption=f"🎬 **Permanent Backup**\nTitle: {new_video['title']}\nCategory: {new_video['category']}\nID: {new_video['id']}",
                 parse_mode="Markdown"
             )
-        except Exception as e:
+        except Exception:
             try:
                 bot.send_document(
                     BACKUP_CHANNEL_ID,
@@ -291,7 +265,7 @@ def handle_admin_inputs(message):
                     caption=f"📁 **Permanent Backup**\nTitle: {new_video['title']}\nID: {new_video['id']}"
                 )
             except Exception as err:
-                print(f"Channel video backup error: {err}")
+                print(f"Backup error: {err}")
 
         title_done = admin_state[chat_id]['title']
         del admin_state[chat_id]
