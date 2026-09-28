@@ -445,37 +445,71 @@
             btn.innerText = 'VISIT';
         }
 
+      let activeTask = null;
+        let taskStartTime = 0;
+
         function startTask(num) {
             const adUrl = num === 1 ? (appData.ads?.ad1 || 'https://google.com') : (appData.ads?.ad2 || 'https://google.com');
             const btn = document.getElementById(`btn-task-${num}`);
             const st = document.getElementById(`status-task-${num}`);
+
+            activeTask = num;
+            taskStartTime = Date.now();
+
+            btn.disabled = true;
+            st.className = 'task-status';
+            st.innerText = 'এডে ভিজিট চলছে...';
 
             if (tg && tg.openLink) {
                 tg.openLink(adUrl);
             } else {
                 window.open(adUrl, '_blank');
             }
-
-            let timeLeft = 10;
-            btn.disabled = true;
-            st.innerText = `অপেক্ষা করুন (${timeLeft}s)...`;
-
-            const timer = setInterval(() => {
-                timeLeft--;
-                if (timeLeft > 0) {
-                    st.innerText = `অপেক্ষা করুন (${timeLeft}s)...`;
-                } else {
-                    clearInterval(timer);
-                    st.className = 'task-status done';
-                    st.innerHTML = '<i class="fas fa-check-circle"></i> সম্পন্ন!';
-                    btn.innerText = 'DONE';
-                    if (num === 1) task1Done = true;
-                    if (num === 2) task2Done = true;
-                    updateDownloadBtn();
-                }
-            }, 1000);
         }
 
+        window.addEventListener('focus', verifyTaskCompletion);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                verifyTaskCompletion();
+            }
+        });
+
+        function verifyTaskCompletion() {
+            if (!activeTask || taskStartTime === 0) return;
+
+            const timeSpent = (Date.now() - taskStartTime) / 1000;
+            const currentNum = activeTask;
+            const btn = document.getElementById(`btn-task-${currentNum}`);
+            const st = document.getElementById(`status-task-${currentNum}`);
+
+            activeTask = null;
+            taskStartTime = 0;
+
+            if (timeSpent >= 10) {
+                st.className = 'task-status done';
+                st.innerHTML = '<i class="fas fa-check-circle"></i> সম্পন্ন!';
+                btn.innerText = 'DONE';
+                btn.disabled = true;
+
+                if (currentNum === 1) task1Done = true;
+                if (currentNum === 2) task2Done = true;
+
+                updateDownloadBtn();
+            } else {
+                const remain = Math.ceil(10 - timeSpent);
+                st.className = 'task-status';
+                st.style.color = '#ef4444';
+                st.innerText = `❌ ${remain} সেকেন্ড বাকি ছিল! আবার ভিজিট করুন।`;
+                btn.disabled = false;
+                btn.innerText = 'RETRY';
+
+                if (tg && tg.showAlert) {
+                    tg.showAlert('⚠️ আপনি ১০ সেকেন্ড শেষ হওয়ার আগেই ফিরে এসেছেন! পুরো ১০ সেকেন্ড সাইটে থাকুন।');
+                } else {
+                    alert('⚠️ আপনি ১০ সেকেন্ড শেষ হওয়ার আগেই ফিরে এসেছেন! পুরো ১০ সেকেন্ড সাইটে থাকুন।');
+                }
+            }
+                }  
         function updateDownloadBtn() {
             const btn = document.getElementById('final-download-btn');
             if (task1Done && task2Done) {
