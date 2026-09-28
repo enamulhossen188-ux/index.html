@@ -335,8 +335,8 @@ def manage_categories_menu(message):
 
         markup = types.InlineKeyboardMarkup()
         for c in cats:
-            btn_edit = types.InlineKeyboardButton(f"✏️ {c}", callback_data=f"editcat_{c}")
-            btn_del = types.InlineKeyboardButton(f"🗑️ {c}", callback_data=f"delcat_{c}")
+            btn_edit = types.InlineKeyboardButton("✏️ " + str(c), callback_data="editcat_" + str(c))
+            btn_del = types.InlineKeyboardButton("🗑️ " + str(c), callback_data="delcat_" + str(c))
             markup.row(btn_edit, btn_del)
             
         markup.add(types.InlineKeyboardButton("➕ নতুন ক্যাটাগরি যোগ করুন", callback_data="add_new_cat"))
@@ -349,14 +349,14 @@ def manage_categories_menu(message):
         )
         bot.send_message(message.chat.id, msg_text, reply_markup=markup)
     except Exception as e:
-        bot.send_message(message.chat.id, f"ত্রুটি হয়েছে: {str(e)}")
+        bot.send_message(message.chat.id, "ত্রুটি: " + str(e))
 
 @bot.callback_query_handler(func=lambda call: call.data == "add_new_cat")
 def callback_add_cat(call):
     if str(call.message.chat.id) != str(ADMIN_ID):
         return
     bot.answer_callback_query(call.id)
-    msg = bot.send_message(call.message.chat.id, "✍️ নতুন ক্যাটাগরির নাম লিখে পাঠান (অথবা বাতিল করতে /cancel লিখুন):")
+    msg = bot.send_message(call.message.chat.id, "নতুন ক্যাটাগরির নাম লিখে পাঠান (বাতিল করতে /cancel লিখুন):")
     bot.register_next_step_handler(msg, process_add_category)
 
 def process_add_category(message):
@@ -367,12 +367,12 @@ def process_add_category(message):
     data = load_data()
     cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
     if new_cat in cats:
-        bot.send_message(message.chat.id, "❌ এই ক্যাটাগরিটি ইতিমধ্যে রয়েছে!")
+        bot.send_message(message.chat.id, "এই ক্যাটাগরিটি ইতিমধ্যে রয়েছে!")
         return
     cats.append(new_cat)
     data["categories"] = cats
     save_data(data)
-    bot.send_message(message.chat.id, f"✅ নতুন ক্যাটাগরি '{new_cat}' সফলভাবে যোগ হয়েছে!")
+    bot.send_message(message.chat.id, "নতুন ক্যাটাগরি '" + new_cat + "' সফলভাবে যোগ হয়েছে!")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("delcat_"))
 def callback_del_cat(call):
@@ -385,8 +385,8 @@ def callback_del_cat(call):
         cats.remove(target_cat)
         data["categories"] = cats
         save_data(data)
-        bot.answer_callback_query(call.id, f"মুছে ফেলা হয়েছে: {target_cat}")
-        bot.send_message(call.message.chat.id, f"🗑️ ক্যাটাগরি '{target_cat}' মুছে ফেলা হয়েছে!")
+        bot.answer_callback_query(call.id, "মুছে ফেলা হয়েছে")
+        bot.send_message(call.message.chat.id, "ক্যাটাগরি '" + target_cat + "' মুছে ফেলা হয়েছে!")
     else:
         bot.answer_callback_query(call.id, "ক্যাটাগরি পাওয়া যায়নি!")
 
@@ -398,7 +398,7 @@ def callback_edit_cat(call):
     bot.answer_callback_query(call.id)
     msg = bot.send_message(
         call.message.chat.id, 
-        f"✏️ '{old_cat}' এর নতুন নাম কী দিতে চান? নাম লিখে পাঠান (অথবা /cancel দিন):"
+        "'" + old_cat + "' এর নতুন নাম কী দিতে চান? নাম লিখে পাঠান (বাতিল করতে /cancel দিন):"
     )
     bot.register_next_step_handler(msg, lambda m: process_rename_category(m, old_cat))
 
@@ -422,13 +422,10 @@ def process_rename_category(message, old_cat):
         save_data(data)
         bot.send_message(
             message.chat.id, 
-            f"✅ ক্যাটাগরি '{old_cat}' পরিবর্তন করে '{new_cat}' করা হয়েছে!"
+            "ক্যাটাগরি '" + old_cat + "' পরিবর্তন করে '" + new_cat + "' করা হয়েছে!"
         )
     else:
-        bot.send_message(message.chat.id, "❌ মূল ক্যাটাগরি খুঁজে পাওয়া যায়নি।")
-
-    else:
-        bot.send_message(message.chat.id, "❌ মূল ক্যাটাগরি খুঁজে পাওয়া যায়নি।")
+        bot.send_message(message.chat.id, "মূল ক্যাটাগরি খুঁজে পাওয়া যায়নি।")
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
