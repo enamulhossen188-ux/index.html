@@ -320,11 +320,8 @@ def handle_admin_inputs(message):
         del admin_state[chat_id]
         bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\nমিনি অ্যাপে এখনই দেখতে পাবেন।")
 # --- ক্যাটাগরি ম্যানেজমেন্ট ---
-
 @bot.message_handler(commands=['setcategory'])
 def manage_categories_menu(message):
-    if str(message.chat.id) != str(ADMIN_ID):
-        return
     try:
         data = load_data()
         cats = data.get("categories")
@@ -335,19 +332,17 @@ def manage_categories_menu(message):
 
         markup = types.InlineKeyboardMarkup()
         for c in cats:
-            btn_edit = types.InlineKeyboardButton("✏️ " + str(c), callback_data="editcat_" + str(c))
-            btn_del = types.InlineKeyboardButton("🗑️ " + str(c), callback_data="delcat_" + str(c))
+            btn_edit = types.InlineKeyboardButton("[Edit] " + str(c), callback_data="editcat_" + str(c))
+            btn_del = types.InlineKeyboardButton("[Delete] " + str(c), callback_data="delcat_" + str(c))
             markup.row(btn_edit, btn_del)
             
-        markup.add(types.InlineKeyboardButton("➕ নতুন ক্যাটাগরি যোগ করুন", callback_data="add_new_cat"))
+        markup.add(types.InlineKeyboardButton("+ Add New Category", callback_data="add_new_cat"))
 
-        msg_text = (
-            "📁 ক্যাটাগরি কন্ট্রোল প্যানেল:\n\n"
-            "• ক্যাটাগরি এডিট করতে ✏️ বাটনে চাপুন।\n"
-            "• ক্যাটাগরি মুছতে 🗑️ বাটনে চাপুন।\n"
-            "• নতুন ক্যাটাগরি আনতে ➕ বাটনে চাপুন।"
-        )
+        msg_text = "ক্যাটাগরি কন্ট্রোল প্যানেল:\nEdit করতে [Edit] বাটনে চাপুন।\nDelete করতে [Delete] বাটনে চাপুন।"
         bot.send_message(message.chat.id, msg_text, reply_markup=markup)
+    except Exception as e:
+        bot.send_message(message.chat.id, "Error: " + str(e))
+
     except Exception as e:
         bot.send_message(message.chat.id, "ত্রুটি: " + str(e))
 
