@@ -47,9 +47,12 @@ def save_data(data):
 
 admin_state = {}
 
+# CORS ও রেন্ডার ফিক্স সহ API
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
-    return jsonify(load_data())
+    response = jsonify(load_data())
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
 
 @app.route('/')
 def home():
@@ -91,7 +94,7 @@ def start_upload(message):
     markup.add("BPS5", "Web Series", "Movie")
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
-# /start কমান্ড (আনলিমিটেড ডাউনলোড)
+# /start কমান্ড
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -116,16 +119,17 @@ def send_welcome(message):
                 try:
                     bot.send_document(message.chat.id, target_video['file_id'])
                 except Exception:
-                    bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে। অ্যাডমিনের সাথে যোগাযোগ করুন।")
+                    bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে।")
             return
         else:
-            bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি খুঁজে পাওয়া যায়নি!")
+            bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি পাওয়া যায়নি!")
             return
 
-    # সাধারণ মেনু (v=100 যাতে ক্যাশ ক্লিয়ার হয়ে নতুন ফাইল লোড হয়)
+    # ক্যাশ ছাড়া ফ্রেশ মিনি অ্যাপ ওপেন হবে
+    app_url = f"https://enamulhossen188-ux.github.io/index.html?v={int(datetime.now().timestamp())}"
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html?v=100")),
+        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=app_url)),
         types.InlineKeyboardButton("🔔 VIDEO UPDATE", callback_data="btn_update"),
         types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
     )       
@@ -207,8 +211,10 @@ def handle_admin_inputs(message):
         file_id = message.video.file_id if message.video else message.document.file_id
         data = load_data()
         
+        # ইউনিক আইডি নিশ্চিত করা
+        next_id = int(datetime.now().timestamp())
         new_video = {
-            "id": len(data.get('videos', [])) + 1,
+            "id": next_id,
             "category": admin_state[chat_id]['category'],
             "title": admin_state[chat_id]['title'],
             "thumb": admin_state[chat_id]['thumb'],
@@ -229,10 +235,11 @@ def handle_admin_inputs(message):
 
         title_done = admin_state[chat_id]['title']
         del admin_state[chat_id]
-        bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\nমিনি অ্যাপে এখনই দেখা যাচ্ছে।")
+        bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\nমিনি অ্যাপে এখনই দেখতে পাবেন।")
 
 def run_flask():
-    app.run(host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     t = threading.Thread(target=run_flask)
