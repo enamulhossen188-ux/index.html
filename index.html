@@ -407,12 +407,25 @@
             try {
                 const res = await fetch("https://my-bot-server-bnj8.onrender.com/api/data?t=" + Date.now());
                 appData = await res.json();
+                
+                // ডায়নামিক ক্যাটাগরি বাটন তৈরি
+                renderCategoryTabs();
                 renderVideos();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
         }
 
+        function renderCategoryTabs() {
+            const tabsContainer = document.getElementById("categoryTabs");
+            const cats = appData.categories || ["BPS5", "Web Series", "Movie"];
+            
+            let html = `<div class="category-chip ${activeCategory === 'all' ? 'active' : ''}" onclick="filterCategory('all', this)">সবগুলো</div>`;
+            cats.forEach(c => {
+                html += `<div class="category-chip ${activeCategory === c ? 'active' : ''}" onclick="filterCategory('${c}', this)">${c}</div>`;
+            });
+            tabsContainer.innerHTML = html;
+        }
         function renderVideos() {
             const container = document.getElementById("videoContainer");
             const empty = document.getElementById("emptyMessage");
