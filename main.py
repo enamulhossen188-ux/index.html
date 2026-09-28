@@ -153,7 +153,9 @@ def send_welcome(message):
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
-def handle_callbacks(call):if call.data.startswith("del_"):
+
+def handle_callbacks(call):
+    if call.data.startswith("del_"):
         if str(call.message.chat.id) != str(ADMIN_ID):
             bot.answer_callback_query(call.id, "❌ অনুমতি নেই!")
             return
