@@ -17,28 +17,53 @@ CORS(app)
 DB_FILE = "database.json"
 
 def load_data():
-    if not os.path.exists(DB_FILE):
-        default_data = {
-            "users": [],
-            "ads": {
-                "ad1": "https://google.com",
-                "ad2": "https://google.com"
-            },
-            "videos": []
-        }
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump(default_data, f, ensure_ascii=False, indent=2)
-        return default_data
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+
+    default_data = {
+        "users": [],
+        "ads": {
+            "ad1": "https://google.com",
+            "ad2": "https://google.com"
+        },
+        "videos": []
+    }
+    
+    # সার্ভার রিস্টার্ট হলেও অ্যাডমিন ইনবক্সের ব্যাকআপ থেকে ডেটা ফিরিয়ে আনা
     try:
-        with open(DB_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        if os.path.exists("backup_msg.txt"):
+            with open("backup_msg.txt", "r") as f:
+                last_msg_id = int(f.read().strip())
+            file_info = bot.get_file(bot.forward_message(ADMIN_ID, ADMIN_ID, last_msg_id).document.file_id)
+            downloaded = bot.download_file(file_info.file_path)
+            data = json.loads(downloaded.decode('utf-8'))
+            with open(DB_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return data
     except Exception:
-        return {"users": [], "ads": {"ad1": "https://google.com", "ad2": "https://google.com"}, "videos": []}
+        pass
+
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(default_data, f, ensure_ascii=False, indent=2)
+    return default_data
 
 def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-
+    
+    # প্রতিবার আপলোড বা এডিটের পর অ্যাডমিনের ইনবক্সে নিরাপদ ক্লাউড ব্যাকআপ রাখা
+    try:
+        with open(DB_FILE, "rb") as f:
+            msg = bot.send_document(ADMIN_ID, f, caption="💾 Auto Database Backup (DO NOT DELETE)")
+            with open("backup_msg.txt", "w") as bf:
+                bf.write(str(msg.message_id))
+    except Exception:
+        pass
+            
 admin_state = {}
 
 # ফাস্ট এপিআই
