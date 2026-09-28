@@ -115,10 +115,10 @@ def send_welcome(message):
     # সাধারণ /start হলে মেনু দেখানো
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html?v=2"))
+        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html?v=2")),
         types.InlineKeyboardButton("🔔 VIDEO UPDATE", callback_data="btn_update"),
-        types.InlineKeyboardButton("🗣️ যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
-    )
+        types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
+    )       
 
     welcome_text = (
         f"**আসসালামু আলাইকুম {message.from_user.first_name}** 🥰\n\n"
