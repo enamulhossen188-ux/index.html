@@ -326,24 +326,26 @@ def manage_categories_menu(message):
     if str(message.chat.id) != str(ADMIN_ID):
         return
     data = load_data()
-    cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
-    if "categories" not in data:
+    cats = data.get("categories")
+    if not cats or not isinstance(cats, list):
+        cats = ["BPS5", "Web Series", "Movie"]
         data["categories"] = cats
         save_data(data)
 
     markup = types.InlineKeyboardMarkup(row_width=2)
-    buttons = []
     for c in cats:
-        buttons.append(types.InlineKeyboardButton(f"✏️ {c}", callback_data=f"editcat_{c}"))
-        buttons.append(types.InlineKeyboardButton(f"🗑️ {c}", callback_data=f"delcat_{c}"))
-    markup.add(*buttons)
+        btn_edit = types.InlineKeyboardButton(f"✏️ {c}", callback_data=f"editcat_{c}")
+        btn_del = types.InlineKeyboardButton(f"🗑️ {c}", callback_data=f"delcat_{c}")
+        markup.row(btn_edit, btn_del)
+        
     markup.add(types.InlineKeyboardButton("➕ নতুন ক্যাটাগরি যোগ করুন", callback_data="add_new_cat"))
 
-    text = "📁 **ক্যাটাগরি কন্ট্রোল প্যানেল:**\n\n"
-    text += "• নাম বদলাতে **✏️ বাটনে** চাপুন।\n"
-    text += "• মুছে ফেলতে **🗑️ বাটনে** চাপুন।\n"
-    text += "• নতুন ক্যাটাগরি আনতে **➕ বাটনে** চাপুন।"
-    
+    text = (
+        "📁 **ক্যাটাগরি কন্ট্রোল প্যানেল:**\n\n"
+        "• ক্যাটাগরি এডিট করতে **✏️ বাটনে** চাপুন।\n"
+        "• ক্যাটাগরি মুছতে **🗑️ বাটনে** চাপুন।\n"
+        "• নতুন ক্যাটাগরি আনতে **➕ বাটনে** চাপুন।"
+    )
     bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data == "add_new_cat")
