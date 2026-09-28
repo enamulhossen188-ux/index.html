@@ -209,39 +209,47 @@
         }
 
       function openTask(video) {
-            activeVideo = video;
-            t1Done = false; 
-            t2Done = false;
-            activeTaskNum = null;
-            
-            document.getElementById('detail-thumb').src = video.thumb;
-            document.getElementById('detail-title').innerText = video.title;
+    activeVideo = video;
+    t1Done = false;
+    t2Done = false;
+    activeTaskNum = null;
 
-            resetBtn('t1-btn', 't1-status');
-            resetBtn('t2-btn', 't2-status');
-            
-            const dlBtn = document.getElementById('download-trigger');
-            const notice = document.getElementById("inbox-notice");
-            if (notice) notice.style.display = "none";
+    const thumbElem = document.getElementById('detail-thumb');
+    const titleElem = document.getElementById('detail-title');
+    if (thumbElem) thumbElem.src = video.thumb;
+    if (titleElem) titleElem.innerText = video.title;
 
-            // ২৪ ঘণ্টার লক চেক
-            const lockKey = `lock_${video.id}`;
-            const unlockTime = localStorage.getItem(lockKey);
+    resetBtn('t1-btn', 't1-status');
+    resetBtn('t2-btn', 't2-status');
 
-            if (unlockTime && Date.now() < parseInt(unlockTime)) {
-                const diffHours = Math.ceil((parseInt(unlockTime) - Date.now()) / (1000 * 60 * 60));
-                dlBtn.className = 'dl-btn';
-                dlBtn.innerText = `🔒 লক আছে (${diffHours} ঘণ্টা পর আনলক হবে)`;
-                dlBtn.style.pointerEvents = "none";
-            } else {
-                dlBtn.className = 'dl-btn';
-                dlBtn.innerText = "📥 ডাউনলোড ভিডিও";
-                dlBtn.style.pointerEvents = "auto";
-            }
+    const dlBtn = document.getElementById('download-trigger');
+    const notice = document.getElementById("inbox-notice");
+    if (notice) notice.style.display = "none";
 
-            document.getElementById('list-view').style.display = 'none';
-            document.getElementById('task-view').style.display = 'block';
-        }  
+    // ২৪ ঘণ্টার লক চেক
+    const lockKey = `lock_${video.id}`;
+    const unlockTime = localStorage.getItem(lockKey);
+
+    if (dlBtn) {
+        if (unlockTime && Date.now() < parseInt(unlockTime)) {
+            const diffHours = Math.ceil((parseInt(unlockTime) - Date.now()) / (1000 * 60 * 60));
+            dlBtn.className = 'dl-btn';
+            dlBtn.innerText = `🔒 লক আছে (${diffHours} ঘণ্টা পর আনলক হবে)`;
+            dlBtn.style.pointerEvents = "none";
+        } else {
+            dlBtn.className = 'dl-btn';
+            dlBtn.innerText = "📥 ডাউনলোড ভিডিও";
+            dlBtn.style.pointerEvents = "auto";
+        }
+    }
+
+    // ভিউ পরিবর্তন (আইডি না পেলেও যাতে ক্র্যাশ না করে)
+    const listView = document.getElementById('list-view') || document.getElementById('video-container');
+    const taskView = document.getElementById('task-view');
+
+    if (listView) listView.style.display = 'none';
+    if (taskView) taskView.style.display = 'block';
+                                              }
 
         function resetBtn(btnId, statusId) {
             const btn = document.getElementById(btnId);
