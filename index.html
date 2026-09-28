@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bachelor Point Mini App</title>
+    <title>Bangla TRX Natok</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -16,7 +16,6 @@
             --input-bg: #1e232d;
         }
 
-        /* লাইট মোড ভেরিয়েবল */
         body.light-theme {
             --bg-color: #f1f5f9;
             --card-bg: #ffffff;
@@ -30,32 +29,28 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); padding: 12px; transition: 0.3s background; }
 
-        /* Top Header */
         .top-nav { display: flex; justify-content: space-between; align-items: center; padding: 6px 0 14px; }
         .logo { font-size: 19px; font-weight: bold; }
         .logo span { color: #ef4444; }
         .settings-btn { width: 38px; height: 38px; border-radius: 50%; background: #ec4899; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #f43f5e; box-shadow: 0 0 10px rgba(236,72,153,0.5); font-size: 18px; }
 
-        /* Category Tabs */
         .category-scroll { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
         .cat-btn { flex: 1; min-width: 90px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: #1e222b; color: #94a3b8; font-weight: bold; font-size: 13px; text-align: center; cursor: pointer; }
         body.light-theme .cat-btn { background: #e2e8f0; color: #475569; }
         .cat-btn.active { background: #dc2626; color: #fff; border-color: #ef4444; }
 
-        /* Search Bar */
         .search-box { position: relative; margin-bottom: 16px; }
         .search-box input { width: 100%; padding: 12px 14px 12px 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: var(--input-bg); color: var(--text-main); font-size: 14px; outline: none; }
         .search-icon { position: absolute; left: 12px; top: 12px; color: var(--text-sub); }
 
-        /* Video List Cards */
-        .video-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 2px solid var(--border-card); cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+        .video-card { background: var(--card-bg); border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 2px solid var(--border-card); cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.3); transition: transform 0.2s ease; }
+        .video-card:active { transform: scale(0.98); }
         .thumb-box { position: relative; width: 100%; height: 230px; background: #000; }
         .thumb-box img { width: 100%; height: 100%; object-fit: cover; }
         .card-details { padding: 12px 14px; }
         .card-title { font-size: 15px; font-weight: bold; line-height: 1.4; margin-bottom: 6px; }
         .card-date { font-size: 12px; color: #ef4444; display: flex; align-items: center; gap: 4px; }
 
-        /* Task View */
         #task-view { display: none; }
         .back-btn { background: #334155; color: #fff; border: none; padding: 8px 14px; border-radius: 8px; margin-bottom: 14px; cursor: pointer; }
         .task-card { background: var(--card-bg); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 14px; }
@@ -63,14 +58,13 @@
         .visit-btn { background: #0284c7; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .visit-btn.done { background: #10b981; pointer-events: none; }
         .timer-badge { color: #f59e0b; font-weight: bold; font-size: 13px; }
-        .dl-btn { width: 100%; padding: 14px; background: #334155; color: #94a3b8; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: not-allowed; margin-top: 10px; }
-        .dl-btn.active { background: #10b981; color: #fff; cursor: pointer; box-shadow: 0 4px 14px rgba(16,185,129,0.4); }
+        .dl-btn { width: 100%; padding: 14px; background: #334155; color: #94a3b8; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: not-allowed; margin-top: 14px; pointer-events: none; transition: 0.3s background; }
+        .dl-btn.active { background: #22c55e; color: #fff; cursor: pointer; box-shadow: 0 4px 14px rgba(34,197,94,0.4); pointer-events: auto; }
         .notice-box { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 14px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <!-- Top Bar -->
     <div class="top-nav">
         <div class="logo"><span>Bachelor</span> Point</div>
         <div class="settings-btn" onclick="toggleTheme()" title="থিম পরিবর্তন">⚙️</div>
@@ -78,14 +72,12 @@
 
     <!-- Main Content -->
     <div id="list-view">
-        <!-- Categories -->
         <div class="category-scroll">
             <button class="cat-btn active" onclick="setCategory('BPS5')">BPS5</button>
             <button class="cat-btn" onclick="setCategory('Web Series')">Web Series</button>
             <button class="cat-btn" onclick="setCategory('Movie')">Movie</button>
         </div>
 
-        <!-- Search Bar -->
         <div class="search-box">
             <span class="search-icon">🔍</span>
             <input type="text" id="searchInput" placeholder="ভিডিও নাম বা এপিসোড লিখে সার্চ দিন" oninput="filterVideos()">
@@ -124,13 +116,20 @@
             </div>
         </div>
 
-        <div id="inbox-notice" style="display:none; text-align:center; color:#22c55e; font-weight:bold; margin-top:12px; font-size:15px;">
-    ✅ ভিডিও পাঠানো হয়েছে! আপনার ইনবক্স চেক করুন...
+        <!-- ডাউনলোড বাটন যা পূর্বে অনুপস্থিত ছিল -->
+        <button id="download-trigger" class="dl-btn" onclick="triggerDownload()">🔒 টাস্ক দুটি সম্পন্ন করুন</button>
+
+        <div id="inbox-notice" style="display:none; text-align:center; color:#22c55e; font-weight:bold; margin-top:14px; font-size:15px;">
+            ✅ ভিডিওটি ইনবক্সে পাঠানো হয়েছে! টেলিগ্রাম চেক করুন...
         </div>
+    </div>
 
     <script>
         const tg = window.Telegram?.WebApp;
-        if (tg) tg.expand();
+        if (tg) {
+            tg.expand();
+            tg.ready();
+        }
 
         const BACKEND_URL = "https://my-bot-server-bnj8.onrender.com";
 
@@ -143,20 +142,19 @@
         let activeTaskNum = null;
         let taskStartTime = null;
 
-        // ডার্ক/লাইট মোড টগল
         function toggleTheme() {
             document.body.classList.toggle('light-theme');
         }
 
         async function fetchContent() {
             try {
-                const res = await fetch(`${BACKEND_URL}/api/data`);
+                const res = await fetch(`${BACKEND_URL}/api/data?t=${Date.now()}`);
                 const data = await res.json();
                 allVideos = data.videos || [];
                 if (data.ads && data.ads.ad1) currentAds = data.ads;
                 renderVideos();
             } catch (e) {
-                document.getElementById('video-container').innerHTML = "<div style='text-align:center; color:#94a3b8; padding:30px;'>লোড হচ্ছে...</div>";
+                document.getElementById('video-container').innerHTML = "<div style='text-align:center; color:#ef4444; padding:30px;'>সার্ভার কানেক্ট হতে পারছে না! আবার চেষ্টা করুন।</div>";
             }
         }
 
@@ -189,67 +187,62 @@
             }
 
             filtered.forEach(v => {
-        const card = document.createElement('div');
-        card.className = 'video-card';
-        card.style.cursor = 'pointer';
-        card.onclick = function() {
-            openTask(v);
-        };
-        card.innerHTML = `
-            <div class="thumb-box" style="pointer-events: none;">
-                <img src="${v.thumb}" onerror="this.src='https://placehold.co/600x400/0f172a/38bdf8?text=Natok'">
-            </div>
-            <div class="card-details" style="pointer-events: none;">
-                <div class="card-title">${v.title}</div>
-                <div class="card-date">🕒 ${v.date || 'Sep 27, 2026'}</div>
-            </div>
-        `;
-        container.appendChild(card);
-    });
+                const card = document.createElement('div');
+                card.className = 'video-card';
+                card.onclick = function() {
+                    openTask(v);
+                };
+                card.innerHTML = `
+                    <div class="thumb-box" style="pointer-events: none;">
+                        <img src="${v.thumb}" onerror="this.src='https://placehold.co/600x400/0f172a/38bdf8?text=Natok'">
+                    </div>
+                    <div class="card-details" style="pointer-events: none;">
+                        <div class="card-title">${v.title}</div>
+                        <div class="card-date">🕒 ${v.date || 'Sep 27, 2026'}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
         }
 
-      function openTask(video) {
-    activeVideo = video;
-    t1Done = false;
-    t2Done = false;
-    activeTaskNum = null;
+        function openTask(video) {
+            activeVideo = video;
+            t1Done = false;
+            t2Done = false;
+            activeTaskNum = null;
 
-    const thumbElem = document.getElementById('detail-thumb');
-    const titleElem = document.getElementById('detail-title');
-    if (thumbElem) thumbElem.src = video.thumb;
-    if (titleElem) titleElem.innerText = video.title;
+            const thumbElem = document.getElementById('detail-thumb');
+            const titleElem = document.getElementById('detail-title');
+            if (thumbElem) thumbElem.src = video.thumb;
+            if (titleElem) titleElem.innerText = video.title;
 
-    resetBtn('t1-btn', 't1-status');
-    resetBtn('t2-btn', 't2-status');
+            resetBtn('t1-btn', 't1-status');
+            resetBtn('t2-btn', 't2-status');
 
-    const dlBtn = document.getElementById('download-trigger');
-    const notice = document.getElementById("inbox-notice");
-    if (notice) notice.style.display = "none";
+            const dlBtn = document.getElementById('download-trigger');
+            const notice = document.getElementById("inbox-notice");
+            if (notice) notice.style.display = "none";
 
-    // ২৪ ঘণ্টার লক চেক
-    const lockKey = `lock_${video.id}`;
-    const unlockTime = localStorage.getItem(lockKey);
+            // ২৪ ঘণ্টার লক চেক
+            const lockKey = `lock_${video.id}`;
+            const unlockTime = localStorage.getItem(lockKey);
 
-    if (dlBtn) {
-        if (unlockTime && Date.now() < parseInt(unlockTime)) {
-            const diffHours = Math.ceil((parseInt(unlockTime) - Date.now()) / (1000 * 60 * 60));
-            dlBtn.className = 'dl-btn';
-            dlBtn.innerText = `🔒 লক আছে (${diffHours} ঘণ্টা পর আনলক হবে)`;
-            dlBtn.style.pointerEvents = "none";
-        } else {
-            dlBtn.className = 'dl-btn';
-            dlBtn.innerText = "📥 ডাউনলোড ভিডিও";
-            dlBtn.style.pointerEvents = "auto";
+            if (dlBtn) {
+                if (unlockTime && Date.now() < parseInt(unlockTime)) {
+                    const diffHours = Math.ceil((parseInt(unlockTime) - Date.now()) / (1000 * 60 * 60));
+                    dlBtn.className = 'dl-btn';
+                    dlBtn.innerText = `🔒 লক আছে (${diffHours} ঘণ্টা পর আনলক হবে)`;
+                    dlBtn.style.pointerEvents = "none";
+                } else {
+                    dlBtn.className = 'dl-btn';
+                    dlBtn.innerText = "🔒 টাস্ক দুটি সম্পন্ন করুন";
+                    dlBtn.style.pointerEvents = "none";
+                }
+            }
+
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('task-view').style.display = 'block';
         }
-    }
-
-    // ভিউ পরিবর্তন (আইডি না পেলেও যাতে ক্র্যাশ না করে)
-    const listView = document.getElementById('list-view') || document.getElementById('video-container');
-    const taskView = document.getElementById('task-view');
-
-    if (listView) listView.style.display = 'none';
-    if (taskView) taskView.style.display = 'block';
-                                              }
 
         function resetBtn(btnId, statusId) {
             const btn = document.getElementById(btnId);
@@ -301,15 +294,12 @@
                 if (currentNum === 2) t2Done = true;
 
                 if (t1Done && t2Done) {
-                const dlBtn = document.getElementById('download-trigger');
-                if (dlBtn) {
-                    dlBtn.className = 'dl-btn active';
-                    dlBtn.innerText = '📥 ডাউনলোড ভিডিও (ইনবক্সে পান)';
-                    dlBtn.style.pointerEvents = 'auto';
-                    dlBtn.style.display = 'block';
-                    dlBtn.style.background = '#22c55e';
-                    dlBtn.style.color = '#ffffff';
-                }
+                    const dlBtn = document.getElementById('download-trigger');
+                    if (dlBtn) {
+                        dlBtn.className = 'dl-btn active';
+                        dlBtn.innerText = '📥 ডাউনলোড ভিডিও (ইনবক্সে পান)';
+                        dlBtn.style.pointerEvents = 'auto';
+                    }
                 }
             } else {
                 status.innerText = `ব্যর্থ (${timeSpentSeconds}s ছিল)`;
@@ -336,35 +326,47 @@
 
             if (!activeVideo) return;
 
-            // বাটনের নিচে নোটিশ দেখানো
-            const notice = document.getElementById("inbox-notice");
-            if (notice) {
-                notice.style.display = "block";
-            }
-
-            // বাটনের টেক্সট পরিবর্তন
             const dlBtn = document.getElementById("download-trigger");
+            const notice = document.getElementById("inbox-notice");
+
             if (dlBtn) {
                 dlBtn.innerText = "⏳ পাঠানো হচ্ছে...";
                 dlBtn.style.pointerEvents = "none";
             }
 
-            // লোকাল স্টোরেজে ২৪ ঘণ্টার লক সেট করা
+            if (notice) {
+                notice.style.display = "block";
+            }
+
+            // ২৪ ঘণ্টার লক সেট করা
             localStorage.setItem(`lock_${activeVideo.id}`, Date.now() + (24 * 60 * 60 * 1000));
 
+            // টেলিগ্রাম মিনি অ্যাপ ডাটা পাঠানো
+            if (tg && tg.sendData) {
+                tg.sendData(JSON.stringify({
+                    action: "send_video",
+                    video_id: activeVideo.id,
+                    file_id: activeVideo.file_id
+                }));
+            }
+
+            // টেলিগ্রাম ডিপলিংক ফলব্যাক (নিশ্চিত ইনবক্স ডেলিভারি)
             const botUsername = "BanglaTRXNatok_bot";
             const downloadUrl = `https://t.me/${botUsername}?start=vid_${activeVideo.id}`;
 
-            if (tg && tg.openTelegramLink) {
-                tg.openTelegramLink(downloadUrl);
-                setTimeout(() => {
-                    tg.close();
-                }, 2000);
-            } else {
-                window.location.href = downloadUrl;
-            }
-}       
+            setTimeout(() => {
+                if (tg && tg.openTelegramLink) {
+                    tg.openTelegramLink(downloadUrl);
+                } else {
+                    window.location.href = downloadUrl;
+                }
+                if (tg && tg.close) {
+                    setTimeout(() => tg.close(), 1000);
+                }
+            }, 600);
+        }
+
         fetchContent();
     </script>
 </body>
-  </html>
+                </html>
