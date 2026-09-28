@@ -153,8 +153,13 @@ def set_ads_start(message):
 # নতুন ভিডিও আপলোড
 @bot.message_handler(commands=['upload'])
 def start_upload(message):
-    if message.chat.id != ADMIN_ID:
+    current_id = str(message.chat.id)
+    target_id = str(ADMIN_ID)
+    
+    if current_id != target_id:
+        bot.reply_to(message, f"❌ দুঃখিত! আপনি অ্যাডমিন নন।\nআপনার আইডি: `{current_id}`\nপ্রয়োজনীয় আইডি: `{target_id}`", parse_mode="Markdown")
         return
+        
     admin_state[message.chat.id] = {'step': 'category'}
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
     markup.add("BPS5", "Web Series", "Movie")
