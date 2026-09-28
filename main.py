@@ -7,9 +7,9 @@ import json
 import os
 from datetime import datetime
 import time
-# আপনার বটের টোকেন এবং টেলিগ্রাম আইডি
+
 BOT_TOKEN = "8995171178:AAGNwil6GNUEVDSvN3XbneR9CZFYhtZleWw"
-ADMIN_ID = 7255626228  # আপনার সংখ্যাযুক্ত টেলিগ্রাম আইডি
+ADMIN_ID = 7255626228  # আপনার টেলিগ্রাম আইডি
 
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
@@ -17,7 +17,7 @@ CORS(app)
 
 DB_FILE = "database.json"
 
-# ডাটাবেজ হ্যান্ডলিং
+# ডাটাবেজ ব্যাকআপ ও হ্যান্ডলিং লজিক
 def load_data():
     if not os.path.exists(DB_FILE):
         default_data = {
@@ -26,17 +26,28 @@ def load_data():
                 "ad1": "https://google.com",
                 "ad2": "https://google.com"
             },
-            "videos": []
+            "videos": [],
+            "download_history": {}
         }
         with open(DB_FILE, "w", encoding="utf-8") as f:
             json.dump(default_data, f, ensure_ascii=False, indent=2)
         return default_data
-    with open(DB_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"users": [], "ads": {"ad1": "https://google.com", "ad2": "https://google.com"}, "videos": [], "download_history": {}}
 
 def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    
+    # অ্যাডমিন চ্যাটে স্বয়ংক্রিয় ব্যাকআপ ফাইল পাঠানো (যাতে ডেটা কখনো না হারায়)
+    try:
+        with open(DB_FILE, "rb") as f:
+            bot.send_document(ADMIN_ID, f, caption="💾 Auto Backup: Database Updated")
+    except Exception as e:
+        print(f"Auto Backup Error: {e}")
 
 admin_state = {}
 
@@ -49,7 +60,7 @@ def get_app_data():
 def home():
     return "Bot Server is Live 24/7!"
 
-# /start কমান্ড (ডিপলিংক, ২৪ ঘণ্টা লক ও সাধারণ স্টার্ট)
+# /start কমান্ড
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -60,26 +71,20 @@ def send_welcome(message):
         data["users"].append(user_id)
         save_data(data)
 
-    # ভিডিও হিস্ট্রি ও টাইমার ট্র্যাকিং ডাটাবেজ
     if "download_history" not in data:
         data["download_history"] = {}
 
-    # যদি ভিডিও ডাউনলোডের রিকোয়েস্ট নিয়ে স্টার্ট আসে
+    # ডিপলিংক চেক
     text_parts = message.text.split()
     if len(text_parts) > 1 and text_parts[1].startswith("vid_"):
         video_id = text_parts[1].replace("vid_", "")
-        target_video = None
-        for v in data.get("videos", []):
-            if str(v.get("id")) == str(video_id):
-                target_video = v
-                break
+        target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
 
         if target_video:
             user_key = f"{user_id}_{video_id}"
             current_time = time.time()
             last_download_time = data["download_history"].get(user_key, 0)
             
-            # ২৪ ঘণ্টা = ৮৬৪০০ সেকেন্ড
             lock_duration = 24 * 3600
             time_left = lock_duration - (current_time - last_download_time)
 
@@ -94,7 +99,6 @@ def send_welcome(message):
                 )
                 return
 
-            # প্রথমবার বা ২৪ ঘণ্টা পর ভিডিও ডেলিভারি
             bot.send_message(message.chat.id, f"🎬 **{target_video['title']}**\n⏳ আপনার ভিডিওটি পাঠানো হচ্ছে...")
             try:
                 bot.send_video(message.chat.id, target_video['file_id'])
@@ -112,19 +116,20 @@ def send_welcome(message):
             bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি খুঁজে পাওয়া যায়নি!")
             return
 
-    # সাধারণ /start হলে মেনু দেখানো
+    # সাধারণ /start কিবোর্ড
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html?v=2")),
+        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html?v=3")),
         types.InlineKeyboardButton("🔔 VIDEO UPDATE", callback_data="btn_update"),
         types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
     )       
 
     welcome_text = (
         f"**আসসালামু আলাইকুম {message.from_user.first_name}** 🥰\n\n"
-        "আমাদের বট ২৪ ঘণ্টা সচল। ভিডিও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন।"
+        "আমাদের বট ২৪ ঘণ্টা সচল। ভিডিও দেখতে ও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন।"
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
+
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     if call.data == "btn_update":
@@ -132,7 +137,7 @@ def handle_callbacks(call):
         bot.send_message(call.message.chat.id, "📢 **ভিডিও আপডেট:**\nনতুন পর্ব আপলোড করা হয়েছে! স্টার্ট দিয়ে Watch Now থেকে দেখে নিন।", parse_mode="Markdown")
     elif call.data == "btn_help":
         bot.answer_callback_query(call.id)
-        bot.send_message(call.message.chat.id, "💡 **টিউটোরিয়াল:**\nWatch Now বাটনে ক্লিক করে যে ভিডিও দেখতে চান সেটিতে চাপুন। দুটি টাস্ক ১০ সেকেন্ড ভিজিট করে ডাউনলোড বাটনে চাপ দিলেই ভিডিও পেয়ে যাবেন।")
+        bot.send_message(call.message.chat.id, "💡 **টিউটোরিয়াল:**\nWatch Now বাটনে ক্লিক করে যে ভিডিও দেখতে চান সেটিতে চাপুন। দুটি টাস্ক ১০ সেকেন্ড ভিজিট করে ডাউনলোড বাটনে চাপ দিলেই ইনবক্সে ভিডিও পেয়ে যাবেন।")
 
 # ইনবক্সে সব ইউজারকে মেসেজ/আপডেট পাঠানোর কমান্ড
 @bot.message_handler(commands=['broadcast'])
@@ -150,6 +155,7 @@ def set_ads_start(message):
         return
     admin_state[message.chat.id] = {'step': 'ad1'}
     bot.send_message(message.chat.id, "🎯 **Task 1 এর এড লিংক পাঠান:**")
+
 # নতুন ভিডিও আপলোড
 @bot.message_handler(commands=['upload'])
 def start_upload(message):
@@ -165,8 +171,25 @@ def start_upload(message):
     markup.add("BPS5", "Web Series", "Movie")
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
+# ডাটাবেজ ব্যাকআপ ফাইল থেকে রিস্টোর করার অপশন (প্রয়োজনে অ্যাডমিন database.json ফাইল পাঠালে তা সেভ হয়ে যাবে)
+@bot.message_handler(content_types=['document'])
+def handle_db_restore(message):
+    if message.chat.id == ADMIN_ID and message.document.file_name == "database.json":
+        try:
+            file_info = bot.get_file(message.document.file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            with open(DB_FILE, "wb") as f:
+                f.write(downloaded_file)
+            bot.reply_to(message, "✅ **Database সফলভাবে Restore করা হয়েছে!** সব ভিডিও আবার যুক্ত হয়ে গেছে।")
+            return
+        except Exception as e:
+            bot.reply_to(message, f"❌ Restore Error: {e}")
+            return
+    # যদি ব্যাকআপ ফাইল না হয়, তবে সাধারণ হ্যান্ডলারে যাবে
+    handle_admin_inputs(message)
+
 # অ্যাডমিন প্রসেস কন্ট্রোলার
-@bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
+@bot.message_handler(content_types=['text', 'photo', 'video'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id 
     if chat_id != ADMIN_ID or chat_id not in admin_state:
@@ -174,7 +197,7 @@ def handle_admin_inputs(message):
 
     step = admin_state[chat_id].get('step')
 
-    # ব্রডকাস্ট নোটিশ সেন্ডিং
+    # ব্রডকাস্ট নোটিশ
     if step == 'broadcast_msg' and message.text:
         text_to_send = message.text
         data = load_data()
@@ -248,17 +271,34 @@ def handle_admin_inputs(message):
         del admin_state[chat_id]
         bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\nমিনি অ্যাপে এখনই দেখা যাচ্ছে।")
 
-# মিনি অ্যাপ ডাউনলোড হ্যান্ডলার
+# মিনি অ্যাপ থেকে ডাউনলোড ট্রিগার হলে ইনবক্সে সরাসরি ভিডিও পাঠানোর হ্যান্ডলার
 @bot.message_handler(content_types=['web_app_data'])
 def handle_webapp_data(message):
     try:
-        data = json.loads(message.web_app_data.data)
-        if data.get('action') == 'send_video':
-            file_id = data.get('file_id')
+        payload = json.loads(message.web_app_data.data)
+        data = load_data()
+        
+        # মিনি অ্যাপ থেকে আসা video_id বা file_id হ্যান্ডল করা
+        v_id = payload.get('video_id')
+        target_video = None
+        
+        if v_id:
+            target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(v_id)), None)
+            
+        file_id = target_video['file_id'] if target_video else payload.get('file_id')
+
+        if file_id:
             bot.send_message(message.chat.id, "⏳ আপনার ভিডিওটি পাঠানো হচ্ছে...")
-            bot.send_video(message.chat.id, file_id)
+            try:
+                caption = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!" if target_video else ""
+                bot.send_video(message.chat.id, file_id, caption=caption, parse_mode="Markdown")
+            except Exception:
+                bot.send_document(message.chat.id, file_id)
+        else:
+            bot.send_message(message.chat.id, "❌ ভিডিওটি খুঁজে পাওয়া যায়নি!")
     except Exception as e:
-        bot.send_message(message.chat.id, "ভিডিওটি পাঠাতে সমস্যা হচ্ছে। আবার চেষ্টা করুন।")
+        print(f"WebApp Data Error: {e}")
+        bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।")
 
 def run_flask():
     app.run(host="0.0.0.0", port=8080)
