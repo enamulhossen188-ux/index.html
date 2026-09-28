@@ -82,7 +82,20 @@ def set_ads_start(message):
         return
     admin_state[message.chat.id] = {'step': 'ad1'}
     bot.send_message(message.chat.id, "🎯 **Task 1 এর এড লিংক পাঠান:**")
-
+@bot.message_handler(commands=['delete'])
+def delete_start(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.reply_to(message, "❌ আপনি অ্যাডমিন নন!")
+        return
+    data = load_data()
+    videos = data.get("videos", [])
+    if not videos:
+        bot.send_message(message.chat.id, "ℹ️ ডাটাবেজে কোনো ভিডিও নেই!")
+        return
+    markup = types.InlineKeyboardMarkup()
+    for v in videos:
+        markup.add(types.InlineKeyboardButton(f"🗑️ {v.get('title', 'Unknown')}", callback_data=f"del_{v.get('id')}"))
+    bot.send_message(message.chat.id, "🗑️ **কোন ভিডিওটি ডিলিট করতে চান? ক্লিক করুন:**", reply_markup=markup)
 @bot.message_handler(commands=['upload'])
 def start_upload(message):
     if str(message.chat.id) != str(ADMIN_ID):
@@ -140,7 +153,22 @@ def send_welcome(message):
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
-def handle_callbacks(call):
+def handle_callbacks(call):if call.data.startswith("del_"):
+        if str(call.message.chat.id) != str(ADMIN_ID):
+            bot.answer_callback_query(call.id, "❌ অনুমতি নেই!")
+            return
+        target_id = call.data.replace("del_", "")
+        data = load_data()
+        videos = data.get("videos", [])
+        new_videos = [v for v in videos if str(v.get("id")) != str(target_id)]
+        if len(new_videos) < len(videos):
+            data["videos"] = new_videos
+            save_data(data)
+            bot.answer_callback_query(call.id, "✅ মুছে ফেলা হয়েছে!")
+            bot.edit_message_text("✅ **ভিডিওটি সফলভাবে ডিলিট করা হয়েছে!**", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        else:
+            bot.answer_callback_query(call.id, "❌ পাওয়া যায়নি!")
+        return
     if call.data == "btn_update":
         bot.answer_callback_query(call.id)
         bot.send_message(call.message.chat.id, "📢 **ভিডিও আপডেট:**\nনতুন পর্ব আপলোড করা হয়েছে! স্টার্ট দিয়ে Watch Now থেকে দেখে নিন।", parse_mode="Markdown")
