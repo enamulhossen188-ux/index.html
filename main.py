@@ -40,11 +40,11 @@ def load_data():
         return {"users": [], "ads": {"ad1": "https://google.com", "ad2": "https://google.com"}, "videos": [], "download_history": {}}
 
 def save_data(data):
-    # লোকাল সার্ভারে সেভ
+    # সার্ভারে ডাটা সেভ
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     
-    # প্রাইভেট চ্যানেলে সাইলেন্ট ডাটা ব্যাকআপ পাঠানো (ইনবক্সে কোনো ফাইল যাবে না)
+    # প্রাইভেট চ্যানেলে ক্লাউড ব্যাকআপ পাঠানো (ইনবক্সে কোনো ফাইল যাবে না)
     try:
         with open(DB_FILE, "rb") as f:
             bot.send_document(BACKUP_CHANNEL_ID, f, caption="#DATABASE_BACKUP", disable_notification=True)
@@ -61,6 +61,46 @@ def get_app_data():
 @app.route('/')
 def home():
     return "Bot Server is Live 24/7!"
+
+# বাতিল বা রিসেট কমান্ড
+@bot.message_handler(commands=['cancel'])
+def cancel_process(message):
+    chat_id = message.chat.id
+    if chat_id in admin_state:
+        del admin_state[chat_id]
+        bot.send_message(chat_id, "🔄 আগের অসমাপ্ত প্রসেস বাতিল করা হয়েছে। এখন নতুন কমান্ড দিন।", reply_markup=types.ReplyKeyboardRemove())
+    else:
+        bot.send_message(chat_id, "বর্তমানে কোনো প্রসেস চালু নেই।")
+
+# ব্রডকাস্ট কমান্ড
+@bot.message_handler(commands=['broadcast'])
+def broadcast_start(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.reply_to(message, "❌ দুঃখিত, আপনি অ্যাডমিন নন!")
+        return
+    admin_state[message.chat.id] = {'step': 'broadcast_msg'}
+    bot.send_message(message.chat.id, "📢 **সকল ইউজারের ইনবক্সে কী আপডেট পাঠাতে চান, তা লিখে পাঠান:**")
+
+# এড লিংক সেট
+@bot.message_handler(commands=['setads'])
+def set_ads_start(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.reply_to(message, "❌ দুঃখিত, আপনি অ্যাডমিন নন!")
+        return
+    admin_state[message.chat.id] = {'step': 'ad1'}
+    bot.send_message(message.chat.id, "🎯 **Task 1 এর এড লিংক পাঠান:**")
+
+# ভিডিও আপলোড কমান্ড
+@bot.message_handler(commands=['upload'])
+def start_upload(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.reply_to(message, f"❌ দুঃখিত! আপনি অ্যাডমিন নন।\nআপনার আইডি: `{message.chat.id}`\nঅ্যাডমিন আইডি: `{ADMIN_ID}`", parse_mode="Markdown")
+        return
+        
+    admin_state[message.chat.id] = {'step': 'category'}
+    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+    markup.add("BPS5", "Web Series", "Movie")
+    bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
 # /start কমান্ড (ইউজার ভিত্তিক ২৪ ঘণ্টা লক)
 @bot.message_handler(commands=['start'])
@@ -120,7 +160,7 @@ def send_welcome(message):
 
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html?v=7")),
+        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url="https://enamulhossen188-ux.github.io/index.html?v=8")),
         types.InlineKeyboardButton("🔔 VIDEO UPDATE", callback_data="btn_update"),
         types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
     )       
@@ -140,38 +180,10 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         bot.send_message(call.message.chat.id, "💡 **টিউটোরিয়াল:**\nWatch Now বাটনে ক্লিক করে পছন্দের ভিডিওতে চাপুন। দুটি টাস্ক ১০ সেকেন্ড ভিজিট করে ডাউনলোড বাটনে চাপ দিলেই ইনবক্সে ভিডিও চলে আসবে।")
 
-# ব্রডকাস্ট কমান্ড
-@bot.message_handler(commands=['broadcast'])
-def broadcast_start(message):
-    if message.chat.id != ADMIN_ID:
-        return
-    admin_state[message.chat.id] = {'step': 'broadcast_msg'}
-    bot.send_message(message.chat.id, "📢 **সকল ইউজারের ইনবক্সে কী আপডেট পাঠাতে চান, তা লিখে পাঠান:**")
-
-# এড লিংক সেট
-@bot.message_handler(commands=['setads'])
-def set_ads_start(message):
-    if message.chat.id != ADMIN_ID:
-        return
-    admin_state[message.chat.id] = {'step': 'ad1'}
-    bot.send_message(message.chat.id, "🎯 **Task 1 এর এড লিংক পাঠান:**")
-
-# ভিডিও আপলোড কমান্ড
-@bot.message_handler(commands=['upload'])
-def start_upload(message):
-    if message.chat.id != ADMIN_ID:
-        bot.reply_to(message, "❌ দুঃখিত! আপনি অ্যাডমিন নন।")
-        return
-        
-    admin_state[message.chat.id] = {'step': 'category'}
-    markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-    markup.add("BPS5", "Web Series", "Movie")
-    bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
-
-# প্রাইভেট চ্যানেল বা অ্যাডমিনের পাঠানো ব্যাকআপ থেকে ডাটাবেজ রিস্টোর হ্যান্ডলার
+# ডাটাবেজ ব্যাকআপ থেকে রিস্টোর
 @bot.message_handler(content_types=['document'])
 def handle_db_restore(message):
-    if (message.chat.id == ADMIN_ID or message.chat.id == BACKUP_CHANNEL_ID) and message.document.file_name == "database.json":
+    if (str(message.chat.id) == str(ADMIN_ID) or message.chat.id == BACKUP_CHANNEL_ID) and message.document.file_name == "database.json":
         try:
             file_info = bot.get_file(message.document.file_id)
             downloaded_file = bot.download_file(file_info.file_path)
@@ -184,16 +196,16 @@ def handle_db_restore(message):
             return
     handle_admin_inputs(message)
 
-# অ্যাডমিন প্রসেস কন্ট্রোলার (ভিডিও আপলোড, এড সেট, ব্রডকাস্ট)
+# অ্যাডমিন প্রসেস কন্ট্রোলার
 @bot.message_handler(content_types=['text', 'photo', 'video'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id 
-    if chat_id != ADMIN_ID or chat_id not in admin_state:
+    if str(chat_id) != str(ADMIN_ID) or chat_id not in admin_state:
         return
 
     step = admin_state[chat_id].get('step')
 
-    # ব্রডকাস্ট মেসেজ
+    # ব্রডকাস্ট
     if step == 'broadcast_msg' and message.text:
         text_to_send = message.text
         data = load_data()
@@ -263,7 +275,7 @@ def handle_admin_inputs(message):
         data['videos'].insert(0, new_video)
         save_data(data)
 
-        # 🌟 প্রাইভেট চ্যানেলে স্বয়ংক্রিয় ভিডিও পার্মানেন্ট ব্যাকআপ পাঠানো
+        # প্রাইভেট ব্যাকআপ চ্যানেলে ভিডিওটি পার্মানেন্ট সেভ পাঠানো
         try:
             bot.send_video(
                 BACKUP_CHANNEL_ID,
@@ -283,7 +295,7 @@ def handle_admin_inputs(message):
 
         title_done = admin_state[chat_id]['title']
         del admin_state[chat_id]
-        bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\n✅ ভিডিওটি প্রাইভেট চ্যানেলে ব্যাকআপ রাখা হয়েছে এবং মিনি অ্যাপে এখনই দেখা যাচ্ছে।")
+        bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\n✅ ভিডিওটি প্রাইভেট চ্যানেলে সুরক্ষিত রাখা হয়েছে এবং মিনি অ্যাপে এখনই পাওয়া যাচ্ছে।")
 
 def run_flask():
     app.run(host="0.0.0.0", port=8080)
