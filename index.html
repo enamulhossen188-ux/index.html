@@ -13,6 +13,7 @@
             --text-main: #ffffff;
             --text-sub: #94a3b8;
             --primary: #0284c7;
+            --primary-light: #38bdf8;
             --border: #1e293b;
             --notice-bg: rgba(239, 68, 68, 0.1);
             --notice-border: #ef4444;
@@ -20,12 +21,13 @@
         }
 
         body.light-mode {
-            --bg-color: #f1f5f9;
+            --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --text-main: #0f172a;
             --text-sub: #64748b;
             --primary: #0284c7;
-            --border: #cbd5e1;
+            --primary-light: #0284c7;
+            --border: #e2e8f0;
             --notice-bg: #fee2e2;
             --notice-border: #ef4444;
             --notice-text: #b91c1c;
@@ -45,7 +47,7 @@
             color: var(--text-main);
             padding: 12px;
             padding-bottom: 40px;
-            transition: background-color 0.3s, color 0.3s;
+            transition: background-color 0.2s, color 0.2s;
         }
 
         .header {
@@ -60,7 +62,7 @@
         .header h1 {
             font-size: 19px;
             font-weight: 700;
-            color: #38bdf8;
+            color: var(--primary-light);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -70,7 +72,7 @@
             background: var(--card-bg);
             border: 1px solid var(--border);
             color: var(--text-main);
-            padding: 6px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
@@ -100,13 +102,13 @@
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
 
         .tab-btn.active {
             background: var(--primary);
             color: #ffffff;
-            border-color: #38bdf8;
+            border-color: var(--primary-light);
         }
 
         .video-grid {
@@ -188,7 +190,7 @@
         .detail-title {
             font-size: 17px;
             font-weight: 700;
-            color: #38bdf8;
+            color: var(--primary-light);
             margin-bottom: 14px;
         }
 
@@ -234,7 +236,7 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 8px 18px;
             border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
@@ -242,8 +244,8 @@
         }
 
         .visit-btn:disabled {
-            background: #64748b;
-            color: #cbd5e1;
+            background: #475569;
+            color: #94a3b8;
             cursor: not-allowed;
         }
 
@@ -273,7 +275,7 @@
         .loader {
             text-align: center;
             padding: 40px 0;
-            color: #38bdf8;
+            color: var(--primary-light);
             font-size: 15px;
         }
     </style>
@@ -355,17 +357,19 @@
 
         async function initData() {
             try {
+                // সরাসরি ব্যাকএন্ড থেকে ডেটা নেওয়া
                 const res = await fetch(`${API_BASE}/api/data?t=${Date.now()}`);
                 if (!res.ok) throw new Error("Offline");
                 appData = await res.json();
                 showContent();
             } catch (err) {
+                // সার্ভার চালু হতে দেরি হলে সরাসরি লোকাল রিপোজিটরি ডেটা লোড
                 try {
-                    const fallbackRes = await fetch(`./database.json?t=${Date.now()}`);
-                    appData = await fallbackRes.json();
+                    const localRes = await fetch(`./database.json?t=${Date.now()}`);
+                    appData = await localRes.json();
                     showContent();
                 } catch (e) {
-                    document.getElementById('loader').innerHTML = 'লোড হচ্ছে... ৫ সেকেন্ড পর আবার চেষ্টা করুন।';
+                    document.getElementById('loader').innerHTML = '⚠️ পেজটি একবার বন্ধ করে আবার ওপেন করুন!';
                 }
             }
         }
@@ -501,10 +505,10 @@
                 } else {
                     window.location.href = deepLink;
                 }
-            }, 500);
+            }, 400);
         }
 
         initData();
     </script>
 </body>
-    </html>
+</html>
