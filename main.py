@@ -1,6 +1,6 @@
 import telebot
 from telebot import types
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, make_response
 from flask_cors import CORS
 import threading
 import json
@@ -9,7 +9,7 @@ from datetime import datetime
 
 BOT_TOKEN = "8995171178:AAGNwil6GNUEVDSvN3XbneR9CZFYhtZleWw"
 ADMIN_ID = 7255626228
-BACKUP_CHANNEL_ID = -1003902807907  # আপনার প্রাইভেট ব্যাকআপ চ্যানেল
+BACKUP_CHANNEL_ID = -1003902807907
 
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
@@ -47,12 +47,16 @@ def save_data(data):
 
 admin_state = {}
 
-# CORS ও রেন্ডার ফিক্স সহ API
+# CORS ও সম্পূর্ণ হেডারযুক্ত API
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
-    response = jsonify(load_data())
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    return response
+    data = load_data()
+    resp = make_response(jsonify(data))
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
 
 @app.route('/')
 def home():
@@ -73,7 +77,7 @@ def broadcast_start(message):
         bot.reply_to(message, "❌ আপনি অ্যাডমিন নন!")
         return
     admin_state[message.chat.id] = {'step': 'broadcast_msg'}
-    bot.send_message(message.chat.id, "📢 **সকল ইউজারের ইনবক্সে কী আপডেট পাঠাতে চান, তা লিখে পাঠান:**")
+    bot.send_message(message.chat.id, "📢 **সকল ইউজারের ইনবক্সে কী পাঠাতে চান, তা লিখুন:**")
 
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
@@ -86,7 +90,7 @@ def set_ads_start(message):
 @bot.message_handler(commands=['upload'])
 def start_upload(message):
     if str(message.chat.id) != str(ADMIN_ID):
-        bot.reply_to(message, f"❌ আপনি অ্যাডমিন নন!\nআপনার আইডি: `{message.chat.id}`\nঅ্যাডমিন আইডি: `{ADMIN_ID}`", parse_mode="Markdown")
+        bot.reply_to(message, f"❌ আপনি অ্যাডমিন নন! আপনার আইডি: `{message.chat.id}`", parse_mode="Markdown")
         return
         
     admin_state[message.chat.id] = {'step': 'category'}
@@ -94,7 +98,7 @@ def start_upload(message):
     markup.add("BPS5", "Web Series", "Movie")
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
-# /start কমান্ড
+# /start হ্যান্ডলার
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -122,14 +126,14 @@ def send_welcome(message):
                     bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে।")
             return
         else:
-            bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি পাওয়া যায়নি!")
+            bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি খুঁজে পাওয়া যায়নি!")
             return
 
-    # ক্যাশ ছাড়া ফ্রেশ মিনি অ্যাপ ওপেন হবে
-    app_url = f"https://enamulhossen188-ux.github.io/index.html?v={int(datetime.now().timestamp())}"
+    # ফ্রেশ টাইমস্ট্যাম্পযুক্ত মিনি অ্যাপ বাটন
+    fresh_url = f"https://enamulhossen188-ux.github.io/index.html?ts={int(datetime.now().timestamp())}"
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=app_url)),
+        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)),
         types.InlineKeyboardButton("🔔 VIDEO UPDATE", callback_data="btn_update"),
         types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
     )       
@@ -211,24 +215,27 @@ def handle_admin_inputs(message):
         file_id = message.video.file_id if message.video else message.document.file_id
         data = load_data()
         
-        # ইউনিক আইডি নিশ্চিত করা
-        next_id = int(datetime.now().timestamp())
         new_video = {
-            "id": next_id,
+            "id": int(datetime.now().timestamp()),
             "category": admin_state[chat_id]['category'],
             "title": admin_state[chat_id]['title'],
             "thumb": admin_state[chat_id]['thumb'],
             "file_id": file_id,
             "date": datetime.now().strftime("%b %d, %Y")
         }
+        
+        # ডাটাবেজে নতুন ভিডিও সবার শুরুতে যুক্ত করা
+        if "videos" not in data:
+            data["videos"] = []
         data['videos'].insert(0, new_video)
         save_data(data)
 
+        # প্রাইভেট চ্যানেলে ভিডিও পাঠানো
         try:
             bot.send_video(
                 BACKUP_CHANNEL_ID,
                 file_id,
-                caption=f"🎬 **Permanent Backup**\nTitle: {new_video['title']}\nID: {new_video['id']}"
+                caption=f"🎬 **Backup**\nTitle: {new_video['title']}\nID: {new_video['id']}"
             )
         except Exception as e:
             print(f"Backup Error: {e}")
