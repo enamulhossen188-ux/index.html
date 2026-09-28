@@ -13,6 +13,7 @@
             --text-main: #ffffff;
             --text-sub: #94a3b8;
             --primary: #0284c7;
+            --primary-light: #38bdf8;
             --border: #1e293b;
         }
 
@@ -43,7 +44,7 @@
         .header h1 {
             font-size: 19px;
             font-weight: 700;
-            color: #38bdf8;
+            color: var(--primary-light);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -69,12 +70,13 @@
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
+            transition: all 0.2s ease;
         }
 
         .tab-btn.active {
             background: var(--primary);
             color: #ffffff;
-            border-color: #38bdf8;
+            border-color: var(--primary-light);
         }
 
         .video-grid {
@@ -155,7 +157,7 @@
         .detail-title {
             font-size: 17px;
             font-weight: 700;
-            color: #38bdf8;
+            color: var(--primary-light);
             margin-bottom: 14px;
         }
 
@@ -240,7 +242,7 @@
         .loader {
             text-align: center;
             padding: 40px 0;
-            color: #38bdf8;
+            color: var(--primary-light);
             font-size: 15px;
         }
     </style>
@@ -303,7 +305,6 @@
             tg.ready();
         }
 
-        // রেন্ডার এপিআই লিংক
         const API_BASE = "https://bangla-trx-natok-bot.onrender.com"; 
 
         let appData = { videos: [], ads: {} };
@@ -313,18 +314,24 @@
 
         async function initData() {
             try {
-                const res = await fetch(`${API_BASE}/api/data?t=${Date.now()}`);
+                // ১. সরাসরি রেন্ডার এপিআই থেকে কল
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+                const res = await fetch(`${API_BASE}/api/data?t=${Date.now()}`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
                 if (!res.ok) throw new Error("API Offline");
                 appData = await res.json();
                 showContent();
             } catch (err) {
-                // রেন্ডার স্লিপ মোডে থাকলে সরাসরি GitHub database.json ব্যাকআপ থেকে দ্রুত লোড করবে
+                // ২. রেন্ডার বন্ধ বা দেরি হলে সরাসরি লোকাল রিপোজিটরির database.json থেকে লোড
                 try {
-                    const fallbackRes = await fetch(`database.json?t=${Date.now()}`);
+                    const fallbackRes = await fetch(`./database.json?t=${Date.now()}`);
                     appData = await fallbackRes.json();
                     showContent();
                 } catch (e) {
-                    document.getElementById('loader').innerHTML = '⚠️ সার্ভার চালু হচ্ছে, ৫ সেকেন্ড পর রিফ্রেশ দিন!';
+                    document.getElementById('loader').innerHTML = '⚠️ ভিডিও রিফ্রেশ হচ্ছে, অনুগ্রহ করে ৫ সেকেন্ড পর আবার ওপেন করুন।';
                 }
             }
         }
