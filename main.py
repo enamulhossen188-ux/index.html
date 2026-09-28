@@ -41,7 +41,7 @@ def save_data(data):
 
 admin_state = {}
 
-# অতি দ্রুত রেসপন্স দেওয়ার জন্য API
+# ফাস্ট এপিআই
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
     data = load_data()
@@ -92,6 +92,7 @@ def start_upload(message):
     markup.add("BPS5", "Web Series", "Movie")
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
+# /start এবং সরাসরি ইনবক্সে ভিডিও ডেলিভারি
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -108,7 +109,7 @@ def send_welcome(message):
         target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
 
         if target_video:
-            bot.send_message(message.chat.id, f"🎬 **{target_video['title']}**\n⏳ আপনার ভিডিওটি পাঠানো হচ্ছে...")
+            bot.send_message(message.chat.id, f"🎬 **{target_video['title']}**\n⏳ আপনার ভিডিওটি ইনবক্সে পাঠানো হচ্ছে...")
             try:
                 caption = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
                 bot.send_video(message.chat.id, target_video['file_id'], caption=caption, parse_mode="Markdown")
@@ -207,8 +208,10 @@ def handle_admin_inputs(message):
         file_id = message.video.file_id if message.video else message.document.file_id
         data = load_data()
         
+        # সহজ সিরিয়াল আইডি যাতে কোনো মিসম্যাচ না হয়
+        new_id = len(data.get('videos', [])) + 1
         new_video = {
-            "id": int(datetime.now().timestamp()),
+            "id": new_id,
             "category": admin_state[chat_id]['category'],
             "title": admin_state[chat_id]['title'],
             "thumb": admin_state[chat_id]['thumb'],
