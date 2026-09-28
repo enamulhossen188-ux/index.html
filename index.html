@@ -9,7 +9,7 @@
     <style>
         :root {
             --bg-color: #0b0f19;
-            --surface-color: rgba(22, 30, 49, 0.7);
+            --surface-color: rgba(22, 30, 49, 0.75);
             --card-border: rgba(255, 255, 255, 0.08);
             --primary: #0088cc;
             --primary-gradient: linear-gradient(135deg, #0088cc 0%, #00b4d8 100%);
@@ -47,7 +47,6 @@
             transition: background 0.3s ease;
         }
 
-        /* হেডার */
         .header {
             display: flex;
             align-items: center;
@@ -79,7 +78,6 @@
             backdrop-filter: blur(8px);
         }
 
-        /* সার্চ বক্স */
         .search-container {
             position: relative;
             margin-bottom: 14px;
@@ -112,7 +110,6 @@
             font-size: 15px;
         }
 
-        /* ক্যাটাগরি ট্যাব */
         .category-scroll {
             display: flex;
             gap: 8px;
@@ -144,7 +141,6 @@
             box-shadow: 0 3px 10px rgba(0, 136, 204, 0.4);
         }
 
-        /* ভিডিও কার্ড গ্রিড */
         .video-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -218,7 +214,6 @@
             font-weight: 600;
         }
 
-        /* ডিটেইল ভিউ ও এড সেকশন */
         .detail-view {
             display: none;
             padding: 8px 0;
@@ -248,7 +243,7 @@
             background: var(--input-bg);
             border: 1px solid var(--card-border);
             border-radius: 12px;
-            padding: 12px;
+            padding: 14px;
             margin-top: 14px;
             text-align: center;
         }
@@ -265,18 +260,34 @@
             text-decoration: none;
             cursor: pointer;
             border: none;
+            transition: all 0.2s ease;
         }
 
-        .btn-ad {
-            background: var(--primary-gradient);
+        .btn-ad1 {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
             color: #fff;
-            box-shadow: 0 4px 12px rgba(0, 136, 204, 0.35);
+        }
+
+        .btn-ad2 {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: #fff;
+        }
+
+        .btn-done {
+            background: #059669 !important;
+            color: #fff !important;
+            pointer-events: none;
+        }
+
+        .btn-failed {
+            background: #dc2626 !important;
+            color: #fff !important;
         }
 
         .btn-download {
             background: #10b981;
             color: #fff;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
         }
 
         .btn-disabled {
@@ -284,6 +295,13 @@
             color: var(--text-muted);
             pointer-events: none;
             box-shadow: none;
+        }
+
+        .status-msg {
+            font-size: 12px;
+            margin-top: 8px;
+            min-height: 18px;
+            color: var(--text-muted);
         }
 
         .empty-msg {
@@ -296,21 +314,17 @@
 </head>
 <body>
 
-    <!-- হেডার -->
     <div class="header">
         <h1><i class="fa-solid fa-circle-play"></i> Bangla TRX Natok</h1>
         <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn"><i class="fa-solid fa-moon"></i> Dark</button>
     </div>
 
-    <!-- মেইন ভিউ -->
     <div id="mainView">
-        <!-- প্রফেশনাল সার্চ বার -->
         <div class="search-container">
             <i class="fa-solid fa-magnifying-glass search-icon"></i>
             <input type="text" id="searchInput" class="search-input" placeholder="নাটকের নাম বা পর্ব খুঁজুন..." oninput="handleSearch()">
         </div>
 
-        <!-- ক্যাটাগরি বাটন -->
         <div class="category-scroll" id="categoryTabs">
             <div class="category-chip active" onclick="filterCategory('all', this)">সবগুলো</div>
             <div class="category-chip" onclick="filterCategory('BPS5', this)">BPS5</div>
@@ -318,12 +332,10 @@
             <div class="category-chip" onclick="filterCategory('Movie', this)">Movie</div>
         </div>
 
-        <!-- ভিডিও গ্রিড -->
         <div class="video-grid" id="videoContainer"></div>
         <div class="empty-msg" id="emptyMessage" style="display: none;">কোনো ভিডিও খুঁজে পাওয়া যায়নি!</div>
     </div>
 
-    <!-- ডিটেইল ভিউ (এড দেখার পেজ) -->
     <div class="detail-view" id="detailView">
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         <div class="detail-card">
@@ -332,21 +344,38 @@
             <span id="detailCategory" class="category-tag"></span>
 
             <div class="task-box">
-                <p style="font-size: 12px; color: var(--text-muted);">ভিডিওটি ইনবক্সে পাওয়ার জন্য নিচের এডে ক্লিক করে ১০ সেকেন্ড অপেক্ষা করুন:</p>
-                <button id="adBtn" class="action-btn btn-ad" onclick="startAd()">👉 অ্যাড দেখুন (১০ সেকেন্ড)</button>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">
+                    ভিডিওটি পেতে নিচের <b>দুটি টাস্কের</b> প্রতিটিতে পুরো ১০ সেকেন্ড অবস্থান করুন:
+                </p>
+
+                <!-- Task বাটন -->
+                <button id="task1Btn" class="action-btn btn-ad1" onclick="startTask(1)">👉 Task 1: অ্যাড দেখুন (১০ সেকেন্ড)</button>
+                <button id="task2Btn" class="action-btn btn-ad2" onclick="startTask(2)">👉 Task 2: অ্যাড দেখুন (১০ সেকেন্ড)</button>
+
+                <div id="statusNotice" class="status-msg"></div>
+
+                <!-- ডাউনলোড বাটন -->
                 <button id="downloadBtn" class="action-btn btn-download btn-disabled" onclick="sendToInbox()">📥 ইনবক্সে ভিডিও নিন</button>
             </div>
         </div>
     </div>
 
     <script>
+        const BOT_USERNAME = "Bachelor_Point_Season_5_bot";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
         let appData = { videos: [], ads: {} };
         let activeCategory = 'all';
         let currentSelectedVideo = null;
-        let adClickedTime = 0;
+
+        let task1Done = false;
+        let task2Done = false;
+
+        // ট্র্যাকিং ভেরিয়েবল
+        let activeTask = null;
+        let taskStartTime = 0;
+        let countdownTimer = null;
 
         async function initData() {
             try {
@@ -365,12 +394,10 @@
 
             let list = appData.videos || [];
 
-            // ক্যাটাগরি অনুযায়ী ফিল্টার
             if (activeCategory !== 'all') {
                 list = list.filter(v => (v.category || '').toLowerCase() === activeCategory.toLowerCase());
             }
 
-            // সার্চ কোয়েরি ফিল্টার
             if (query) {
                 list = list.filter(v => (v.title || '').toLowerCase().includes(query));
             }
@@ -421,51 +448,144 @@
             document.getElementById("detailTitle").innerText = video.title;
             document.getElementById("detailCategory").innerText = video.category || 'নাটক';
 
-            // এড ও ডাউনলোড বাটন রিসেট
+            resetTasks();
+        }
+
+        function resetTasks() {
+            task1Done = false;
+            task2Done = false;
+            activeTask = null;
+            if (countdownTimer) clearInterval(countdownTimer);
+
+            const btn1 = document.getElementById("task1Btn");
+            const btn2 = document.getElementById("task2Btn");
             const dlBtn = document.getElementById("downloadBtn");
+            const notice = document.getElementById("statusNotice");
+
+            btn1.className = "action-btn btn-ad1";
+            btn1.innerText = "👉 Task 1: অ্যাড দেখুন (১০ সেকেন্ড)";
+            btn1.style.pointerEvents = "auto";
+
+            btn2.className = "action-btn btn-ad2";
+            btn2.innerText = "👉 Task 2: অ্যাড দেখুন (১০ সেকেন্ড)";
+            btn2.style.pointerEvents = "auto";
+
             dlBtn.className = "action-btn btn-download btn-disabled";
             dlBtn.innerText = "📥 ইনবক্সে ভিডিও নিন";
-            adClickedTime = 0;
+            notice.innerText = "";
         }
 
         function goBack() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            activeTask = null;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
         }
 
-        function startAd() {
-            adClickedTime = Date.now();
-            const adUrl = appData.ads?.ad1 || "https://google.com";
+        function startTask(taskNum) {
+            if (taskNum === 1 && task1Done) return;
+            if (taskNum === 2 && task2Done) return;
+
+            activeTask = taskNum;
+            taskStartTime = Date.now();
+
+            const adUrl = (taskNum === 1) ? (appData.ads?.ad1 || "https://google.com") : (appData.ads?.ad2 || "https://google.com");
+            
+            // অ্যাড ওপেন
             if (tg && tg.openLink) {
                 tg.openLink(adUrl);
             } else {
                 window.open(adUrl, "_blank");
             }
 
-            const dlBtn = document.getElementById("downloadBtn");
+            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
+            const notice = document.getElementById("statusNotice");
+            btn.style.pointerEvents = "none";
+
             let remaining = 10;
-            dlBtn.innerText = `⏳ অপেক্ষা করুন (${remaining}s)`;
-            
-            const timer = setInterval(() => {
-                remaining--;
+            btn.innerText = `⏳ অপেক্ষা করুন (${remaining}s)`;
+            notice.style.color = "var(--text-muted)";
+            notice.innerText = "অ্যাড পেজে পুরো ১০ সেকেন্ড অবস্থান করুন...";
+
+            if (countdownTimer) clearInterval(countdownTimer);
+
+            countdownTimer = setInterval(() => {
+                const passedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
+                remaining = 10 - passedSeconds;
+
                 if (remaining > 0) {
-                    dlBtn.innerText = `⏳ অপেক্ষা করুন (${remaining}s)`;
+                    btn.innerText = `⏳ অপেক্ষা করুন (${remaining}s)`;
                 } else {
-                    clearInterval(timer);
-                    dlBtn.innerText = "📥 ইনবক্সে ভিডিও নিন";
-                    dlBtn.className = "action-btn btn-download";
+                    clearInterval(countdownTimer);
+                    completeTask(taskNum);
                 }
-            }, 1000);
+            }, 500);
         }
 
+        function completeTask(taskNum) {
+            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
+            const notice = document.getElementById("statusNotice");
+
+            btn.innerText = `✅ Task ${taskNum} সম্পন্ন!`;
+            btn.className = "action-btn btn-done";
+            btn.style.pointerEvents = "none";
+
+            if (taskNum === 1) task1Done = true;
+            if (taskNum === 2) task2Done = true;
+
+            activeTask = null;
+            notice.style.color = "#10b981";
+            notice.innerText = `Task ${taskNum} সফলভাবে সম্পূর্ণ হয়েছে!`;
+
+            if (task1Done && task2Done) {
+                const dlBtn = document.getElementById("downloadBtn");
+                dlBtn.className = "action-btn btn-download";
+                dlBtn.innerText = "📥 ইনবক্সে ভিডিও নিন";
+                notice.innerText = "🎉 উভয় টাস্ক সম্পন্ন! এখন নিচের বাটনে চাপ দিন।";
+            }
+        }
+
+        // ইউজার ১০ সেকেন্ডের আগে মিনি অ্যাপে ব্যাক করলে শনাক্ত করার সিকিউরিটি লজিক
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && activeTask !== null) {
+                const elapsedSeconds = (Date.now() - taskStartTime) / 1000;
+                
+                // যদি ১০ সেকেন্ড পার হওয়ার আগেই ফেরত আসে
+                if (elapsedSeconds < 10) {
+                    clearInterval(countdownTimer);
+                    const taskFailed = activeTask;
+                    activeTask = null;
+
+                    const btn = document.getElementById(taskFailed === 1 ? "task1Btn" : "task2Btn");
+                    const notice = document.getElementById("statusNotice");
+
+                    btn.className = "action-btn btn-failed";
+                    btn.innerText = `❌ Task ${taskFailed} ব্যর্থ! (পুনরায় করুন)`;
+                    btn.style.pointerEvents = "auto";
+
+                    notice.style.color = "#ef4444";
+                    notice.innerText = `⚠️ আপনি পুরো ১০ সেকেন্ড অপেক্ষা করেননি! আবার ক্লিক করে সম্পূর্ণ সময় থাকুন।`;
+                    
+                    alert(`সতর্কতা: আপনি ১০ সেকেন্ড শেষ হওয়ার আগেই ফিরে এসেছেন!\nটাস্ক ${taskFailed} সম্পন্ন করতে আবার ক্লিক করে পুরো ১০ সেকেন্ড অপেক্ষা করুন।`);
+                }
+            }
+        });
+
         function sendToInbox() {
-            if (Date.now() - adClickedTime < 10000) {
-                alert("অনুগ্রহ করে অন্তত ১০ সেকেন্ড অ্যাডটি দেখে অপেক্ষা করুন!");
+            if (!task1Done || !task2Done) {
+                alert("দুটি টাস্কই সম্পূর্ণ ১০ সেকেন্ড করে দেখুন!");
                 return;
             }
-            if (currentSelectedVideo && tg) {
-                tg.openTelegramLink(`https://t.me/Bangla_TRX_Natok_bot?start=vid_${currentSelectedVideo.id}`);
-                tg.close();
+            if (currentSelectedVideo) {
+                const targetUrl = `https://t.me/${BOT_USERNAME}?start=vid_${currentSelectedVideo.id}`;
+                if (tg && tg.openTelegramLink) {
+                    tg.openTelegramLink(targetUrl);
+                } else {
+                    window.location.href = targetUrl;
+                }
+                if (tg && tg.close) {
+                    setTimeout(() => tg.close(), 300);
+                }
             }
         }
 
@@ -482,4 +602,4 @@
         initData();
     </script>
 </body>
-    </html>
+            </html>
