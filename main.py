@@ -26,6 +26,9 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+# ব্রডকাস্ট মেসেজ ট্র্যাকিং লিস্ট (সবার ইনবক্স থেকে ডিলিট করার জন্য)
+broadcast_history = []
+
 def load_data():
     try:
         r = requests.get(f"{BIN_URL}/latest", headers=HEADERS)
@@ -119,6 +122,20 @@ def broadcast_command(message):
     admin_state[message.chat.id] = {'step': 'broadcast_content'}
     bot.send_message(message.chat.id, "📢 সকল ইউজারের কাছে পাঠানোর জন্য নোটিশ বা পোস্টটি (ছবি/ভিডিও/লেখা) পাঠান (বাতিল করতে /cancel দিন):")
 
+# --- ব্রডকাস্ট পোস্ট ডিলিট মেনু (/delpost) ---
+@bot.message_handler(commands=['delpost'])
+def delete_broadcast_menu(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.reply_to(message, "❌ আপনি অ্যাডমিন নন!")
+        return
+    if not broadcast_history:
+        bot.send_message(message.chat.id, "ℹ️ ডিলিট করার মতো কোনো ব্রডকাস্ট পোস্ট পাওয়া যায়নি!")
+        return
+    markup = types.InlineKeyboardMarkup()
+    for item in broadcast_history:
+        markup.add(types.InlineKeyboardButton(f"🗑️ {item['title']}", callback_data=f"delbc_{item['id']}"))
+    bot.send_message(message.chat.id, "🗑️ **কোন পোস্টটি সবার ইনবক্স থেকে ডিলিট করতে চান? ক্লিক করুন:**", reply_markup=markup, parse_mode="Markdown")
+
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
     if str(message.chat.id) != str(ADMIN_ID):
@@ -139,7 +156,7 @@ def delete_start(message):
         return
     markup = types.InlineKeyboardMarkup()
     for v in videos:
-        markup.add(types.InlineKeyboardButton(f"🗑️ {v.get('title', 'Unknown')}", callback_data=f"del_{v.get('id')}"))
+        markup.add(types.InlineKeyboardButton(f"🗑️️ {v.get('title', 'Unknown')}", callback_data=f"del_{v.get('id')}"))
     bot.send_message(message.chat.id, "🗑️ **কোন ভিডিওটি ডিলিট করতে চান? ক্লিক করুন:**", reply_markup=markup)
 
 @bot.message_handler(commands=['upload'])
@@ -229,7 +246,30 @@ def handle_all_callbacks(call):
         bot.register_next_step_handler(msg, lambda m: process_rename_category(m, old_cat))
         return
 
-    # ৪. ভিডিও মোছা
+    # ৪. ব্রডকাস্ট পোস্ট সবার ইনবক্স থেকে ডিলিট করা
+    if call.data.startswith("delbc_"):
+        if str(chat_id) != str(ADMIN_ID):
+            bot.send_message(chat_id, "❌ অনুমতি নেই!")
+            return
+        target_id = call.data.replace("delbc_", "")
+        target_item = next((item for item in broadcast_history if str(item["id"]) == str(target_id)), None)
+
+        if target_item:
+            bot.edit_message_text(f"⏳ '{target_item['title']}' পোস্টটি সকলের ইনবক্স থেকে মোছা হচ্ছে...", chat_id=chat_id, message_id=call.message.message_id)
+            deleted_count = 0
+            for record in target_item["records"]:
+                try:
+                    bot.delete_message(chat_id=record["chat_id"], message_id=record["msg_id"])
+                    deleted_count += 1
+                except Exception:
+                    pass
+            broadcast_history.remove(target_item)
+            bot.send_message(chat_id, f"✅ সফলভাবে মোট {deleted_count} জনের ইনবক্স থেকে পোস্ট ও বাটন মুছে ফেলা হয়েছে!")
+        else:
+            bot.send_message(chat_id, "❌ পোস্টটি পাওয়া যায়নি বা আগেই ডিলিট করা হয়েছে!")
+        return
+
+    # ৫. ভিডিও মোছা
     if call.data.startswith("del_"):
         if str(chat_id) != str(ADMIN_ID):
             bot.send_message(chat_id, "❌ অনুমতি নেই!")
@@ -246,7 +286,7 @@ def handle_all_callbacks(call):
             bot.send_message(chat_id, "❌ পাওয়া যায়নি!")
         return
 
-    # ৫. তথ্য ও সাহায্য বাটন
+    # ৬. তথ্য ও সাহায্য বাটন
     if call.data == "btn_update":
         bot.send_message(chat_id, "📢 **ভিডিও আপডেট:**\nনতুন পর্ব আপলোড করা হয়েছে! স্টার্ট দিয়ে Watch Now থেকে দেখে নিন।", parse_mode="Markdown")
         return
@@ -296,7 +336,7 @@ def handle_admin_inputs(message):
 
     step = admin_state[chat_id].get('step')
 
-    # ব্রডকাস্ট পাঠানোর লজিক (সব ইউজার বাটনসহ মেসেজ পাবে)
+    # ব্রডকাস্ট পাঠানোর লজিক (মেসেজ পাঠানোর সাথে সাথে আইডিগুলো মনে রাখবে)
     if step == 'broadcast_content':
         if message.text == '/cancel':
             del admin_state[chat_id]
@@ -306,24 +346,42 @@ def handle_admin_inputs(message):
         data = load_data()
         user_list = data.get("users", [])
         bot.send_message(chat_id, f"🚀 {len(user_list)} জনের ইনবক্সে বাটনসহ পোস্ট পাঠানো হচ্ছে...")
-        sent_count = 0
+        
+        sent_records = []
         markup = get_action_buttons()
+
+        # পোস্টের টাইটেল নির্ধারণ
+        raw_text = message.caption if (message.photo or message.video) else message.text
+        if not raw_text:
+            raw_text = "Photo/Video Broadcast"
+        title_snippet = (raw_text[:25] + "...") if len(raw_text) > 25 else raw_text
 
         for uid in user_list:
             try:
+                sent_msg = None
                 if message.photo:
-                    bot.send_photo(uid, message.photo[-1].file_id, caption=message.caption or "", reply_markup=markup)
+                    sent_msg = bot.send_photo(uid, message.photo[-1].file_id, caption=message.caption or "", reply_markup=markup)
                 elif message.video:
-                    bot.send_video(uid, message.video.file_id, caption=message.caption or "", reply_markup=markup)
+                    sent_msg = bot.send_video(uid, message.video.file_id, caption=message.caption or "", reply_markup=markup)
                 elif message.text:
-                    bot.send_message(uid, message.text, reply_markup=markup)
-                sent_count += 1
+                    sent_msg = bot.send_message(uid, message.text, reply_markup=markup)
+                
+                if sent_msg:
+                    sent_records.append({"chat_id": uid, "msg_id": sent_msg.message_id})
                 time.sleep(0.04)
             except Exception:
                 pass
 
+        # ব্রডকাস্ট হিস্টোরিতে সংরক্ষণ
+        if sent_records:
+            broadcast_history.append({
+                "id": str(len(broadcast_history) + 1),
+                "title": title_snippet,
+                "records": sent_records
+            })
+
         del admin_state[chat_id]
-        bot.send_message(chat_id, f"✅ সফলভাবে {sent_count} জনের ইনবক্সে WATCH NOW বাটনসহ পোস্ট চলে গেছে!")
+        bot.send_message(chat_id, f"✅ সফলভাবে {len(sent_records)} জনের ইনবক্সে WATCH NOW বাটনসহ পোস্ট চলে গেছে!\n\n(ভুলবশত এটি ডিলিট করতে চাইলে /delpost কমান্ড দিন)")
 
     elif step == 'ad1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
