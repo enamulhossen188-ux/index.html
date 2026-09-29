@@ -7,7 +7,7 @@ import json
 import os
 from datetime import datetime
 
-BOT_TOKEN = "8995171178:AAGtywmRpI9PNlhXJ2Swdb6r-8T8nXEcqu0"
+BOT_TOKEN = "8995171178:AAFwu00-0NGegyHk4USIl_nBufknZZ_4wb4"
 ADMIN_ID = "7255626228"
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -418,7 +418,7 @@ def process_rename_category(message, old_cat):
     new_cat = message.text.strip()
     data = load_data()
     cats = data.get("categories", [])
-    ifdef old_cat in cats:
+    if old_cat in cats:
         idx = cats.index(old_cat)
         cats[idx] = new_cat
         data["categories"] = cats
@@ -435,4 +435,4 @@ def run_flask():
 if __name__ == "__main__":
     t = threading.Thread(target=run_flask)
     t.start()
-    bot.infinity_polling()
+    bot.infinity_polling(skip_pending=True)
