@@ -5,6 +5,9 @@ from flask_cors import CORS
 import threading
 import json
 import os
+import time
+import base64
+import requests
 from datetime import datetime
 
 BOT_TOKEN = "8995171178:AAFwu00-0NGegyHk4USIl_nBufknZZ_4wb4"
@@ -15,9 +18,6 @@ app = Flask(__name__)
 CORS(app)
 
 DB_FILE = "database.json"
-
-import base64
-import requests
 
 GITHUB_TOKEN = "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"
 REPO_NAME = "enamulhossen188-ux/index.html"
@@ -54,6 +54,7 @@ def load_data():
 
     default_data = {
         "users": [],
+        "categories": ["BPS5", "Web Series", "Movie"],
         "ads": {"ad1": "https://google.com", "ad2": "https://google.com"},
         "videos": []
     }
@@ -101,6 +102,16 @@ def get_app_data():
 def home():
     return "Bot Server is Live 24/7!"
 
+# বাটন জেনারেটর (ব্রডকাস্ট ও স্টার্টের জন্য)
+def get_action_buttons():
+    fresh_url = f"https://enamulhossen188-ux.github.io/index.html?ts={int(datetime.now().timestamp())}"
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    btn_watch = types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url))
+    btn_update = types.InlineKeyboardButton("🔔 VIDEO UPDATE", callback_data="btn_update")
+    btn_help = types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
+    markup.add(btn_watch, btn_update, btn_help)
+    return markup
+
 @bot.message_handler(commands=['cancel'])
 def cancel_process(message):
     chat_id = message.chat.id
@@ -109,8 +120,8 @@ def cancel_process(message):
         bot.send_message(chat_id, "🔄 আগের অসমাপ্ত কাজ বাতিল করা হয়েছে।", reply_markup=types.ReplyKeyboardRemove())
     else:
         bot.send_message(chat_id, "বর্তমানে কোনো কাজ চালু নেই।")
-# --- ক্যাটাগরি এবং ব্রডকাস্ট কমান্ড ---
 
+# --- ক্যাটাগরি প্যানেল ---
 @bot.message_handler(commands=['setcategory'])
 def manage_categories_menu(message):
     if str(message.chat.id) != str(ADMIN_ID):
@@ -137,28 +148,15 @@ def manage_categories_menu(message):
     except Exception as e:
         bot.send_message(message.chat.id, "Error: " + str(e))
 
+# --- ব্রডকাস্ট কমান্ড ---
 @bot.message_handler(commands=['broadcast'])
 def broadcast_command(message):
     if str(message.chat.id) != str(ADMIN_ID):
         bot.send_message(message.chat.id, f"অননুমোদিত অ্যাক্সেস! আপনার আইডি: {message.chat.id}")
         return
-    msg = bot.send_message(message.chat.id, "📢 সকল ইউজারের কাছে পাঠানোর জন্য নোটিশ বা মেসেজটি লিখুন (বাতিল করতে /cancel দিন):")
-    bot.register_next_step_handler(msg, process_broadcast_message)
+    admin_state[message.chat.id] = {'step': 'broadcast_content'}
+    bot.send_message(message.chat.id, "📢 সকল ইউজারের কাছে পাঠানোর জন্য নোটিশ বা পোস্টটি (ছবি/ভিডিও/লেখা) পাঠান (বাতিল করতে /cancel দিন):")
 
-def process_broadcast_message(message):
-    if message.text == '/cancel':
-        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
-        return
-    data = load_data()
-    users = data.get("users", [])
-    count = 0
-    for uid in users:
-        try:
-            bot.copy_message(chat_id=uid, from_chat_id=message.chat.id, message_id=message.message_id)
-            count += 1
-        except Exception:
-            pass
-    bot.send_message(message.chat.id, f"✅ সফলভাবে {count} জন ইউজারের কাছে মেসেজ পাঠানো হয়েছে!")
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
     if str(message.chat.id) != str(ADMIN_ID):
@@ -166,6 +164,7 @@ def set_ads_start(message):
         return
     admin_state[message.chat.id] = {'step': 'ad1'}
     bot.send_message(message.chat.id, "🎯 **Task 1 এর এড লিংক পাঠান:**")
+
 @bot.message_handler(commands=['delete'])
 def delete_start(message):
     if str(message.chat.id) != str(ADMIN_ID):
@@ -180,6 +179,7 @@ def delete_start(message):
     for v in videos:
         markup.add(types.InlineKeyboardButton(f"🗑️ {v.get('title', 'Unknown')}", callback_data=f"del_{v.get('id')}"))
     bot.send_message(message.chat.id, "🗑️ **কোন ভিডিওটি ডিলিট করতে চান? ক্লিক করুন:**", reply_markup=markup)
+
 @bot.message_handler(commands=['upload'])
 def start_upload(message):
     if str(message.chat.id) != str(ADMIN_ID):
@@ -227,26 +227,50 @@ def send_welcome(message):
             bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি পাওয়া যায়নি!")
             return
 
-    fresh_url = f"https://enamulhossen188-ux.github.io/index.html?ts={int(datetime.now().timestamp())}"
-    markup = types.InlineKeyboardMarkup(row_width=1)
-    markup.add(
-        types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)),
-        types.InlineKeyboardButton("🔔 VIDEO UPDATE", callback_data="btn_update"),
-        types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
-    )       
-
+    markup = get_action_buttons()
     welcome_text = (
         f"**আসসালামু আলাইকুম {message.from_user.first_name}** 🥰\n\n"
         "আমাদের বট ২৪ ঘণ্টা সচল। নাটক দেখতে ও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন।"
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
 
+# --- একটি মাত্র সেন্ট্রালাইজড কলব্যাক হ্যান্ডলার (যা সব বাটন দ্রুত কাজ করাবে) ---
 @bot.callback_query_handler(func=lambda call: True)
+def handle_all_callbacks(call):
+    bot.answer_callback_query(call.id)
+    chat_id = call.message.chat.id
 
-def handle_callbacks(call):
+    # ১. ক্যাটাগরি যোগ
+    if call.data == "add_new_cat":
+        msg = bot.send_message(chat_id, "নতুন ক্যাটাগরির নাম লিখে পাঠান (বাতিল করতে /cancel লিখুন):")
+        bot.register_next_step_handler(msg, process_add_category)
+        return
+
+    # ২. ক্যাটাগরি মোছা
+    if call.data.startswith("delcat_"):
+        target_cat = call.data.replace("delcat_", "")
+        data = load_data()
+        cats = data.get("categories", [])
+        if target_cat in cats:
+            cats.remove(target_cat)
+            data["categories"] = cats
+            save_data(data)
+            bot.send_message(chat_id, f"✅ ক্যাটাগরি '{target_cat}' মুছে ফেলা হয়েছে!")
+        else:
+            bot.send_message(chat_id, "❌ ক্যাটাগরি পাওয়া যায়নি!")
+        return
+
+    # ৩. ক্যাটাগরি নাম পরিবর্তন
+    if call.data.startswith("editcat_"):
+        old_cat = call.data.replace("editcat_", "")
+        msg = bot.send_message(chat_id, f"'{old_cat}' এর নতুন নাম কী দিতে চান? নাম লিখে পাঠান (বাতিল করতে /cancel দিন):")
+        bot.register_next_step_handler(msg, lambda m: process_rename_category(m, old_cat))
+        return
+
+    # ৪. ভিডিও মোছা
     if call.data.startswith("del_"):
-        if str(call.message.chat.id) != str(ADMIN_ID):
-            bot.answer_callback_query(call.id, "❌ অনুমতি নেই!")
+        if str(chat_id) != str(ADMIN_ID):
+            bot.send_message(chat_id, "❌ অনুমতি নেই!")
             return
         target_id = call.data.replace("del_", "")
         data = load_data()
@@ -255,18 +279,53 @@ def handle_callbacks(call):
         if len(new_videos) < len(videos):
             data["videos"] = new_videos
             save_data(data)
-            bot.answer_callback_query(call.id, "✅ মুছে ফেলা হয়েছে!")
-            bot.edit_message_text("✅ **ভিডিওটি সফলভাবে ডিলিট করা হয়েছে!**", chat_id=call.message.chat.id, message_id=call.message.message_id)
+            bot.edit_message_text("🗑️ **ভিডিওটি সফলভাবে ডিলিট করা হয়েছে!**", chat_id=chat_id, message_id=call.message.message_id)
         else:
-            bot.answer_callback_query(call.id, "❌ পাওয়া যায়নি!")
+            bot.send_message(chat_id, "❌ পাওয়া যায়নি!")
         return
-    if call.data == "btn_update":
-        bot.answer_callback_query(call.id)
-        bot.send_message(call.message.chat.id, "📢 **ভিডিও আপডেট:**\nনতুন পর্ব আপলোড করা হয়েছে! স্টার্ট দিয়ে Watch Now থেকে দেখে নিন।", parse_mode="Markdown")
-    elif call.data == "btn_help":
-        bot.answer_callback_query(call.id)
-        bot.send_message(call.message.chat.id, "💡 **টিউটোরিয়াল:**\nWatch Now বাটনে ক্লিক করে পছন্দের ভিডিওতে চাপুন। দুটি টাস্ক ১০ সেকেন্ড ভিজিট করে ডাউনলোড বাটনে চাপ দিলেই ইনবক্সে ভিডিও চলে আসবে।")
 
+    # ৫. তথ্য ও সাহায্য বাটন
+    if call.data == "btn_update":
+        bot.send_message(chat_id, "📢 **ভিডিও আপডেট:**\nনতুন পর্ব আপলোড করা হয়েছে! স্টার্ট দিয়ে Watch Now থেকে দেখে নিন।", parse_mode="Markdown")
+        return
+
+    if call.data == "btn_help":
+        bot.send_message(chat_id, "💡 **টিউটোরিয়াল:**\nWatch Now বাটনে ক্লিক করে পছন্দের ভিডিওতে চাপুন। দুটি টাস্ক সম্পন্ন করে ডাউনলোড বাটনে চাপ দিলেই ইনবক্সে ভিডিও চলে আসবে।")
+        return
+
+def process_add_category(message):
+    if message.text == '/cancel':
+        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
+        return
+    new_cat = message.text.strip()
+    data = load_data()
+    cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
+    if new_cat in cats:
+        bot.send_message(message.chat.id, "এই ক্যাটাগরিটি ইতিমধ্যে রয়েছে!")
+        return
+    cats.append(new_cat)
+    data["categories"] = cats
+    save_data(data)
+    bot.send_message(message.chat.id, f"✅ নতুন ক্যাটাগরি '{new_cat}' সফলভাবে যোগ হয়েছে!")
+
+def process_rename_category(message, old_cat):
+    if message.text == '/cancel':
+        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
+        return
+    new_cat = message.text.strip()
+    data = load_data()
+    cats = data.get("categories", [])
+    if old_cat in cats:
+        idx = cats.index(old_cat)
+        cats[idx] = new_cat
+        data["categories"] = cats
+        for v in data.get("videos", []):
+            if v.get("category") == old_cat:
+                v["category"] = new_cat
+        save_data(data)
+        bot.send_message(message.chat.id, f"✅ ক্যাটাগরি '{old_cat}' পরিবর্তন করে '{new_cat}' করা হয়েছে!")
+
+# --- অ্যাডমিনের ইনপুট হ্যান্ডলার (ব্রডকাস্ট ও আপলোড) ---
 @bot.message_handler(content_types=['text', 'photo', 'video'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id 
@@ -275,31 +334,35 @@ def handle_admin_inputs(message):
 
     step = admin_state[chat_id].get('step')
 
+    # ব্রডকাস্ট পাঠানোর লজিক (সব ইউজার বাটনসহ মেসেজ পাবে)
     if step == 'broadcast_content':
+        if message.text == '/cancel':
+            del admin_state[chat_id]
+            bot.send_message(chat_id, "বাতিল করা হয়েছে।")
+            return
+
         data = load_data()
         user_list = data.get("users", [])
-        bot.send_message(chat_id, f"🚀 {len(user_list)} জনের ইনবক্সে পোস্ট পাঠানো হচ্ছে...")
+        bot.send_message(chat_id, f"🚀 {len(user_list)} জনের ইনবক্সে বাটনসহ পোস্ট পাঠানো হচ্ছে...")
         sent_count = 0
-
-        # ওয়াচ নাও বাটন তৈরি
-        fresh_url = f"https://enamulhossen188-ux.github.io/index.html?ts={int(datetime.now().timestamp())}"
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)))
+        markup = get_action_buttons()
 
         for uid in user_list:
             try:
                 if message.photo:
-                    bot.send_photo(uid, message.photo[-1].file_id, caption=message.caption or "", reply_markup=markup, parse_mode="Markdown")
+                    bot.send_photo(uid, message.photo[-1].file_id, caption=message.caption or "", reply_markup=markup)
                 elif message.video:
-                    bot.send_video(uid, message.video.file_id, caption=message.caption or "", reply_markup=markup, parse_mode="Markdown")
+                    bot.send_video(uid, message.video.file_id, caption=message.caption or "", reply_markup=markup)
                 elif message.text:
-                    bot.send_message(uid, message.text, reply_markup=markup, parse_mode="Markdown")
+                    bot.send_message(uid, message.text, reply_markup=markup)
                 sent_count += 1
+                time.sleep(0.04)
             except Exception:
                 pass
 
         del admin_state[chat_id]
         bot.send_message(chat_id, f"✅ সফলভাবে {sent_count} জনের ইনবক্সে WATCH NOW বাটনসহ পোস্ট চলে গেছে!")
+
     elif step == 'ad1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
         admin_state[chat_id]['step'] = 'ad2'
@@ -358,86 +421,8 @@ def handle_admin_inputs(message):
         title_done = admin_state[chat_id]['title']
         del admin_state[chat_id]
         bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\nমিনি অ্যাপে এখনই দেখতে পাবেন।")
-# --- ক্যাটাগরি ম্যানেজমেন্ট ---
 
-# --- ক্যাটাগরি বাটন অ্যাকশন ---
-
-@bot.callback_query_handler(func=lambda call: call.data == "add_new_cat")
-def callback_add_cat(call):
-    bot.answer_callback_query(call.id)
-    msg = bot.send_message(call.message.chat.id, "নতুন ক্যাটাগরির নাম লিখে পাঠান (বাতিল করতে /cancel লিখুন):")
-    bot.register_next_step_handler(msg, process_add_category)
-
-def process_add_category(message):
-    if message.text == '/cancel':
-        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
-        return
-    new_cat = message.text.strip()
-    data = load_data()
-    cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
-    if new_cat in cats:
-        bot.send_message(message.chat.id, "এই ক্যাটাগরিটি ইতিমধ্যে রয়েছে!")
-        return
-    cats.append(new_cat)
-    data["categories"] = cats
-    save_data(data)
-    bot.send_message(message.chat.id, f"নতুন ক্যাটাগরি '{new_cat}' সফলভাবে যোগ হয়েছে!")
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("delcat_"))
-def callback_del_cat(call):
-    bot.answer_callback_query(call.id)
-    target_cat = call.data.replace("delcat_", "")
-    data = load_data()
-    cats = data.get("categories", [])
-    if target_cat in cats:
-        cats.remove(target_cat)
-        data["categories"] = cats
-        save_data(data)
-        bot.send_message(call.message.chat.id, f"ক্যাটাগরি '{target_cat}' মুছে ফেলা হয়েছে!")
-    else:
-        bot.send_message(call.message.chat.id, "ক্যাটাগরি পাওয়া যায়নি!")
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("editcat_"))
-def callback_edit_cat(call):
-    bot.answer_callback_query(call.id)
-    old_cat = call.data.replace("editcat_", "")
-    msg = bot.send_message(call.message.chat.id, f"'{old_cat}' এর নতুন নাম কী দিতে চান? নাম লিখে পাঠান (বাতিল করতে /cancel দিন):")
-    bot.register_next_step_handler(msg, lambda m: process_rename_category(m, old_cat))
-
-def process_rename_category(message, old_cat):
-    if message.text == '/cancel':
-        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
-        return
-    new_cat = message.text.strip()
-    data = load_data()
-    cats = data.get("categories", [])
-    if old_cat in cats:
-        idx = cats.index(old_cat)
-        cats[idx] = new_cat
-        data["categories"] = cats
-        for v in data.get("videos", []):
-            if v.get("category") == old_cat:
-                v["category"] = new_cat
-        save_data(data)
-        bot.send_message(message.chat.id, f"ক্যাটাগরি '{old_cat}' পরিবর্তন করে '{new_cat}' করা হয়েছে!")
-
-# --- ব্রডকাস্ট বাটন জেনারেটর ---
-
-def get_broadcast_markup():
-    markup = types.InlineKeyboardMarkup(row_width=1)
-    btn_watch = types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=WEB_APP_URL))
-    btn_update = types.InlineKeyboardButton("🔔 VIDEO UPDATE", url="https://t.me/bachelor_point_season_5_update")
-    btn_help = types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="help_download")
-    markup.add(btn_watch, btn_update, btn_help)
-    return markup
-
-@bot.callback_query_handler(func=lambda call: call.data == "help_download")
-def help_callback(call):
-    bot.answer_callback_query(call.id)
-    bot.send_message(call.message.chat.id, "ভিডিও দেখতে বা ডাউনলোড করতে 'WATCH NOW' বাটনে চাপ দিন এবং আপনার পছন্দের পর্ব বেছে নিন।")
-
-# --- সার্ভার রানার ---
-
+# সার্ভার রানার
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
