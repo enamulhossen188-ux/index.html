@@ -6,7 +6,6 @@ import threading
 import json
 import os
 import time
-import base64
 import requests
 from datetime import datetime
 
@@ -17,74 +16,37 @@ bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
 CORS(app)
 
-DB_FILE = "database.json"
+# --- ক্লাউড ডাটাবেজ কনফিগারেশন (JSONBin.io) ---
+BIN_ID = "6abbadacac6210605a01bb77"
+JSONBIN_API_KEY = "$2a$10$YXJkOPYEpFL1pS32JSWh7O5Zs7VMzulVbyfBwxBkvPOQ9EY1m0/ri"
 
-GITHUB_TOKEN = "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"
-REPO_NAME = "enamulhossen188-ux/index.html"
-FILE_PATH = "database.json"
-
-def get_github_db():
-    try:
-        url = f"https://api.github.com/repos/{REPO_NAME}/contents/{FILE_PATH}"
-        headers = {
-            "Authorization": f"token {GITHUB_TOKEN}",
-            "Accept": "application/vnd.github.v3+json"
-        }
-        r = requests.get(url, headers=headers)
-        if r.status_code == 200:
-            content = base64.b64decode(r.json()['content']).decode('utf-8')
-            return json.loads(content), r.json()['sha']
-    except Exception as e:
-        print("GitHub Read Error:", e)
-    return None, None
+BIN_URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
+HEADERS = {
+    "X-Master-Key": JSONBIN_API_KEY,
+    "Content-Type": "application/json"
+}
 
 def load_data():
-    data, _ = get_github_db()
-    if data:
-        with open(DB_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        return data
+    try:
+        r = requests.get(f"{BIN_URL}/latest", headers=HEADERS)
+        if r.status_code == 200:
+            return r.json().get("record", {})
+    except Exception as e:
+        print("JSONBin Read Error:", e)
 
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-
-    default_data = {
+    return {
         "users": [],
         "categories": ["BPS5", "Web Series", "Movie"],
         "ads": {"ad1": "https://google.com", "ad2": "https://google.com"},
         "videos": []
     }
-    return default_data
 
 def save_data(data):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
     try:
-        url = f"https://api.github.com/repos/{REPO_NAME}/contents/{FILE_PATH}"
-        headers = {
-            "Authorization": f"token {GITHUB_TOKEN}",
-            "Accept": "application/vnd.github.v3+json"
-        }
-        _, sha = get_github_db()
-        content_str = json.dumps(data, ensure_ascii=False, indent=2)
-        content_b64 = base64.b64encode(content_str.encode('utf-8')).decode('utf-8')
-
-        payload = {
-            "message": "Auto update database [Bot Cloud]",
-            "content": content_b64
-        }
-        if sha:
-            payload["sha"] = sha
-
-        requests.put(url, headers=headers, json=payload)
+        requests.put(BIN_URL, headers=HEADERS, json=data)
     except Exception as e:
-        print("GitHub Save Error:", e)
-            
+        print("JSONBin Save Error:", e)
+
 admin_state = {}
 
 # ফাস্ট এপিআই
@@ -234,7 +196,7 @@ def send_welcome(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
 
-# --- একটি মাত্র সেন্ট্রালাইজড কলব্যাক হ্যান্ডলার (যা সব বাটন দ্রুত কাজ করাবে) ---
+# --- সেন্ট্রালাইজড কলব্যাক হ্যান্ডলার ---
 @bot.callback_query_handler(func=lambda call: True)
 def handle_all_callbacks(call):
     bot.answer_callback_query(call.id)
@@ -402,7 +364,6 @@ def handle_admin_inputs(message):
         file_id = message.video.file_id if message.video else message.document.file_id
         data = load_data()
         
-        # সহজ সিরিয়াল আইডি যাতে কোনো মিসম্যাচ না হয়
         new_id = len(data.get('videos', [])) + 1
         new_video = {
             "id": new_id,
