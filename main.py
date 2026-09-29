@@ -343,9 +343,6 @@ def manage_categories_menu(message):
     except Exception as e:
         bot.send_message(message.chat.id, "Error: " + str(e))
 
-    except Exception as e:
-        bot.send_message(message.chat.id, "ত্রুটি: " + str(e))
-
 @bot.callback_query_handler(func=lambda call: call.data == "add_new_cat")
 def callback_add_cat(call):
     if str(call.message.chat.id) != str(ADMIN_ID):
