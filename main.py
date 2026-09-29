@@ -360,12 +360,11 @@ def handle_admin_inputs(message):
         bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\nমিনি অ্যাপে এখনই দেখতে পাবেন।")
 # --- ক্যাটাগরি ম্যানেজমেন্ট ---
 
+# --- ক্যাটাগরি বাটন অ্যাকশন ---
+
 @bot.callback_query_handler(func=lambda call: call.data == "add_new_cat")
 def callback_add_cat(call):
     bot.answer_callback_query(call.id)
-    if str(call.from_user.id) != str(ADMIN_ID):
-        bot.send_message(call.message.chat.id, "অননুমোদিত অ্যাক্সেস!")
-        return
     msg = bot.send_message(call.message.chat.id, "নতুন ক্যাটাগরির নাম লিখে পাঠান (বাতিল করতে /cancel লিখুন):")
     bot.register_next_step_handler(msg, process_add_category)
 
@@ -387,9 +386,6 @@ def process_add_category(message):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("delcat_"))
 def callback_del_cat(call):
     bot.answer_callback_query(call.id)
-    if str(call.from_user.id) != str(ADMIN_ID):
-        bot.send_message(call.message.chat.id, "অননুমোদিত অ্যাক্সেস!")
-        return
     target_cat = call.data.replace("delcat_", "")
     data = load_data()
     cats = data.get("categories", [])
@@ -404,9 +400,6 @@ def callback_del_cat(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("editcat_"))
 def callback_edit_cat(call):
     bot.answer_callback_query(call.id)
-    if str(call.from_user.id) != str(ADMIN_ID):
-        bot.send_message(call.message.chat.id, "অননুমোদিত অ্যাক্সেস!")
-        return
     old_cat = call.data.replace("editcat_", "")
     msg = bot.send_message(call.message.chat.id, f"'{old_cat}' এর নতুন নাম কী দিতে চান? নাম লিখে পাঠান (বাতিল করতে /cancel দিন):")
     bot.register_next_step_handler(msg, lambda m: process_rename_category(m, old_cat))
@@ -427,12 +420,30 @@ def process_rename_category(message, old_cat):
                 v["category"] = new_cat
         save_data(data)
         bot.send_message(message.chat.id, f"ক্যাটাগরি '{old_cat}' পরিবর্তন করে '{new_cat}' করা হয়েছে!")
- 
+
+# --- ব্রডকাস্ট বাটন জেনারেটর ---
+
+def get_broadcast_markup():
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    btn_watch = types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=WEB_APP_URL))
+    btn_update = types.InlineKeyboardButton("🔔 VIDEO UPDATE", url="https://t.me/bachelor_point_season_5_update")
+    btn_help = types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="help_download")
+    markup.add(btn_watch, btn_update, btn_help)
+    return markup
+
+@bot.callback_query_handler(func=lambda call: call.data == "help_download")
+def help_callback(call):
+    bot.answer_callback_query(call.id)
+    bot.send_message(call.message.chat.id, "ভিডিও দেখতে বা ডাউনলোড করতে 'WATCH NOW' বাটনে চাপ দিন এবং আপনার পছন্দের পর্ব বেছে নিন।")
+
+# --- সার্ভার রানার ---
+
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     t = threading.Thread(target=run_flask)
+    t.daemon = True
     t.start()
     bot.infinity_polling(skip_pending=True)
