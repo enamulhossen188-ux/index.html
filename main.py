@@ -8,7 +8,7 @@ import os
 from datetime import datetime
 
 BOT_TOKEN = "8995171178:AAGtywmRpI9PNlhXJ2Swdb6r-8T8nXEcqu0"
-ADMIN_ID = 7255626228
+ADMIN_ID = "7255626228"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
@@ -109,17 +109,56 @@ def cancel_process(message):
         bot.send_message(chat_id, "🔄 আগের অসমাপ্ত কাজ বাতিল করা হয়েছে।", reply_markup=types.ReplyKeyboardRemove())
     else:
         bot.send_message(chat_id, "বর্তমানে কোনো কাজ চালু নেই।")
-@bot.message_handler(commands=['broadcast'])
-def broadcast_start(message):
-    if str(message.chat.id) != str(ADMIN_ID):
-        bot.reply_to(message, "❌ আপনি অ্যাডমিন নন!")
-        return
-    admin_state[message.chat.id] = {'step': 'broadcast_content'}
-    bot.send_message(
-        message.chat.id, 
-        "📢 **ব্রডকাস্ট পোস্টটি পাঠান:**\n\nআপনি যে ছবিটি পাঠাতে চান সেটি ক্যাপশন সহ পাঠান। বট নিজে থেকেই নিচে **WATCH NOW** বাটন যুক্ত করে সবার ইনবক্সে পাঠিয়ে দেবে।"
-    )
+# --- ক্যাটাগরি এবং ব্রডকাস্ট কমান্ড ---
 
+@bot.message_handler(commands=['setcategory'])
+def manage_categories_menu(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.send_message(message.chat.id, f"অননুমোদিত অ্যাক্সেস! আপনার আইডি: {message.chat.id}")
+        return
+    try:
+        data = load_data()
+        cats = data.get("categories")
+        if not cats or not isinstance(cats, list):
+            cats = ["BPS5", "Web Series", "Movie"]
+            data["categories"] = cats
+            save_data(data)
+
+        markup = types.InlineKeyboardMarkup()
+        for c in cats:
+            btn_edit = types.InlineKeyboardButton("[Edit] " + str(c), callback_data="editcat_" + str(c))
+            btn_del = types.InlineKeyboardButton("[Delete] " + str(c), callback_data="delcat_" + str(c))
+            markup.row(btn_edit, btn_del)
+            
+        markup.add(types.InlineKeyboardButton("+ Add New Category", callback_data="add_new_cat"))
+
+        msg_text = "📁 ক্যাটাগরি কন্ট্রোল প্যানেল:\nEdit করতে [Edit] বাটনে চাপুন।\nDelete করতে [Delete] বাটনে চাপুন।"
+        bot.send_message(message.chat.id, msg_text, reply_markup=markup)
+    except Exception as e:
+        bot.send_message(message.chat.id, "Error: " + str(e))
+
+@bot.message_handler(commands=['broadcast'])
+def broadcast_command(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.send_message(message.chat.id, f"অননুমোদিত অ্যাক্সেস! আপনার আইডি: {message.chat.id}")
+        return
+    msg = bot.send_message(message.chat.id, "📢 সকল ইউজারের কাছে পাঠানোর জন্য নোটিশ বা মেসেজটি লিখুন (বাতিল করতে /cancel দিন):")
+    bot.register_next_step_handler(msg, process_broadcast_message)
+
+def process_broadcast_message(message):
+    if message.text == '/cancel':
+        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
+        return
+    data = load_data()
+    users = data.get("users", [])
+    count = 0
+    for uid in users:
+        try:
+            bot.copy_message(chat_id=uid, from_chat_id=message.chat.id, message_id=message.message_id)
+            count += 1
+        except Exception:
+            pass
+    bot.send_message(message.chat.id, f"✅ সফলভাবে {count} জন ইউজারের কাছে মেসেজ পাঠানো হয়েছে!")
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
     if str(message.chat.id) != str(ADMIN_ID):
@@ -320,28 +359,6 @@ def handle_admin_inputs(message):
         del admin_state[chat_id]
         bot.reply_to(message, f"🎉 **{title_done} সফলভাবে আপলোড হয়েছে!**\nমিনি অ্যাপে এখনই দেখতে পাবেন।")
 # --- ক্যাটাগরি ম্যানেজমেন্ট ---
-@bot.message_handler(commands=['setcategory'])
-def manage_categories_menu(message):
-    try:
-        data = load_data()
-        cats = data.get("categories")
-        if not cats or not isinstance(cats, list):
-            cats = ["BPS5", "Web Series", "Movie"]
-            data["categories"] = cats
-            save_data(data)
-
-        markup = types.InlineKeyboardMarkup()
-        for c in cats:
-            btn_edit = types.InlineKeyboardButton("[Edit] " + str(c), callback_data="editcat_" + str(c))
-            btn_del = types.InlineKeyboardButton("[Delete] " + str(c), callback_data="delcat_" + str(c))
-            markup.row(btn_edit, btn_del)
-            
-        markup.add(types.InlineKeyboardButton("+ Add New Category", callback_data="add_new_cat"))
-
-        msg_text = "ক্যাটাগরি কন্ট্রোল প্যানেল:\nEdit করতে [Edit] বাটনে চাপুন।\nDelete করতে [Delete] বাটনে চাপুন।"
-        bot.send_message(message.chat.id, msg_text, reply_markup=markup)
-    except Exception as e:
-        bot.send_message(message.chat.id, "Error: " + str(e))
 
 @bot.callback_query_handler(func=lambda call: call.data == "add_new_cat")
 def callback_add_cat(call):
