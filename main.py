@@ -362,6 +362,72 @@ def handle_admin_inputs(message):
 
 @bot.callback_query_handler(func=lambda call: call.data == "add_new_cat")
 def callback_add_cat(call):
+    bot.answer_callback_query(call.id)
+    if str(call.from_user.id) != str(ADMIN_ID):
+        bot.send_message(call.message.chat.id, "অননুমোদিত অ্যাক্সেস!")
+        return
+    msg = bot.send_message(call.message.chat.id, "নতুন ক্যাটাগরির নাম লিখে পাঠান (বাতিল করতে /cancel লিখুন):")
+    bot.register_next_step_handler(msg, process_add_category)
+
+def process_add_category(message):
+    if message.text == '/cancel':
+        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
+        return
+    new_cat = message.text.strip()
+    data = load_data()
+    cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
+    if new_cat in cats:
+        bot.send_message(message.chat.id, "এই ক্যাটাগরিটি ইতিমধ্যে রয়েছে!")
+        return
+    cats.append(new_cat)
+    data["categories"] = cats
+    save_data(data)
+    bot.send_message(message.chat.id, f"নতুন ক্যাটাগরি '{new_cat}' সফলভাবে যোগ হয়েছে!")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("delcat_"))
+def callback_del_cat(call):
+    bot.answer_callback_query(call.id)
+    if str(call.from_user.id) != str(ADMIN_ID):
+        bot.send_message(call.message.chat.id, "অননুমোদিত অ্যাক্সেস!")
+        return
+    target_cat = call.data.replace("delcat_", "")
+    data = load_data()
+    cats = data.get("categories", [])
+    if target_cat in cats:
+        cats.remove(target_cat)
+        data["categories"] = cats
+        save_data(data)
+        bot.send_message(call.message.chat.id, f"ক্যাটাগরি '{target_cat}' মুছে ফেলা হয়েছে!")
+    else:
+        bot.send_message(call.message.chat.id, "ক্যাটাগরি পাওয়া যায়নি!")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("editcat_"))
+def callback_edit_cat(call):
+    bot.answer_callback_query(call.id)
+    if str(call.from_user.id) != str(ADMIN_ID):
+        bot.send_message(call.message.chat.id, "অননুমোদিত অ্যাক্সেস!")
+        return
+    old_cat = call.data.replace("editcat_", "")
+    msg = bot.send_message(call.message.chat.id, f"'{old_cat}' এর নতুন নাম কী দিতে চান? নাম লিখে পাঠান (বাতিল করতে /cancel দিন):")
+    bot.register_next_step_handler(msg, lambda m: process_rename_category(m, old_cat))
+
+def process_rename_category(message, old_cat):
+    if message.text == '/cancel':
+        bot.send_message(message.chat.id, "বাতিল করা হয়েছে।")
+        return
+    new_cat = message.text.strip()
+    data = load_data()
+    cats = data.get("categories", [])
+    if old_cat in cats:
+        idx = cats.index(old_cat)
+        cats[idx] = new_cat
+        data["categories"] = cats
+        for v in data.get("videos", []):
+            if v.get("category") == old_cat:
+                v["category"] = new_cat
+        save_data(data)
+        bot.send_message(message.chat.id, f"ক্যাটাগরি '{old_cat}' পরিবর্তন করে '{new_cat}' করা হয়েছে!")
+def callback_add_cat(call):
     if str(call.message.chat.id) != str(ADMIN_ID):
         return
     bot.answer_callback_query(call.id)
