@@ -19,7 +19,7 @@ DB_FILE = "database.json"
 import base64
 import requests
 
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "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"
 REPO_NAME = "enamulhossen188-ux/index.html"
 FILE_PATH = "database.json"
 
