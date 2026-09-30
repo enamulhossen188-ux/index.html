@@ -8,16 +8,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-color: #080c14;
-            --surface-color: rgba(18, 25, 38, 0.75);
+            --bg-color: #0d0e12;
+            --surface-color: rgba(22, 23, 29, 0.85);
             --card-border: rgba(255, 255, 255, 0.08);
-            --primary: #0088cc;
-            --primary-gradient: linear-gradient(135deg, #0088cc 0%, #00b4d8 100%);
+            --primary: #ff0055;
+            --primary-gradient: linear-gradient(135deg, #ff007f 0%, #ff0055 100%);
+            --accent-pink: #ff007f;
+            --accent-glow: rgba(255, 0, 127, 0.5);
             --text-color: #f8fafc;
             --text-muted: #8e9bb0;
-            --input-bg: rgba(14, 20, 31, 0.8);
-            --badge-bg: rgba(0, 136, 204, 0.15);
-            --badge-text: #38bdf8;
+            --input-bg: #181920;
+            --badge-bg: rgba(255, 0, 127, 0.15);
+            --badge-text: #ff3385;
         }
 
         body.light-mode {
@@ -27,8 +29,8 @@
             --text-color: #0f172a;
             --text-muted: #64748b;
             --input-bg: #e2e8f0;
-            --badge-bg: #e0f2fe;
-            --badge-text: #0284c7;
+            --badge-bg: #ffe4e6;
+            --badge-text: #e11d48;
         }
 
         * {
@@ -97,8 +99,8 @@
         }
 
         .search-input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 10px rgba(0, 136, 204, 0.3);
+            border-color: var(--accent-pink);
+            box-shadow: 0 0 10px var(--accent-glow);
         }
 
         .search-icon {
@@ -138,26 +140,27 @@
             color: #ffffff;
             font-weight: 600;
             border: none;
-            box-shadow: 0 2px 8px rgba(0, 136, 204, 0.4);
+            box-shadow: 0 2px 10px var(--accent-glow);
         }
 
-        /* YouTube স্টাইল ওয়াইড কার্ড গ্রিড */
         .video-grid {
             display: grid;
             grid-template-columns: 1fr;
             gap: 16px;
         }
 
+        /* চারপাশে পিংক কালার হাইলাইট বর্ডার */
         .video-card {
             background: var(--surface-color);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
+            border: 1.5px solid var(--accent-pink);
+            box-shadow: 0 0 12px rgba(255, 0, 127, 0.2);
+            border-radius: 16px;
             overflow: hidden;
             backdrop-filter: blur(12px);
             display: flex;
             flex-direction: column;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .video-card:active {
@@ -241,83 +244,156 @@
             backdrop-filter: blur(14px);
         }
 
-        /* ডিটেইল পেজের থাম্বনেইলও পারফেক্ট 16:9 রাখা হলো */
+        /* ভিডিও চারপাশে কালার ঘোরার অ্যানিমেশন রিং */
+        .rotating-border-box {
+            position: relative;
+            padding: 2px;
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .rotating-border-box::before {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 300%;
+            background: conic-gradient(transparent, #ff007f, #ff3385, transparent 60%);
+            animation: rotateGlow 3s linear infinite;
+        }
+
+        @keyframes rotateGlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         #detailThumb {
             width: 100%;
             aspect-ratio: 16 / 9;
             object-fit: cover;
             border-radius: 12px;
-            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
             background: #000;
         }
 
-        /* প্রফেশনাল ও চিকন টাস্ক বাটন ডিজাইন */
-        .task-box {
-            background: var(--input-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 14px;
-            margin-top: 14px;
+        .detail-title-card {
+            border: 1.5px solid var(--accent-pink);
+            border-radius: 10px;
+            padding: 10px 14px;
             text-align: center;
-        }
-
-        .task-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 10px;
             margin-bottom: 12px;
+            background: rgba(255, 0, 127, 0.03);
         }
 
-        .slim-task-btn {
+        /* লাল স্ট্রাইপ সতর্কবার্তা বক্স */
+        .unlock-info-box {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 9px 8px;
-            border-radius: 8px;
-            font-size: 11px;
+            gap: 8px;
+            border-left: 4px solid #ef4444;
+            background: rgba(239, 68, 68, 0.08);
+            padding: 10px 12px;
+            border-radius: 0 8px 8px 0;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 14px;
+        }
+
+        /* স্ক্রিনশট স্টাইল টাস্ক বাটন বক্স */
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .task-card-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            background: var(--input-bg);
+            border: 1.5px solid var(--accent-pink);
+            border-radius: 14px;
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.15);
+        }
+
+        .task-info-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .task-icon {
+            font-size: 18px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .task-icon.completed {
+            color: #10b981;
+        }
+
+        .task-text h4 {
+            font-size: 14px;
             font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-color);
+            margin-bottom: 2px;
+        }
+
+        .task-text p {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* VISIT লাল বাটন */
+        .visit-action-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
             cursor: pointer;
-            transition: all 0.25s ease;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+            transition: all 0.2s ease;
         }
 
-        .slim-task-btn:active {
-            transform: scale(0.97);
+        .visit-action-btn:active {
+            transform: scale(0.95);
         }
 
-        .slim-task-btn.running {
-            border-color: #0088cc;
-            background: rgba(0, 136, 204, 0.15);
-            color: #38bdf8;
+        .visit-action-btn.running {
+            background: #0088cc;
             pointer-events: none;
         }
 
-        .slim-task-btn.done {
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
+        .visit-action-btn.done {
+            background: #10b981;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
             pointer-events: none;
         }
 
-        .slim-task-btn.failed {
-            border-color: #ef4444;
-            background: rgba(239, 68, 68, 0.15);
-            color: #f87171;
-            pointer-events: auto;
+        .visit-action-btn.failed {
+            background: #b91c1c;
         }
 
         .download-btn {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             width: 100%;
             padding: 12px;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
-            text-align: center;
             cursor: pointer;
             border: none;
             transition: all 0.3s ease;
@@ -327,17 +403,10 @@
         }
 
         .download-btn.disabled {
-            background: var(--card-border);
-            color: var(--text-muted);
+            background: #1e293b;
+            color: #64748b;
             pointer-events: none;
             box-shadow: none;
-        }
-
-        .task-status-text {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-            min-height: 16px;
         }
 
         .empty-msg {
@@ -375,28 +444,54 @@
     <div class="detail-view" id="detailView">
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         <div class="detail-card">
-            <img id="detailThumb" src="" alt="Thumbnail">
-            <h2 id="detailTitle" style="font-size: 16px; margin-bottom: 6px;"></h2>
-            <span id="detailCategory" class="category-tag"></span>
+            
+            <!-- ভিডিওর চারপাশে রোটেটিং কালার হাইলাইট -->
+            <div class="rotating-border-box">
+                <img id="detailThumb" src="" alt="Thumbnail">
+            </div>
 
-            <div class="task-box">
-                <div id="taskNotice" class="task-status-text">নিচের ২টি টাস্কে ১০ সেকেন্ড করে ভিজিট করুন:</div>
+            <!-- টাইটেল বক্স -->
+            <div class="detail-title-card">
+                <h2 id="detailTitle" style="font-size: 15px; font-weight: 700;"></h2>
+            </div>
 
-                <!-- দুটি চিকন প্রফেশনাল টাস্ক বাটন -->
-                <div class="task-grid">
-                    <button id="task1Btn" class="slim-task-btn" onclick="startTask(1)">
-                        <i class="fa-solid fa-play"></i> Task 1 (10s)
-                    </button>
-                    <button id="task2Btn" class="slim-task-btn" onclick="startTask(2)">
-                        <i class="fa-solid fa-play"></i> Task 2 (10s)
-                    </button>
+            <!-- রেড ইনফো বক্স -->
+            <div class="unlock-info-box">
+                <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা এড দেখে নিন ১০ সেকেন্ড করে।</span>
+            </div>
+
+            <!-- স্ক্রিনশট স্টাইল টাস্ক বাটন -->
+            <div class="task-list">
+                <!-- Task 1 -->
+                <div class="task-card-row">
+                    <div class="task-info-left">
+                        <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
+                        <div class="task-text">
+                            <h4>Task 1</h4>
+                            <p id="task1Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                        </div>
+                    </div>
+                    <button id="task1Btn" class="visit-action-btn" onclick="startTask(1)">VISIT</button>
                 </div>
 
-                <!-- ডাউনলোড বাটন -->
-                <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
-                    <i class="fa-solid fa-download"></i> ইনবক্সে ভিডিও নিন
-                </button>
+                <!-- Task 2 -->
+                <div class="task-card-row">
+                    <div class="task-info-left">
+                        <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
+                        <div class="task-text">
+                            <h4>Task 2</h4>
+                            <p id="task2Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                        </div>
+                    </div>
+                    <button id="task2Btn" class="visit-action-btn" onclick="startTask(2)">VISIT</button>
+                </div>
             </div>
+
+            <!-- ডাউনলোড বাটন -->
+            <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
+                <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
+            </button>
         </div>
     </div>
 
@@ -419,8 +514,6 @@
             try {
                 const res = await fetch("https://my-bot-server-bnj8.onrender.com/api/data?t=" + Date.now());
                 appData = await res.json();
-                
-                // ডায়নামিক ক্যাটাগরি বাটন তৈরি
                 renderCategoryTabs();
                 renderVideos();
             } catch (err) {
@@ -498,7 +591,6 @@
 
             document.getElementById("detailThumb").src = video.thumb || 'https://via.placeholder.com/640x360';
             document.getElementById("detailTitle").innerText = video.title;
-            document.getElementById("detailCategory").innerText = video.category || 'নাটক';
 
             resetTasks();
         }
@@ -512,19 +604,18 @@
             const btn1 = document.getElementById("task1Btn");
             const btn2 = document.getElementById("task2Btn");
             const dlBtn = document.getElementById("downloadBtn");
-            const notice = document.getElementById("taskNotice");
 
-            btn1.className = "slim-task-btn";
-            btn1.innerHTML = `<i class="fa-solid fa-play"></i> Task 1 (10s)`;
+            btn1.className = "visit-action-btn";
+            btn1.innerHTML = "VISIT";
+            document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
+            document.getElementById("task1Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
-            btn2.className = "slim-task-btn";
-            btn2.innerHTML = `<i class="fa-solid fa-play"></i> Task 2 (10s)`;
+            btn2.className = "visit-action-btn";
+            btn2.innerHTML = "VISIT";
+            document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
+            document.getElementById("task2Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
             dlBtn.className = "download-btn disabled";
-            dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ইনবক্সে ভিডিও নিন`;
-
-            notice.style.color = "var(--text-muted)";
-            notice.innerText = "নিচের ২টি টাস্কে ১০ সেকেন্ড করে ভিজিট করুন:";
         }
 
         function goBack() {
@@ -550,12 +641,11 @@
             }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
-            const notice = document.getElementById("taskNotice");
+            const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
-            btn.className = "slim-task-btn running";
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 10s`;
-            notice.style.color = "#38bdf8";
-            notice.innerText = `Task ${taskNum}: অ্যাড পেজে ১০ সেকেন্ড অবস্থান করুন...`;
+            btn.className = "visit-action-btn running";
+            btn.innerHTML = `10s`;
+            desc.innerText = "অপেক্ষা করুন...";
 
             if (countdownTimer) clearInterval(countdownTimer);
 
@@ -564,7 +654,7 @@
                 const remaining = 10 - passed;
 
                 if (remaining > 0) {
-                    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${remaining}s`;
+                    btn.innerHTML = `${remaining}s`;
                 } else {
                     clearInterval(countdownTimer);
                     completeTask(taskNum);
@@ -574,10 +664,13 @@
 
         function completeTask(taskNum) {
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
-            const notice = document.getElementById("taskNotice");
+            const icon = document.getElementById(taskNum === 1 ? "task1Icon" : "task2Icon");
+            const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
-            btn.className = "slim-task-btn done";
-            btn.innerHTML = `<i class="fa-solid fa-check"></i> Task ${taskNum}`;
+            btn.className = "visit-action-btn done";
+            btn.innerHTML = `DONE`;
+            icon.classList.add("completed");
+            desc.innerText = "টাস্ক সম্পন্ন হয়েছে ✅";
 
             if (taskNum === 1) task1Done = true;
             if (taskNum === 2) task2Done = true;
@@ -587,14 +680,10 @@
             if (task1Done && task2Done) {
                 const dlBtn = document.getElementById("downloadBtn");
                 dlBtn.className = "download-btn";
-                notice.style.color = "#10b981";
-                notice.innerText = "🎉 উভয় টাস্ক সম্পন্ন! নিচের বাটনে ক্লিক করুন।";
-            } else {
-                notice.style.color = "var(--text-muted)";
-                notice.innerText = `Task ${taskNum} সম্পন্ন! বাকি টাস্কটি সম্পন্ন করুন।`;
             }
         }
 
+        // ১০ সেকেন্ডের আগে মিনি অ্যাপে ফিরে আসলে সতর্কবার্তা শো করার ফাংশন
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = (Date.now() - taskStartTime) / 1000;
@@ -605,13 +694,18 @@
                     activeTask = null;
 
                     const btn = document.getElementById(taskFailed === 1 ? "task1Btn" : "task2Btn");
-                    const notice = document.getElementById("taskNotice");
+                    const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
 
-                    btn.className = "slim-task-btn failed";
-                    btn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> Task ${taskFailed}`;
+                    btn.className = "visit-action-btn failed";
+                    btn.innerHTML = `RETRY`;
+                    desc.innerText = "❌ ১০ সেকেন্ড পূর্ণ হয়নি! আবার চেষ্টা করুন।";
 
-                    notice.style.color = "#ef4444";
-                    notice.innerText = `⚠️ ১০ সেকেন্ডের আগে ফিরে এসেছেন! Task ${taskFailed} পুনরায় করুন।`;
+                    // স্ক্রিনে সরাসরি অ্যালার্ট সতর্কবার্তা
+                    if (tg && tg.showAlert) {
+                        tg.showAlert("⚠️ আপনি ১০ সেকেন্ড অপেক্ষা করেননি! ভিডিওটি আনলক করতে দয়া করে পুরো ১০ সেকেন্ড ভিজিট সম্পন্ন করুন।");
+                    } else {
+                        alert("⚠️ আপনি ১০ সেকেন্ড অপেক্ষা করেননি! ভিডিওটি আনলক করতে দয়া করে পুরো ১০ সেকেন্ড ভিজিট সম্পন্ন করুন।");
+                    }
                 }
             }
         });
