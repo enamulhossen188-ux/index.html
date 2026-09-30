@@ -156,7 +156,7 @@ def delete_start(message):
         return
     markup = types.InlineKeyboardMarkup()
     for v in videos:
-        markup.add(types.InlineKeyboardButton(f"🗑️️ {v.get('title', 'Unknown')}", callback_data=f"del_{v.get('id')}"))
+        markup.add(types.InlineKeyboardButton(f"🗑 {v.get('title', 'Unknown')}", callback_data=f"del_{v.get('id')}"))
     bot.send_message(message.chat.id, "🗑️ **কোন ভিডিওটি ডিলিট করতে চান? ক্লিক করুন:**", reply_markup=markup)
 
 @bot.message_handler(commands=['upload'])
@@ -175,7 +175,7 @@ def start_upload(message):
     markup.row(types.KeyboardButton("/cancel"))
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
-# /start এবং সরাসরি ইনবক্সে ভিডিও ডেলিভারি
+# /start এবং সরাসরি ইনবক্সে ভিডিও ডেলিভারি (Content Protection সহ)
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -195,10 +195,10 @@ def send_welcome(message):
             bot.send_message(message.chat.id, f"🎬 **{target_video['title']}**\n⏳ আপনার ভিডিওটি ইনবক্সে পাঠানো হচ্ছে...")
             try:
                 caption = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
-                bot.send_video(message.chat.id, target_video['file_id'], caption=caption, parse_mode="Markdown")
+                bot.send_video(message.chat.id, target_video['file_id'], caption=caption, parse_mode="Markdown", protect_content=True)
             except Exception:
                 try:
-                    bot.send_document(message.chat.id, target_video['file_id'])
+                    bot.send_document(message.chat.id, target_video['file_id'], protect_content=True)
                 except Exception:
                     bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে।")
             return
