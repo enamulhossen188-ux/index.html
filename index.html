@@ -431,10 +431,7 @@
         </div>
 
         <div class="category-scroll" id="categoryTabs">
-            <div class="category-chip active" onclick="filterCategory('all', this)">সবগুলো</div>
-            <div class="category-chip" onclick="filterCategory('BPS5', this)">BPS5</div>
-            <div class="category-chip" onclick="filterCategory('Web Series', this)">Web Series</div>
-            <div class="category-chip" onclick="filterCategory('Movie', this)">Movie</div>
+            <!-- ক্যাটাগরি স্বয়ংক্রিয়ভাবে ডাটাবেজ থেকে রেন্ডার হবে -->
         </div>
 
         <div class="video-grid" id="videoContainer"></div>
@@ -501,7 +498,7 @@
         if (tg) tg.expand();
 
         let appData = { videos: [], ads: {} };
-        let activeCategory = 'all';
+        let activeCategory = '';
         let currentSelectedVideo = null;
 
         let task1Done = false;
@@ -514,6 +511,13 @@
             try {
                 const res = await fetch("https://my-bot-server-bnj8.onrender.com/api/data?t=" + Date.now());
                 appData = await res.json();
+                
+                // প্রথম ক্যাটাগরি ডিফল্টভাবে সক্রিয় করা হচ্ছে
+                const cats = appData.categories || ["BPS5", "Web Series", "Movie"];
+                if (cats.length > 0) {
+                    activeCategory = cats[0];
+                }
+                
                 renderCategoryTabs();
                 renderVideos();
             } catch (err) {
@@ -525,9 +529,11 @@
             const tabsContainer = document.getElementById("categoryTabs");
             const cats = appData.categories || ["BPS5", "Web Series", "Movie"];
             
-            let html = `<div class="category-chip ${activeCategory === 'all' ? 'active' : ''}" onclick="filterCategory('all', this)">সবগুলো</div>`;
-            cats.forEach(c => {
-                html += `<div class="category-chip ${activeCategory === c ? 'active' : ''}" onclick="filterCategory('${c}', this)">${c}</div>`;
+            let html = '';
+            cats.forEach((c, index) => {
+                const isActive = (activeCategory === c) || (!activeCategory && index === 0);
+                if (isActive) activeCategory = c;
+                html += `<div class="category-chip ${isActive ? 'active' : ''}" onclick="filterCategory('${c}', this)">${c}</div>`;
             });
             tabsContainer.innerHTML = html;
         }
@@ -539,7 +545,8 @@
 
             let list = appData.videos || [];
 
-            if (activeCategory !== 'all') {
+            // ক্যাটাগরি অনুযায়ী আলাদা ফিল্টার করা
+            if (activeCategory) {
                 list = list.filter(v => (v.category || '').toLowerCase() === activeCategory.toLowerCase());
             }
 
@@ -700,7 +707,6 @@
                     btn.innerHTML = `RETRY`;
                     desc.innerText = "❌ ১০ সেকেন্ড পূর্ণ হয়নি! আবার চেষ্টা করুন।";
 
-                    // স্ক্রিনে সরাসরি অ্যালার্ট সতর্কবার্তা
                     if (tg && tg.showAlert) {
                         tg.showAlert("⚠️ আপনি ১০ সেকেন্ড অপেক্ষা করেননি! ভিডিওটি আনলক করতে দয়া করে পুরো ১০ সেকেন্ড ভিজিট সম্পন্ন করুন।");
                     } else {
@@ -742,4 +748,4 @@
         initData();
     </script>
 </body>
-    </html>
+                </html>
