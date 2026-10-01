@@ -327,8 +327,8 @@ def process_rename_category(message, old_cat):
         save_data(data)
         bot.send_message(message.chat.id, f"✅ ক্যাটাগরি '{old_cat}' পরিবর্তন করে '{new_cat}' করা হয়েছে!")
 
-# --- অ্যাডমিনের ইনপুট হ্যান্ডলার (ব্রডকাস্ট ও আপলোড) ---
-@bot.message_handler(content_types=['text', 'photo', 'video'])
+# --- অ্যাডমিনের ইনপুট হ্যান্ডলার (ব্রডকাস্ট ও আপলোড: এখানে document যুক্ত করা হয়েছে) ---
+@bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id 
     if str(chat_id) != str(ADMIN_ID) or chat_id not in admin_state:
@@ -351,9 +351,9 @@ def handle_admin_inputs(message):
         markup = get_action_buttons()
 
         # পোস্টের টাইটেল নির্ধারণ
-        raw_text = message.caption if (message.photo or message.video) else message.text
+        raw_text = message.caption if (message.photo or message.video or message.document) else message.text
         if not raw_text:
-            raw_text = "Photo/Video Broadcast"
+            raw_text = "Broadcast Message"
         title_snippet = (raw_text[:25] + "...") if len(raw_text) > 25 else raw_text
 
         for uid in user_list:
@@ -363,6 +363,8 @@ def handle_admin_inputs(message):
                     sent_msg = bot.send_photo(uid, message.photo[-1].file_id, caption=message.caption or "", reply_markup=markup)
                 elif message.video:
                     sent_msg = bot.send_video(uid, message.video.file_id, caption=message.caption or "", reply_markup=markup)
+                elif message.document:
+                    sent_msg = bot.send_document(uid, message.document.file_id, caption=message.caption or "", reply_markup=markup)
                 elif message.text:
                     sent_msg = bot.send_message(uid, message.text, reply_markup=markup)
                 
