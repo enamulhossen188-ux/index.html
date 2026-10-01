@@ -134,7 +134,7 @@ def delete_broadcast_menu(message):
     markup = types.InlineKeyboardMarkup()
     for item in broadcast_history:
         markup.add(types.InlineKeyboardButton(f"🗑️ {item['title']}", callback_data=f"delbc_{item['id']}"))
-    bot.send_message(message.chat.id, "🗑️ **কোন পোস্টটি সবার ইনবক্স থেকে ডিলিট করতে চান? ক্লিক করুন:**", reply_markup=markup, parse_mode="Markdown")
+    bot.send_message(message.chat.id, "🗑️️ **কোন পোস্টটি সবার ইনবক্স থেকে ডিলিট করতে চান? ক্লিক করুন:**", reply_markup=markup, parse_mode="Markdown")
 
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
@@ -175,7 +175,7 @@ def start_upload(message):
     markup.row(types.KeyboardButton("/cancel"))
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
-# /start এবং সরাসরি ইনবক্সে ভিডিও ডেলিভারি (Content Protection সহ)
+# /start এবং সরাসরি ইনবক্সে ভিডিও ডেলিভারি (ভিডিও স্ট্রিমিং নিশ্চিতকরণ)
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -193,14 +193,37 @@ def send_welcome(message):
 
         if target_video:
             bot.send_message(message.chat.id, f"🎬 **{target_video['title']}**\n⏳ আপনার ভিডিওটি ইনবক্সে পাঠানো হচ্ছে...")
+            caption = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
             try:
-                caption = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
-                bot.send_video(message.chat.id, target_video['file_id'], caption=caption, parse_mode="Markdown", protect_content=True)
-            except Exception:
+                bot.send_video(
+                    message.chat.id, 
+                    target_video['file_id'], 
+                    caption=caption, 
+                    parse_mode="Markdown", 
+                    protect_content=True,
+                    supports_streaming=True
+                )
+            except Exception as e:
+                print("Video send retry/fallback:", e)
                 try:
-                    bot.send_document(message.chat.id, target_video['file_id'], protect_content=True)
+                    bot.send_video(
+                        message.chat.id, 
+                        target_video['file_id'], 
+                        caption=caption, 
+                        parse_mode="Markdown", 
+                        protect_content=True
+                    )
                 except Exception:
-                    bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে।")
+                    try:
+                        bot.send_document(
+                            message.chat.id, 
+                            target_video['file_id'], 
+                            caption=caption, 
+                            parse_mode="Markdown", 
+                            protect_content=True
+                        )
+                    except Exception:
+                        bot.send_message(message.chat.id, "❌ ভিডিওটি পাঠাতে সমস্যা হচ্ছে।")
             return
         else:
             bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি পাওয়া যায়নি!")
@@ -327,7 +350,7 @@ def process_rename_category(message, old_cat):
         save_data(data)
         bot.send_message(message.chat.id, f"✅ ক্যাটাগরি '{old_cat}' পরিবর্তন করে '{new_cat}' করা হয়েছে!")
 
-# --- অ্যাডমিনের ইনপুট হ্যান্ডলার (ব্রডকাস্ট ও আপলোড: এখানে document যুক্ত করা হয়েছে) ---
+# --- অ্যাডমিনের ইনপুট হ্যান্ডলার ---
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id 
@@ -336,7 +359,7 @@ def handle_admin_inputs(message):
 
     step = admin_state[chat_id].get('step')
 
-    # ব্রডকাস্ট পাঠানোর লজিক (মেসেজ পাঠানোর সাথে সাথে আইডিগুলো মনে রাখবে)
+    # ব্রডকাস্ট পাঠানোর লজিক
     if step == 'broadcast_content':
         if message.text == '/cancel':
             del admin_state[chat_id]
@@ -350,7 +373,6 @@ def handle_admin_inputs(message):
         sent_records = []
         markup = get_action_buttons()
 
-        # পোস্টের টাইটেল নির্ধারণ
         raw_text = message.caption if (message.photo or message.video or message.document) else message.text
         if not raw_text:
             raw_text = "Broadcast Message"
@@ -374,7 +396,6 @@ def handle_admin_inputs(message):
             except Exception:
                 pass
 
-        # ব্রডকাস্ট হিস্টোরিতে সংরক্ষণ
         if sent_records:
             broadcast_history.append({
                 "id": str(len(broadcast_history) + 1),
@@ -407,7 +428,7 @@ def handle_admin_inputs(message):
     elif step == 'title' and message.text:
         admin_state[chat_id]['title'] = message.text.strip()
         admin_state[chat_id]['step'] = 'thumb'
-        bot.send_message(chat_id, "🖼️ **থাম্বনেইল ছবি পাঠান:**")
+        bot.send_message(chat_id, "🖼️️ **থাম্বনেইল ছবি পাঠান:**")
 
     elif step == 'thumb' and (message.photo or message.text):
         if message.photo:
