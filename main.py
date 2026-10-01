@@ -134,7 +134,26 @@ def delete_broadcast_menu(message):
     markup = types.InlineKeyboardMarkup()
     for item in broadcast_history:
         markup.add(types.InlineKeyboardButton(f"🗑️ {item['title']}", callback_data=f"delbc_{item['id']}"))
-    bot.send_message(message.chat.id, "🗑️️ **কোন পোস্টটি সবার ইনবক্স থেকে ডিলিট করতে চান? ক্লিক করুন:**", reply_markup=markup, parse_mode="Markdown")
+    bot.send_message(message.chat.id, "🗑 **কোন পোস্টটি সবার ইনবক্স থেকে ডিলিট করতে চান? ক্লিক করুন:**", reply_markup=markup, parse_mode="Markdown")
+
+# --- মোট ইউজার সংখ্যা ও পরিসংখ্যান দেখার কমান্ড (/users ও /stats) ---
+@bot.message_handler(commands=['users', 'stats'])
+def show_total_users(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.reply_to(message, "❌ আপনি অ্যাডমিন নন!")
+        return
+
+    data = load_data()
+    user_list = data.get("users", [])
+    total_users = len(user_list)
+
+    msg_text = (
+        "📊 **বটের ইউজার পরিসংখ্যান**\n\n"
+        f"👥 মোট জয়েনকৃত ইউজার: **{total_users}** জন\n"
+        f"🎬 মোট আপলোডকৃত ভিডিও: **{len(data.get('videos', []))}** টি\n"
+        f"📁 মোট ক্যাটাগরি: **{len(data.get('categories', []))}** টি"
+    )
+    bot.send_message(message.chat.id, msg_text, parse_mode="Markdown")
 
 @bot.message_handler(commands=['setads'])
 def set_ads_start(message):
@@ -152,7 +171,7 @@ def delete_start(message):
     data = load_data()
     videos = data.get("videos", [])
     if not videos:
-        bot.send_message(message.chat.id, "ℹ️ ডাটাবেজে কোনো ভিডিও নেই!")
+        bot.send_message(message.chat.id, "ℹ️️ ডাটাবেজে কোনো ভিডিও নেই!")
         return
     markup = types.InlineKeyboardMarkup()
     for v in videos:
@@ -428,7 +447,7 @@ def handle_admin_inputs(message):
     elif step == 'title' and message.text:
         admin_state[chat_id]['title'] = message.text.strip()
         admin_state[chat_id]['step'] = 'thumb'
-        bot.send_message(chat_id, "🖼️️ **থাম্বনেইল ছবি পাঠান:**")
+        bot.send_message(chat_id, "🖼 **থাম্বনেইল ছবি পাঠান:**")
 
     elif step == 'thumb' and (message.photo or message.text):
         if message.photo:
