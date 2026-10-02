@@ -190,14 +190,15 @@ def show_total_users(message):
     data = load_data()
     user_list = data.get("users", [])
 
-    # যারা বট ডিলিট বা ব্লক করে দিয়েছে তাদের বাদ দেওয়া
+    # যারা বট ডিলিট বা ব্লক করে দিয়েছে তাদের শনাক্ত করে ডাটাবেজ থেকে মুছে ফেলা
     active_users = []
     removed_any = False
 
     for uid in user_list:
         try:
-            bot.get_chat(uid)
+            bot.send_chat_action(uid, 'typing')
             active_users.append(uid)
+            time.sleep(0.02)
         except Exception:
             removed_any = True
 
