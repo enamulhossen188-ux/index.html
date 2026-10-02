@@ -89,6 +89,25 @@ def get_admin_keyboard():
     markup.add(b1, b2, b3, b4, b5, b6)
     return markup
 
+# --- ইউজার বট ব্লক বা ডিলিট করলে তা সাথে সাথে লিস্ট থেকে মুছে ফেলা ---
+@bot.my_chat_member_handler()
+def handle_bot_blocked_or_unblocked(update: types.ChatMemberUpdated):
+    user_id = update.chat.id
+    new_status = update.new_chat_member.status
+    data = load_data()
+    users = data.get("users", [])
+
+    if new_status in ["kicked", "left"]:
+        if user_id in users:
+            users.remove(user_id)
+            data["users"] = users
+            save_data(data)
+    elif new_status == "member":
+        if user_id not in users:
+            users.append(user_id)
+            data["users"] = users
+            save_data(data)
+
 # --- অ্যাডমিন প্যানেল কমান্ড ---
 @bot.message_handler(commands=['admin'])
 def open_admin_panel(message):
@@ -170,7 +189,23 @@ def show_total_users(message):
 
     data = load_data()
     user_list = data.get("users", [])
-    total_users = len(user_list)
+
+    # যারা বট ডিলিট বা ব্লক করে দিয়েছে তাদের বাদ দেওয়া
+    active_users = []
+    removed_any = False
+
+    for uid in user_list:
+        try:
+            bot.get_chat(uid)
+            active_users.append(uid)
+        except Exception:
+            removed_any = True
+
+    if removed_any:
+        data["users"] = active_users
+        save_data(data)
+
+    total_users = len(active_users)
 
     msg_text = (
         "📊 **বটের ইউজার পরিসংখ্যান**\n\n"
@@ -550,4 +585,4 @@ if __name__ == "__main__":
     t = threading.Thread(target=run_flask)
     t.daemon = True
     t.start()
-    bot.infinity_polling(skip_pending=True)
+    bot.infinity_polling(skip_pending=True, allowed_updates=['message', 'callback_query', 'my_chat_member', 'chat_member'])
