@@ -41,6 +41,7 @@ def load_data():
         "users": [],
         "categories": ["BPS5", "Web Series", "Movie"],
         "ads": {"ad1": "https://google.com", "ad2": "https://google.com"},
+        "welcome_video": "",
         "videos": []
     }
 
@@ -86,7 +87,8 @@ def get_admin_keyboard():
     b4 = types.KeyboardButton("📊 Total Users")
     b5 = types.KeyboardButton("📁 Set Category")
     b6 = types.KeyboardButton("🎯 Set Ads Link")
-    markup.add(b1, b2, b3, b4, b5, b6)
+    b7 = types.KeyboardButton("🎥 Set Welcome Video")
+    markup.add(b1, b2, b3, b4, b5, b6, b7)
     return markup
 
 # --- ইউজার বট ব্লক বা ডিলিট করলে তা সাথে সাথে লিস্ট থেকে মুছে ফেলা ---
@@ -254,7 +256,7 @@ def start_upload(message):
         markup.row(*row)
     bot.send_message(message.chat.id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup, parse_mode="Markdown")
 
-# /start এবং সরাসরি ইনবক্সে ভিডিও ডেলিভারি (ভিডিও স্ট্রিমিং নিশ্চিতকরণ)
+# /start এবং সরাসরি ইনবক্সে ভিডিও ডেলিভারি
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     data = load_data()
@@ -308,23 +310,28 @@ def send_welcome(message):
             bot.send_message(message.chat.id, "❌ দুঃখিত, ভিডিওটি পাওয়া যায়নি!")
             return
 
-    # অ্যাডমিন স্টার্ট দিলে নিচে অটোমেটিক বাটন চলে আসবে
-    if str(user_id) == str(ADMIN_ID):
-        markup = get_action_buttons()
-        welcome_text = (
-            f"**আসসালামু আলাইকুম {message.from_user.first_name} (Admin)** 🥰\n\n"
-            "আমাদের বট ২৪ ঘণ্টা সচল। নাটক দেখতে নিচে **WATCH NOW** বাটনে ক্লিক করুন।\n"
-            "🛠️ নিচে দেওয়া বাটনগুলো ব্যবহার করে সবকিছু সহজে নিয়ন্ত্রণ করতে পারেন।"
-        )
-        bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
-        bot.send_message(message.chat.id, "🛠️ **এডমিন প্যানেল সচল করা হয়েছে:**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
+    # স্ক্রিনশটের মতো ওয়েলকাম টেক্সট
+    markup = get_action_buttons()
+    first_name = message.from_user.first_name or "বন্ধু"
+    welcome_caption = (
+        f"**আসসালামুআলাইকুম {first_name} 🥰**\n\n"
+        "আমাদের বট ২৪ ঘণ্টা সচল। ভিডিও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন"
+    )
+
+    welcome_vid = data.get("welcome_video")
+
+    # ওয়েলকাম ভিডিও সেট করা থাকলে ভিডিও সহ মেসেজ যাবে, না থাকলে টেক্সট যাবে
+    if welcome_vid:
+        try:
+            bot.send_video(message.chat.id, welcome_vid, caption=welcome_caption, reply_markup=markup, parse_mode="Markdown")
+        except Exception:
+            bot.send_message(message.chat.id, welcome_caption, reply_markup=markup, parse_mode="Markdown")
     else:
-        markup = get_action_buttons()
-        welcome_text = (
-            f"**আসসালামু আলাইকুম {message.from_user.first_name}** 🥰\n\n"
-            "আমাদের বট ২৪ ঘণ্টা সচল। নাটক দেখতে ও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন।"
-        )
-        bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
+        bot.send_message(message.chat.id, welcome_caption, reply_markup=markup, parse_mode="Markdown")
+
+    # অ্যাডমিন স্টার্ট দিলে নিচে অটোমেটিক অ্যাডমিন কিবোর্ড বাটন চলে আসবে
+    if str(user_id) == str(ADMIN_ID):
+        bot.send_message(message.chat.id, "🛠️ **এডমিন প্যানেল সচল করা হয়েছে:**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
 
 # --- সেন্ট্রালাইজড কলব্যাক হ্যান্ডলার ---
 @bot.callback_query_handler(func=lambda call: True)
@@ -466,11 +473,31 @@ def handle_admin_inputs(message):
     elif message.text == "🎯 Set Ads Link":
         set_ads_start(message)
         return
+    elif message.text == "🎥 Set Welcome Video":
+        admin_state[chat_id] = {'step': 'welcome_video'}
+        bot.send_message(chat_id, "🎥 **স্টার্টের সময় যে ভিডিওটি শো করবে সেটি সেন্ড বা ফরোয়ার্ড করুন (বাতিল করতে /cancel দিন):**")
+        return
 
     if chat_id not in admin_state:
         return
 
     step = admin_state[chat_id].get('step')
+
+    # ওয়েলকাম টিউটোরিয়াল ভিডিও সেভ করার লজিক
+    if step == 'welcome_video':
+        if message.text == '/cancel':
+            del admin_state[chat_id]
+            bot.send_message(chat_id, "বাতিল করা হয়েছে।", reply_markup=get_admin_keyboard())
+            return
+        if message.video:
+            data = load_data()
+            data['welcome_video'] = message.video.file_id
+            save_data(data)
+            del admin_state[chat_id]
+            bot.send_message(chat_id, "✅ **ওয়েলকাম ভিডিও সফলভাবে সেট করা হয়েছে!**\nএখন যে কেউ /start দিলে এই ভিডিওটি সবার আগে দেখতে পাবে।", reply_markup=get_admin_keyboard())
+        else:
+            bot.send_message(chat_id, "❌ অনুগ্রহ করে একটি ভিডিও ফাইল সেন্ড করুন!")
+        return
 
     # ব্রডকাস্ট পাঠানোর লজিক
     if step == 'broadcast_content':
