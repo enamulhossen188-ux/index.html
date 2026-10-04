@@ -192,7 +192,6 @@ def show_total_users(message):
     data = load_data()
     user_list = data.get("users", [])
 
-    # যারা বট ডিলিট বা ব্লক করে দিয়েছে তাদের শনাক্ত করে ডাটাবেজ থেকে মুছে ফেলা
     active_users = []
     removed_any = False
 
@@ -320,7 +319,6 @@ def send_welcome(message):
 
     welcome_vid = data.get("welcome_video")
 
-    # ওয়েলকাম ভিডিও সেট করা থাকলে ভিডিও সহ মেসেজ যাবে, না থাকলে টেক্সট যাবে
     if welcome_vid:
         try:
             bot.send_video(message.chat.id, welcome_vid, caption=welcome_caption, reply_markup=markup, parse_mode="Markdown")
@@ -329,7 +327,6 @@ def send_welcome(message):
     else:
         bot.send_message(message.chat.id, welcome_caption, reply_markup=markup, parse_mode="Markdown")
 
-    # অ্যাডমিন স্টার্ট দিলে নিচে অটোমেটিক অ্যাডমিন কিবোর্ড বাটন চলে আসবে
     if str(user_id) == str(ADMIN_ID):
         bot.send_message(message.chat.id, "🛠️ **এডমিন প্যানেল সচল করা হয়েছে:**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
 
@@ -572,8 +569,28 @@ def handle_admin_inputs(message):
 
     elif step == 'thumb' and (message.photo or message.text):
         if message.photo:
-            file_info = bot.get_file(message.photo[-1].file_id)
-            thumb_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+            bot.send_chat_action(chat_id, 'upload_photo')
+            try:
+                # টেলিগ্রাম থেকে ছবির বাইনারি ফাইল ডাউনলোড করা
+                file_info = bot.get_file(message.photo[-1].file_id)
+                downloaded_file = bot.download_file(file_info.file_path)
+                
+                # ক্যাশ ও ব্রাউজার ফ্রেন্ডলি চিরস্থায়ী ক্লাউডে আপলোড
+                upload_res = requests.post(
+                    "https://catbox.moe/user/api.php",
+                    data={"reqtype": "fileupload"},
+                    files={"fileToUpload": ("thumb.jpg", downloaded_file, "image/jpeg")},
+                    timeout=20
+                )
+                
+                if upload_res.status_code == 200 and upload_res.text.startswith("http"):
+                    thumb_url = upload_res.text.strip()
+                else:
+                    thumb_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+            except Exception as e:
+                print("Thumb upload error:", e)
+                file_info = bot.get_file(message.photo[-1].file_id)
+                thumb_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
         else:
             thumb_url = message.text.strip()
 
