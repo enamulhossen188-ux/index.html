@@ -9,8 +9,8 @@ import time
 import requests
 from datetime import datetime
 
-# ১ম বটের নিজস্ব টোকেন (banglatrxnatok_bot)
-BOT_TOKEN = "8995171178:AAFwu00-0NGegyHk4USIl_nBufknZZ_4wb4"
+# আপনার নতুন টোকেন
+BOT_TOKEN = "8995171178:AAGfYeFh2yJJWWvETlifeP53L8PWiBHdFtw"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 
