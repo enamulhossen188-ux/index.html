@@ -1,6 +1,16 @@
+import subprocess
+import sys
+
+# প্রয়োজনীয় লাইব্রেরি অটো-ইন্সটল
+for pkg in ["pyTelegramBotAPI", "Flask", "Flask-CORS", "requests"]:
+    try:
+        __import__(pkg.replace("-", "_"))
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
+
 import telebot
 from telebot import types
-from flask import Flask, jsonify, make_response
+from flask import Flask, jsonify, make_response, send_file
 from flask_cors import CORS
 import threading
 import json
@@ -9,50 +19,24 @@ import time
 import requests
 from datetime import datetime
 
-# আপনার নতুন টোকেন
+# আপনার দ্বিতীয় বটের কনফিগারেশন
 BOT_TOKEN = "8995171178:AAGfYeFh2yJJWWvETlifeP53L8PWiBHdFtw"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
+DB_CHANNEL_ID = -1004330425245  # আপনার এই বটের জন্য নিজস্ব প্রাইভেট চ্যানেল
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 CORS(app)
 
-# ১ম বটের নিজস্ব ডাটাবেজ (BIN_ID)
-BIN_ID = "6ac369b7ac6210605a14defb"
-JSONBIN_API_KEY = "$2a$10$YXJkOPYEpFL1pS32JSWh7O5Zs7VMzulVbyfBwxBkvPOQ9EY1m0/ri"
-
-BIN_URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
-HEADERS = {
-    "X-Master-Key": JSONBIN_API_KEY,
-    "Content-Type": "application/json"
-}
-
+DB_MSG_FILE = "channel_msg_id_bot2.txt"
 cached_data = None
 last_cache_time = 0
-CACHE_DURATION = 600
+CACHE_DURATION = 300  # ৫ মিনিট পর পর ব্যাকগ্রাউন্ড সিঙ্ক
 
 admin_state = {}
 
-def load_data(force_refresh=False):
-    global cached_data, last_cache_time
-    current_time = time.time()
-
-    if not force_refresh and cached_data and (current_time - last_cache_time < CACHE_DURATION):
-        return cached_data
-
-    try:
-        r = requests.get(f"{BIN_URL}/latest", headers=HEADERS, timeout=10)
-        if r.status_code == 200:
-            cached_data = r.json().get("record", {})
-            last_cache_time = current_time
-            return cached_data
-    except Exception as e:
-        print("JSONBin Read Error:", e)
-
-    if cached_data:
-        return cached_data
-
+def get_default_data():
     return {
         "users": [],
         "categories": ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"],
@@ -62,35 +46,99 @@ def load_data(force_refresh=False):
         "videos": []
     }
 
+def get_stored_msg_id():
+    if os.path.exists(DB_MSG_FILE):
+        try:
+            with open(DB_MSG_FILE, "r") as f:
+                return int(f.read().strip())
+        except Exception:
+            pass
+    return None
+
+def set_stored_msg_id(msg_id):
+    try:
+        with open(DB_MSG_FILE, "w") as f:
+            f.write(str(msg_id))
+    except Exception as e:
+        print("Error saving msg_id:", e)
+
+def load_data(force_refresh=False):
+    global cached_data, last_cache_time
+    current_time = time.time()
+
+    if not force_refresh and cached_data and (current_time - last_cache_time < CACHE_DURATION):
+        return cached_data
+
+    msg_id = get_stored_msg_id()
+    if msg_id:
+        try:
+            # প্রাইভেট চ্যানেল থেকে মেটাডাটা ব্যাকআপ রিড
+            fwd = bot.forward_message(ADMIN_ID, DB_CHANNEL_ID, msg_id)
+            bot.delete_message(ADMIN_ID, fwd.message_id)
+            if fwd.document:
+                file_info = bot.get_file(fwd.document.file_id)
+                file_content = bot.download_file(file_info.file_path)
+                cached_data = json.loads(file_content.decode('utf-8'))
+                last_cache_time = current_time
+                return cached_data
+        except Exception as e:
+            print("Telegram DB Read Error:", e)
+
+    if cached_data:
+        return cached_data
+
+    cached_data = get_default_data()
+    save_data(cached_data)
+    return cached_data
+
 def save_data(data):
     global cached_data, last_cache_time
     cached_data = data
     last_cache_time = time.time()
     try:
-        requests.put(BIN_URL, headers=HEADERS, json=data, timeout=10)
+        json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
+        old_msg_id = get_stored_msg_id()
+
+        # ডাটাবেজ ফাইল প্রাইভেট চ্যানেলে আপলোড
+        sent_doc = bot.send_document(
+            DB_CHANNEL_ID,
+            ("db_backup_bot2.json", json_bytes),
+            caption=f"📦 Database Update (Bot 2): {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
+        )
+        set_stored_msg_id(sent_doc.message_id)
+
+        # চ্যানেল পরিষ্কার রাখতে পুরনো ব্যাকআপ ডিলিট
+        if old_msg_id and old_msg_id != sent_doc.message_id:
+            try:
+                bot.delete_message(DB_CHANNEL_ID, old_msg_id)
+            except Exception:
+                pass
     except Exception as e:
-        print("JSONBin Save Error:", e)
+        print("Telegram DB Save Error:", e)
 
 def upload_thumb_securely(photo_id):
+    """ছবি পাঠানো মাত্রই স্থায়ী সিডিএন-এ হোস্ট করে নিখুঁত লিংক রিটার্ন করে"""
     try:
         file_info = bot.get_file(photo_id)
         downloaded = bot.download_file(file_info.file_path)
+        
         res = requests.post(
             "https://catbox.moe/user/api.php",
             data={"reqtype": "fileupload"},
             files={"fileToUpload": ("thumb.jpg", downloaded, "image/jpeg")},
-            timeout=20
+            timeout=25
         )
         if res.status_code == 200 and res.text.strip().startswith("http"):
             return res.text.strip()
     except Exception as e:
-        print("Upload Error:", e)
+        print("Catbox Upload Error:", e)
 
     try:
         file_info = bot.get_file(photo_id)
-        return f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+        tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+        return f"https://images.weserv.nl/?url={tg_url}&w=640&h=360&fit=cover&output=jpg&q=85"
     except Exception:
-        return ""
+        return "https://placehold.co/640x360/1a1a1a/ffffff.png?text=Thumbnail"
 
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
@@ -104,6 +152,8 @@ def get_app_data():
 
 @app.route('/')
 def home():
+    if os.path.exists('index.html'):
+        return send_file('index.html')
     return "Bot Server Live 24/7!"
 
 def get_action_buttons():
@@ -534,7 +584,7 @@ def handle_admin_inputs(message):
 
         data = load_data(force_refresh=True)
         new_item = {
-            "id": len(data.get('videos', [])) + 1,
+            "id": int(time.time()),
             "category": "COMING SOON",
             "is_coming_soon": True,
             "title": admin_state[chat_id]['title'],
@@ -573,7 +623,7 @@ def handle_admin_inputs(message):
         file_id = message.video.file_id if message.video else message.document.file_id
         data = load_data(force_refresh=True)
         new_video = {
-            "id": len(data.get('videos', [])) + 1,
+            "id": int(time.time()),
             "category": admin_state[chat_id]['category'],
             "title": admin_state[chat_id]['title'],
             "thumb": admin_state[chat_id]['thumb'],
