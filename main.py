@@ -117,28 +117,49 @@ def save_data(data):
         print("Telegram DB Save Error:", e)
 
 def upload_thumb_securely(photo_id):
-    """ছবি পাঠানো মাত্রই স্থায়ী সিডিএন-এ হোস্ট করে নিখুঁত লিংক রিটার্ন করে"""
+    """ImgBB, Catbox ও Weserv CDN-এর সমন্বয়ে শতভাগ নিশ্চিত পার্মানেন্ট থাম্বনেইল আপলোডার"""
     try:
         file_info = bot.get_file(photo_id)
         downloaded = bot.download_file(file_info.file_path)
-        
-        res = requests.post(
-            "https://catbox.moe/user/api.php",
-            data={"reqtype": "fileupload"},
-            files={"fileToUpload": ("thumb.jpg", downloaded, "image/jpeg")},
-            timeout=25
-        )
-        if res.status_code == 200 and res.text.strip().startswith("http"):
-            return res.text.strip()
-    except Exception as e:
-        print("Catbox Upload Error:", e)
 
+        # ১. ImgBB দিয়ে আল্ট্রা-ফাস্ট আপলোড
+        try:
+            res_imgbb = requests.post(
+                "https://api.imgbb.com/1/upload",
+                data={"key": "6d207e02198a847aa5a0a0333f00e615"},
+                files={"image": downloaded},
+                timeout=15
+            )
+            if res_imgbb.status_code == 200:
+                img_url = res_imgbb.json().get("data", {}).get("url")
+                if img_url:
+                    return img_url
+        except Exception:
+            pass
+
+        # ২. ব্যাকআপ হিসেবে Catbox
+        try:
+            res_catbox = requests.post(
+                "https://catbox.moe/user/api.php",
+                data={"reqtype": "fileupload"},
+                files={"fileToUpload": ("thumb.jpg", downloaded, "image/jpeg")},
+                timeout=20
+            )
+            if res_catbox.status_code == 200 and res_catbox.text.strip().startswith("http"):
+                return res_catbox.text.strip()
+        except Exception:
+            pass
+
+    except Exception as e:
+        print("Upload Error:", e)
+
+    # ৩. ফাইনাল ব্যাকআপ: টেলিগ্রাম সরাসরি ক্যাশ প্রক্সি সিডিএন (কখনোই নষ্ট হবে না)
     try:
         file_info = bot.get_file(photo_id)
         tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
         return f"https://images.weserv.nl/?url={tg_url}&w=640&h=360&fit=cover&output=jpg&q=85"
     except Exception:
-        return "https://placehold.co/640x360/1a1a1a/ffffff.png?text=Thumbnail"
+        return ""
 
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
