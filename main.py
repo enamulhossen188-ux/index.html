@@ -20,7 +20,7 @@ import requests
 from datetime import datetime
 
 # আপনার দ্বিতীয় বটের কনফিগারেশন
-BOT_TOKEN = "8995171178:AAGfYeFh2yJJWWvETlifeP53L8PWiBHdFtw"
+BOT_TOKEN = "8995171178:AAG8u0bCDO51BsGyFf2l14m978Pnqjzq3dU"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245  # আপনার নিজস্ব প্রাইভেট চ্যানেল
