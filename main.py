@@ -10,7 +10,7 @@ for pkg in ["pyTelegramBotAPI", "Flask", "Flask-CORS", "requests"]:
 
 import telebot
 from telebot import types
-from flask import Flask, jsonify, make_response, send_file
+from flask import Flask, jsonify, make_response, send_file, Response
 from flask_cors import CORS
 import threading
 import json
@@ -19,11 +19,13 @@ import time
 import requests
 from datetime import datetime
 
-# আপনার দ্বিতীয় বটের কনফিগারেশন
+# ==================== কনফিগারেশন ====================
 BOT_TOKEN = "8995171178:AAG8u0bCDO51BsGyFf2l14m978Pnqjzq3dU"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
-DB_CHANNEL_ID = -1004330425245  # আপনার নিজস্ব প্রাইভেট চ্যানেল
+DB_CHANNEL_ID = -1004330425245  # নিজস্ব প্রাইভেট চ্যানেল
+RENDER_SERVER_URL = "https://my-bot-server-bnj8.onrender.com"
+# ====================================================
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
@@ -31,7 +33,7 @@ CORS(app)
 
 cached_data = None
 last_cache_time = 0
-CACHE_DURATION = 300  # ৫ মিনিট পর পর ব্যাকগ্রাউন্ড সিঙ্ক
+CACHE_DURATION = 300
 
 admin_state = {}
 
@@ -65,7 +67,6 @@ def load_data(force_refresh=False):
     if not force_refresh and cached_data and (current_time - last_cache_time < CACHE_DURATION):
         return cached_data
 
-    # ১. টেলিগ্রাম চ্যানেলের পিন করা মেসেজ থেকে ডেটা খোঁজা
     data = get_db_file_content()
     if data and "videos" in data:
         cached_data = data
@@ -85,14 +86,12 @@ def save_data(data):
     try:
         json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
         
-        # চ্যানেলে ব্যাকআপ ফাইল পাঠানো
         sent_doc = bot.send_document(
             DB_CHANNEL_ID,
             ("db_backup_bot2.json", json_bytes),
             caption=f"📦 Database Update (Bot 2): {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
         )
         
-        # নতুন ফাইলটি স্বয়ংক্রিয়ভাবে পিন করা (যাতে সার্ভার রিস্টার্ট হলেও কোনো ডেটা না হারায়)
         try:
             bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
         except Exception:
@@ -102,18 +101,21 @@ def save_data(data):
         print("Telegram DB Save Error:", e)
 
 def upload_thumb_securely(photo_id):
-    """ImgBB, Catbox ও Weserv CDN-এর সমন্বয়ে ট্রিপল-লেয়ার থাম্বনেইল আপলোডার"""
+    """পার্মানেন্ট চ্যানেলে ব্যাকআপ + Weserv ও নিজস্ব সার্ভার প্রক্সি"""
     try:
-        file_info = bot.get_file(photo_id)
-        downloaded = bot.download_file(file_info.file_path)
+        # প্রাইভেট চ্যানেলে ফটো ফরোয়ার্ড করে স্থায়ী আইডি তৈরি
+        sent_msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumbnail Backup")
+        perm_file_id = sent_msg.photo[-1].file_id
 
-        # ১. ImgBB দিয়ে আল্ট্রা-ফাস্ট আপলোড
+        # ১. ImgBB দিয়ে দ্রুত আপলোড চেষ্টা
         try:
+            file_info = bot.get_file(perm_file_id)
+            downloaded = bot.download_file(file_info.file_path)
             res_imgbb = requests.post(
                 "https://api.imgbb.com/1/upload",
                 data={"key": "6d207e02198a847aa5a0a0333f00e615"},
                 files={"image": downloaded},
-                timeout=15
+                timeout=12
             )
             if res_imgbb.status_code == 200:
                 img_url = res_imgbb.json().get("data", {}).get("url")
@@ -122,33 +124,29 @@ def upload_thumb_securely(photo_id):
         except Exception:
             pass
 
-        # ২. ব্যাকআপ হিসেবে Catbox
-        try:
-            res_catbox = requests.post(
-                "https://catbox.moe/user/api.php",
-                data={"reqtype": "fileupload"},
-                files={"fileToUpload": ("thumb.jpg", downloaded, "image/jpeg")},
-                timeout=20
-            )
-            if res_catbox.status_code == 200 and res_catbox.text.strip().startswith("http"):
-                return res_catbox.text.strip()
-        except Exception:
-            pass
-
+        # ২. ব্যাকআপ হিসেবে সার্ভারের নিজস্ব পার্মানেন্ট ইমেজ রাউট
+        return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
     except Exception as e:
         print("Upload Error:", e)
+        return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
 
-    # ৩. ফাইনাল ব্যাকআপ: Weserv CDN প্রক্সি
+# সার্ভার সরাসরি টেলিগ্রাম থেকে যেকোনো পুরনো বা নতুন ইমেজ পার্মানেন্টলি সার্ভ করবে
+@app.route('/thumb/<file_id>')
+def serve_thumbnail(file_id):
     try:
-        file_info = bot.get_file(photo_id)
-        tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
-        return f"https://images.weserv.nl/?url={tg_url}&w=640&h=360&fit=cover&output=jpg&q=85"
-    except Exception:
-        return ""
+        file_info = bot.get_file(file_id)
+        file_bytes = bot.download_file(file_info.file_path)
+        resp = Response(file_bytes, mimetype="image/jpeg")
+        resp.headers['Cache-Control'] = 'public, max-age=31536000'
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+    except Exception as e:
+        print("Serve Thumb Error:", e)
+        return Response(status=404)
 
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
-    data = load_data()
+    data = load_data(force_refresh=True)
     resp = make_response(jsonify(data))
     resp.headers['Access-Control-Allow-Origin'] = '*'
     resp.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
@@ -206,7 +204,7 @@ def format_button_label(video):
     return f"🗑️ {title}"
 
 def get_delete_view_data(page=0):
-    data = load_data()
+    data = load_data(force_refresh=True)
     videos = data.get("videos", [])
     if not videos:
         return None, None
@@ -239,7 +237,7 @@ def get_delete_view_data(page=0):
     return text_msg, markup
 
 def get_category_keyboard():
-    data = load_data()
+    data = load_data(force_refresh=True)
     cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
     markup = types.InlineKeyboardMarkup()
 
@@ -249,6 +247,30 @@ def get_category_keyboard():
     markup.add(types.InlineKeyboardButton("➕ Add New Category", callback_data="add_new_category"))
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return markup
+
+# আগের নষ্ট বা কালো হওয়া থাম্বনেইল ঠিক করার স্বয়ংক্রিয় কমান্ড
+@bot.message_handler(commands=['fix_thumbs'])
+def fix_all_thumbnails(message):
+    if str(message.chat.id) != str(ADMIN_ID):
+        return
+    msg = bot.reply_to(message, "⏳ পুরোনো থাম্বনেইলগুলো ঠিক করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...")
+    data = load_data(force_refresh=True)
+    videos = data.get("videos", [])
+    fixed_count = 0
+
+    for v in videos:
+        thumb = v.get("thumb", "")
+        # যদি এক্সপায়ার হওয়া টেলিগ্রাম লিঙ্ক থাকে তবে সেটি রিস্টোর করবে
+        if "api.telegram.org" in thumb:
+            if v.get("file_id"):
+                v["thumb"] = f"{RENDER_SERVER_URL}/thumb/{v['file_id']}"
+                fixed_count += 1
+
+    if fixed_count > 0:
+        save_data(data)
+        bot.edit_message_text(f"✅ মোট **{fixed_count}** টি পুরোনো ভিডিওর থাম্বনেইল রিকভার করা হয়েছে!", message.chat.id, msg.message_id, parse_mode="Markdown")
+    else:
+        bot.edit_message_text("✅ সব থাম্বনেইল ইতিমধ্যে সুরক্ষিত অবস্থায় রয়েছে।", message.chat.id, msg.message_id)
 
 @bot.my_chat_member_handler()
 def handle_bot_blocked_or_unblocked(update: types.ChatMemberUpdated):
@@ -275,7 +297,7 @@ def open_admin_panel(message):
         return
     bot.send_message(
         message.chat.id, 
-        "🛠 **এডমিন প্যানেল সচল করা হয়েছে:**", 
+        "🛠 **এডমিন প্যানেল সচল করা হয়েছে:**\n(পুরোনো ছবি ঠিক করতে /fix_thumbs কমান্ড ব্যবহার করতে পারেন)", 
         reply_markup=get_admin_keyboard(),
         parse_mode="Markdown"
     )
@@ -294,28 +316,7 @@ def show_total_users(message):
     if str(message.chat.id) != str(ADMIN_ID): return
     data = load_data()
     user_list = data.get("users", [])
-    active_users = []
-    removed_any = False
-
-    for uid in user_list:
-        try:
-            bot.send_chat_action(uid, 'typing')
-            active_users.append(uid)
-            time.sleep(0.02)
-        except Exception:
-            removed_any = True
-
-    if removed_any:
-        data["users"] = active_users
-        save_data(data)
-
-    msg_text = (
-        "📊 **বটের ইউজার পরিসংখ্যান**\n\n"
-        f"👥 মোট সক্রিয় ইউজার: **{len(active_users)}** জন\n"
-        f"🎬 মোট ভিডিও: **{len(data.get('videos', []))}** টি\n"
-        f"📁 মোট ক্যাটাগরি: **{len(data.get('categories', []))}** টি"
-    )
-    bot.send_message(message.chat.id, msg_text, parse_mode="Markdown")
+    bot.send_message(message.chat.id, f"📊 মোট সক্রিয় ইউজার: **{len(user_list)}** জন\nমোট ভিডিও: **{len(data.get('videos', []))}** টি")
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -436,7 +437,7 @@ def handle_admin_inputs(message):
 
     if message.text == "➕ Add Video":
         admin_state[chat_id] = {'step': 'category'}
-        data = load_data()
+        data = load_data(force_refresh=True)
         cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES"])
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         for i in range(0, len(cats), 2):
@@ -513,7 +514,7 @@ def handle_admin_inputs(message):
         return
 
     elif step == 'add_single_category' and message.text:
-        new_c = message.text.strip()
+        new_c = message.text.strip().upper()
         data = load_data(force_refresh=True)
         cats = data.get("categories", [])
         if new_c and new_c not in cats:
@@ -605,7 +606,7 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "✅ **কামিং সুন পোস্ট সফলভাবে যুক্ত হয়েছে!**", reply_markup=get_admin_keyboard())
 
     elif step == 'category' and message.text:
-        admin_state[chat_id]['category'] = message.text.strip()
+        admin_state[chat_id]['category'] = message.text.strip().upper()
         admin_state[chat_id]['step'] = 'title'
         bot.send_message(chat_id, "🎬 **ভিডিওর নাম (Title) লিখুন:**", reply_markup=types.ReplyKeyboardRemove())
 
