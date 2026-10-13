@@ -609,25 +609,32 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
-        // কোনো অবস্থায় ডামি ধূসর ছবি দেখাবে না
-        const SAFE_FALLBACK_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="%2311141a"/><circle cx="320" cy="180" r="42" fill="%23ff0055" fill-opacity="0.85"/><polygon points="310,165 338,180 310,195" fill="%23ffffff"/></svg>';
+        // কোনো অবস্থাতেই ফাঁকা বা কালো বক্স হবে না, পোস্টার ব্যানার তৈরি করবে
+        function getGeneratedBanner(title) {
+            const cleanTitle = encodeURIComponent((title || 'Bangla Natok').substring(0, 32));
+            return `https://placehold.co/640x360/16181f/ff0055.png?text=${cleanTitle}&font=roboto`;
+        }
 
         function handleImageFallback(img) {
+            const title = img.getAttribute("data-title") || "Bangla Natok";
             const original = img.getAttribute("data-original");
+            
+            // প্রথমবার Weserv CDN প্রক্সি চেষ্টা করবে
             if (!img.dataset.retried && original && original.startsWith("http") && !original.includes("weserv.nl")) {
                 img.dataset.retried = "true";
                 img.src = `https://images.weserv.nl/?url=${encodeURIComponent(original)}&w=640&fit=cover&output=jpg&q=85`;
                 return;
             }
+            // দ্বিতীয়বার ফেইল করলে ফাঁকা কালো না রেখে টাইটেল কার্ড দেখাবে
             img.onerror = null;
-            img.src = SAFE_FALLBACK_SVG;
+            img.src = getGeneratedBanner(title);
         }
 
-        function resolveThumb(url) {
-            if (!url) return SAFE_FALLBACK_SVG;
+        function resolveThumb(url, title) {
+            if (!url || url.trim() === "") return getGeneratedBanner(title);
             let u = url.trim();
             if (u.includes("placehold.co")) {
-                return SAFE_FALLBACK_SVG;
+                return getGeneratedBanner(title);
             }
             if (u.includes("api.telegram.org")) {
                 return `https://images.weserv.nl/?url=${encodeURIComponent(u)}&w=640&fit=cover&output=jpg&q=85`;
@@ -692,11 +699,11 @@
                     card.className = "video-card";
                     card.onclick = () => openDetail(item);
                     
-                    const thumbUrl = resolveThumb(item.thumb);
+                    const thumbUrl = resolveThumb(item.thumb, item.title);
 
                     card.innerHTML = `
                         <div class="thumb-wrapper">
-                            <img class="thumb-img" src="${thumbUrl}" data-original="${item.thumb || ''}" alt="${item.title || 'Video'}" loading="lazy" onerror="handleImageFallback(this)">
+                            <img class="thumb-img" src="${thumbUrl}" data-original="${item.thumb || ''}" data-title="${item.title || ''}" alt="${item.title || 'Video'}" loading="lazy" onerror="handleImageFallback(this)">
                         </div>
                         <div class="card-details">
                             <div class="video-title">${item.title}</div>
@@ -729,8 +736,9 @@
 
             const detailImg = document.getElementById("detailThumb");
             detailImg.setAttribute("data-original", video.thumb || "");
+            detailImg.setAttribute("data-title", video.title || "");
             detailImg.removeAttribute("data-retried");
-            detailImg.src = resolveThumb(video.thumb);
+            detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
             resetTasks();
