@@ -36,6 +36,7 @@ last_cache_time = 0
 CACHE_DURATION = 300
 
 admin_state = {}
+thumb_memory_cache = {}
 
 def get_default_data():
     return {
@@ -101,47 +102,36 @@ def save_data(data):
         print("Telegram DB Save Error:", e)
 
 def upload_thumb_securely(photo_id):
-    """পার্মানেন্ট চ্যানেলে ব্যাকআপ + Weserv ও নিজস্ব সার্ভার প্রক্সি"""
+    """পার্মানেন্ট চ্যানেলে ছবি ফরোয়ার্ড ও সরাসরি নিজস্ব প্রক্সি রুট তৈরি"""
     try:
-        # প্রাইভেট চ্যানেলে ফটো ফরোয়ার্ড করে স্থায়ী আইডি তৈরি
-        sent_msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumbnail Backup")
-        perm_file_id = sent_msg.photo[-1].file_id
-
-        # ১. ImgBB দিয়ে দ্রুত আপলোড চেষ্টা
-        try:
-            file_info = bot.get_file(perm_file_id)
-            downloaded = bot.download_file(file_info.file_path)
-            res_imgbb = requests.post(
-                "https://api.imgbb.com/1/upload",
-                data={"key": "6d207e02198a847aa5a0a0333f00e615"},
-                files={"image": downloaded},
-                timeout=12
-            )
-            if res_imgbb.status_code == 200:
-                img_url = res_imgbb.json().get("data", {}).get("url")
-                if img_url:
-                    return img_url
-        except Exception:
-            pass
-
-        # ২. ব্যাকআপ হিসেবে সার্ভারের নিজস্ব পার্মানেন্ট ইমেজ রাউট
+        msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumb")
+        perm_file_id = msg.photo[-1].file_id
         return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
     except Exception as e:
-        print("Upload Error:", e)
+        print("Channel thumb error:", e)
         return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
 
-# সার্ভার সরাসরি টেলিগ্রাম থেকে যেকোনো পুরনো বা নতুন ইমেজ পার্মানেন্টলি সার্ভ করবে
+# পার্মানেন্ট ইমেজ সার্ভার - ব্রাউজার ও মেমোরি ক্যাশসহ
 @app.route('/thumb/<file_id>')
 def serve_thumbnail(file_id):
+    global thumb_memory_cache
+    if file_id in thumb_memory_cache:
+        resp = Response(thumb_memory_cache[file_id], mimetype="image/jpeg")
+        resp.headers['Cache-Control'] = 'public, max-age=31536000'
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+
     try:
         file_info = bot.get_file(file_id)
         file_bytes = bot.download_file(file_info.file_path)
+        thumb_memory_cache[file_id] = file_bytes
+
         resp = Response(file_bytes, mimetype="image/jpeg")
         resp.headers['Cache-Control'] = 'public, max-age=31536000'
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
     except Exception as e:
-        print("Serve Thumb Error:", e)
+        print("Image proxy failed:", e)
         return Response(status=404)
 
 @app.route('/api/data', methods=['GET'])
@@ -248,29 +238,25 @@ def get_category_keyboard():
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return markup
 
-# আগের নষ্ট বা কালো হওয়া থাম্বনেইল ঠিক করার স্বয়ংক্রিয় কমান্ড
-@bot.message_handler(commands=['fix_thumbs'])
-def fix_all_thumbnails(message):
+# 🔥 যেকোনো নষ্ট পুরোনো থাম্বনেইল স্থায়ীভাবে মেরামত করার ফোর্স কমান্ড 🔥
+@bot.message_handler(commands=['fix_thumbs', 'force_fix_all', 'fix_all_thumbs_permanent'])
+def force_fix_all_thumbs(message):
     if str(message.chat.id) != str(ADMIN_ID):
         return
-    msg = bot.reply_to(message, "⏳ পুরোনো থাম্বনেইলগুলো ঠিক করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...")
+    status_msg = bot.reply_to(message, "⏳ সবকটি পুরোনো থাম্বনেইল স্থায়ীভাবে কনভার্ট করা হচ্ছে...")
     data = load_data(force_refresh=True)
     videos = data.get("videos", [])
-    fixed_count = 0
+    count = 0
 
     for v in videos:
-        thumb = v.get("thumb", "")
-        # যদি এক্সপায়ার হওয়া টেলিগ্রাম লিঙ্ক থাকে তবে সেটি রিস্টোর করবে
-        if "api.telegram.org" in thumb:
-            if v.get("file_id"):
-                v["thumb"] = f"{RENDER_SERVER_URL}/thumb/{v['file_id']}"
-                fixed_count += 1
+        f_id = v.get("file_id")
+        # সরাসরি ভিডিও ফাইল আইডি দিয়ে স্থায়ী রাউট তৈরি করা
+        if f_id:
+            v["thumb"] = f"{RENDER_SERVER_URL}/thumb/{f_id}"
+            count += 1
 
-    if fixed_count > 0:
-        save_data(data)
-        bot.edit_message_text(f"✅ মোট **{fixed_count}** টি পুরোনো ভিডিওর থাম্বনেইল রিকভার করা হয়েছে!", message.chat.id, msg.message_id, parse_mode="Markdown")
-    else:
-        bot.edit_message_text("✅ সব থাম্বনেইল ইতিমধ্যে সুরক্ষিত অবস্থায় রয়েছে।", message.chat.id, msg.message_id)
+    save_data(data)
+    bot.edit_message_text(f"✅ সফল! মোট **{count}** টি ভিডিওর থাম্বনেইল সার্ভারে স্থায়ীভাবে ঠিক করা হয়েছে। এখন মিনি অ্যাপ রিফ্রেশ দিন।", message.chat.id, status_msg.message_id, parse_mode="Markdown")
 
 @bot.my_chat_member_handler()
 def handle_bot_blocked_or_unblocked(update: types.ChatMemberUpdated):
@@ -297,7 +283,7 @@ def open_admin_panel(message):
         return
     bot.send_message(
         message.chat.id, 
-        "🛠 **এডমিন প্যানেল সচল করা হয়েছে:**\n(পুরোনো ছবি ঠিক করতে /fix_thumbs কমান্ড ব্যবহার করতে পারেন)", 
+        "🛠 **এডমিন প্যানেল সচল করা হয়েছে:**\n(পুরোনো ছবি ঠিক করতে `/fix_all_thumbs_permanent` দিন)", 
         reply_markup=get_admin_keyboard(),
         parse_mode="Markdown"
     )
@@ -560,10 +546,7 @@ def handle_admin_inputs(message):
         for uid in user_list:
             try:
                 if is_photo:
-                    if caption_text:
-                        bot.send_photo(uid, photo_id, caption=caption_text, reply_markup=notice_markup)
-                    else:
-                        bot.send_photo(uid, photo_id, reply_markup=notice_markup)
+                    bot.send_photo(uid, photo_id, caption=caption_text, reply_markup=notice_markup)
                 else:
                     bot.send_message(uid, f"📢 **নোটিশ:**\n\n{caption_text}", reply_markup=notice_markup, parse_mode="Markdown")
                 sent += 1
@@ -583,12 +566,7 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "🖼 **কামিং সুন পোস্টের থাম্বনেইল ছবি পাঠান:**")
 
     elif step == 'cs_thumb' and (message.photo or message.text):
-        if message.photo:
-            bot.send_chat_action(chat_id, 'upload_photo')
-            thumb_url = upload_thumb_securely(message.photo[-1].file_id)
-        else:
-            thumb_url = message.text.strip()
-
+        thumb_url = upload_thumb_securely(message.photo[-1].file_id) if message.photo else message.text.strip()
         data = load_data(force_refresh=True)
         new_item = {
             "id": int(time.time()),
