@@ -17,6 +17,7 @@ import json
 import os
 import time
 import requests
+from io import BytesIO
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
@@ -149,32 +150,67 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
-# 🔥 কোনো থাম্বনেইল ছাড়া ১০০% ক্লিন ভিডিও পাঠানোর ফাংশন 🔥
+def get_thumb_stream_for_video(thumb_url):
+    try:
+        if not thumb_url:
+            return None
+        raw_bytes = None
+        if "/thumb/" in thumb_url:
+            file_id = thumb_url.split("/thumb/")[-1]
+            if file_id in thumb_memory_cache:
+                raw_bytes = thumb_memory_cache[file_id]
+            else:
+                file_info = bot.get_file(file_id)
+                raw_bytes = bot.download_file(file_info.file_path)
+                thumb_memory_cache[file_id] = raw_bytes
+        elif thumb_url.startswith("http"):
+            res = requests.get(thumb_url, timeout=5)
+            if res.status_code == 200:
+                raw_bytes = res.content
+
+        if raw_bytes:
+            thumb_stream = BytesIO(raw_bytes)
+            thumb_stream.name = "thumb.jpg"
+            return thumb_stream
+    except Exception as e:
+        print("Thumb fetch error:", e)
+    return None
+
+# 🔥 ভিডিও প্লেয়ার ফরম্যাটে ইনবক্সে পাঠানো (স্ক্রিনশটের মতো) 🔥
 def deliver_single_video(chat_id, target_video):
     caption_text = f"🎬 **{target_video.get('title', 'Video')}**\n\nউপভোগ করুন!"
+    thumb_stream = get_thumb_stream_for_video(target_video.get("thumb"))
+
+    # থাম্বনেইল ফাইলসহ ভিডিও প্লেয়ার হিসেবে ডেলিভারি
+    if thumb_stream:
+        try:
+            bot.send_video(
+                chat_id,
+                target_video['file_id'],
+                thumbnail=thumb_stream,
+                caption=caption_text,
+                supports_streaming=True,
+                protect_content=True,
+                parse_mode="Markdown"
+            )
+            return True
+        except Exception as e:
+            print("Video with thumb stream error:", e)
+
+    # সাধারণ ভিডিও প্লেয়ার হিসেবে ডেলিভারি
     try:
-        # send_document দিলে টেলিগ্রাম কোনো থাম্বনেইল কভার স্ক্রিনে দেখায় না
-        bot.send_document(
+        bot.send_video(
             chat_id,
             target_video['file_id'],
             caption=caption_text,
+            supports_streaming=True,
             protect_content=True,
             parse_mode="Markdown"
         )
         return True
     except Exception as e:
-        print("Document send failed, trying normal video fallback:", e)
-        try:
-            bot.send_video(
-                chat_id,
-                target_video['file_id'],
-                caption=caption_text,
-                supports_streaming=True
-            )
-            return True
-        except Exception as vid_e:
-            print("All video send failed:", vid_e)
-            return False
+        print("Direct send_video failed:", e)
+        return False
 
 @app.route('/api/send_video', methods=['POST'])
 def api_send_video():
@@ -663,21 +699,46 @@ def handle_admin_inputs(message):
         return
 
     elif step == 'thumb' and (message.photo or message.text):
+        admin_state[chat_id]['thumb_photo_id'] = message.photo[-1].file_id if message.photo else None
         thumb_url = upload_thumb_securely(message.photo[-1].file_id) if message.photo else message.text.strip()
         admin_state[chat_id]['thumb'] = thumb_url
         admin_state[chat_id]['step'] = 'video'
         bot.send_message(chat_id, "📥 **ভিডিও ফাইলটি পাঠান:**")
         return
 
+    # 🔥 ভিডিও আপলোড করার সময় থাম্বনেইলটি ভিডিওর সাথে স্থায়ীভাবে যুক্ত করা 🔥
     elif step == 'video' and (message.video or message.document):
-        file_id = message.video.file_id if message.video else message.document.file_id
+        incoming_file_id = message.video.file_id if message.video else message.document.file_id
+        final_video_file_id = incoming_file_id
+
+        # থাম্বনেইলসহ টেলিগ্রাম চ্যানেলে ভিডিও সেভ করা
+        thumb_photo_id = admin_state[chat_id].get('thumb_photo_id')
+        if thumb_photo_id:
+            try:
+                thumb_info = bot.get_file(thumb_photo_id)
+                thumb_bytes = bot.download_file(thumb_info.file_path)
+                thumb_stream = BytesIO(thumb_bytes)
+                thumb_stream.name = "thumb.jpg"
+                
+                # চ্যানেলে থাম্বনেইলসহ পোস্ট করে সেভ করা
+                saved_msg = bot.send_video(
+                    DB_CHANNEL_ID,
+                    incoming_file_id,
+                    thumbnail=thumb_stream,
+                    caption=f"🎬 {admin_state[chat_id]['title']}",
+                    supports_streaming=True
+                )
+                final_video_file_id = saved_msg.video.file_id
+            except Exception as e:
+                print("Channel video thumb embed error:", e)
+
         data = load_data(force_refresh=True)
         new_video = {
             "id": int(time.time()),
             "category": admin_state[chat_id]['category'],
             "title": admin_state[chat_id]['title'],
             "thumb": admin_state[chat_id]['thumb'],
-            "file_id": file_id,
+            "file_id": final_video_file_id,
             "date": datetime.now().strftime("%b %d, %Y"),
             "time": datetime.now().strftime("%I:%M %p")
         }
