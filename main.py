@@ -179,7 +179,7 @@ def get_admin_keyboard():
     )
     return markup
 
-# 🔥 ৪টি আলাদা বিজ্ঞাপনের বাটন 🔥
+# ৪টি আলাদা বিজ্ঞাপনের বাটন
 def get_ads_keyboard():
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
@@ -315,7 +315,6 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
-    # ৪টি আলাদা বিজ্ঞাপনের বাটন হ্যান্ডলার
     if call.data == "set_ad_tasks":
         admin_state[chat_id] = {'step': 'ad_1'}
         bot.send_message(chat_id, "🔗 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
