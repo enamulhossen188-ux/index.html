@@ -49,7 +49,7 @@
             transition: background 0.3s ease;
         }
 
-        /* উপরে সোশ্যাল বার বিজ্ঞাপন বক্স */
+        /* সোশ্যাল বার বিজ্ঞাপন বক্স */
         .social-ad-container {
             width: 100%;
             margin-bottom: 12px;
@@ -673,8 +673,8 @@
     </div>
 
     <script>
-        const BOT_USERNAME = "BongoBd_ot_Bot";
-        const SERVER_URL = "https://bongo-bd-app-uixi.onrender.com";
+        const BOT_USERNAME = "banglatrxnatok_bot";
+        const SERVER_URL = "https://my-bot-server-bnj8.onrender.com";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
@@ -689,7 +689,6 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
-        // অফলাইন হলেও সুন্দর পোস্টার ব্যানার তৈরি করার ফাংশন
         function generateSvgPoster(title) {
             const cleanTitle = (title || 'Bongo BD').replace(/[\'<>\"]/g, '').substring(0, 30);
             const svgContent = `
@@ -734,7 +733,7 @@
             return u;
         }
 
-        // 🔥 যেকোনা স্ক্রিপ্ট বা অ্যাড কোড ফোর্স রান করানোর রিয়েল ইঞ্জেকশন মেথড 🔥
+        // 🔥 বিজ্ঞাপন কোড লাইভ রান করানোর ডায়নামিক স্ক্রিপ্ট ইঞ্জেকশন মেথড 🔥
         function injectAdScript(container, codeStr) {
             if (!codeStr || !codeStr.trim()) {
                 container.style.display = "none";
@@ -773,7 +772,6 @@
             });
         }
 
-        // পপআন্ডার স্ক্রিপ্ট এক্সিকিউশন
         function runPopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             const raw = popCode.trim();
@@ -810,7 +808,7 @@
                 });
                 appData = await res.json();
                 
-                const cats = appData.categories || ["BPS5", "MOVE", "DRAMA", "SERIES", "COMING SOON"];
+                const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
                 if (cats.length > 0 && !activeCategory) {
                     activeCategory = cats[0];
                 }
@@ -826,7 +824,7 @@
 
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById("categoryTabs");
-            const cats = appData.categories || ["BPS5", "MOVE", "DRAMA", "SERIES", "COMING SOON"];
+            const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
             
             let html = '';
             cats.forEach((c) => {
