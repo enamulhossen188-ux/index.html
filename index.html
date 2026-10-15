@@ -58,7 +58,7 @@
             display: none;
         }
 
-        /* স্ক্রিনশটের মতো হেডার */
+        /* হেডার */
         .top-nav {
             display: flex;
             align-items: center;
@@ -165,7 +165,7 @@
             cursor: pointer;
         }
 
-        /* স্ক্রিনশটের মতো ক্যাটাগরি বাটন */
+        /* ক্যাটাগরি বাটন */
         .category-scroll {
             display: flex;
             gap: 8px;
@@ -228,7 +228,7 @@
             font-size: 14px;
         }
 
-        /* ভিডিও কার্ড ও পার্পল নিয়ন বর্ডার */
+        /* ভিডিও কার্ড */
         .video-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -285,7 +285,7 @@
             color: #ef4444;
         }
 
-        /* ডিটেইলস পেজ ভিউ */
+        /* ডিটেইলস পেজ */
         .detail-view {
             display: none;
             padding: 4px 0;
@@ -332,7 +332,7 @@
         /* ভিডিওর নিচে নেটিভ ব্যানার বক্স */
         .native-ad-container {
             width: 100%;
-            min-height: 60px;
+            min-height: 80px;
             margin-bottom: 14px;
             padding: 8px 4px;
             background: var(--input-bg);
@@ -541,7 +541,6 @@
     </div>
 
     <div id="mainView">
-        <!-- টপ হেডার -->
         <div class="top-nav">
             <div class="nav-left">
                 <i class="fa-solid fa-bars menu-bar-icon" onclick="toggleSidebar()"></i>
@@ -549,16 +548,13 @@
                     <span class="red-text">Bachelor</span> <span class="white-text">Point</span>
                 </div>
             </div>
-            <!-- সেটিংস গিয়ার বাটন -->
             <div class="settings-circle" onclick="toggleTheme()" title="ডার্ক / লাইট মোড">
                 <i class="fa-solid fa-gear" id="themeIcon"></i>
             </div>
         </div>
 
-        <!-- ক্যাটাগরি বাটন -->
         <div class="category-scroll" id="categoryTabs"></div>
 
-        <!-- সার্চ বক্স -->
         <div class="search-box">
             <i class="fa-solid fa-magnifying-glass search-icon"></i>
             <input type="text" id="searchInput" class="search-input" placeholder="ভিডিও নাম বা এপিসোড লিখে সার্চ দিন" oninput="handleSearch()">
@@ -568,7 +564,6 @@
         <div class="empty-msg" id="emptyMessage" style="display: none;">কোনো ভিডিও খুঁজে পাওয়া যায়নি!</div>
     </div>
 
-    <!-- ডিটেইলস পেজ -->
     <div class="detail-view" id="detailView">
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         <div class="detail-card">
@@ -630,6 +625,8 @@
     </div>
 
     <script>
+        // ✅ আপনার আসল বটের সঠিক ইউজারনেম ফিক্স করা হলো
+        const BOT_USERNAME = "banglatrxnatok_bot";
         const SERVER_URL = "https://my-bot-server-bnj8.onrender.com";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
@@ -736,7 +733,7 @@
             }
         }
 
-        // 🔥 Adsterra নেটিভ ব্যানার ফিক্সড এক্সিকিউটর 🔥
+        // 🔥 Adsterra নেটিভ ব্যানার এক্সিকিউটর 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -758,7 +755,7 @@
                 scripts.forEach(sc => {
                     const s = document.createElement("script");
                     if (sc.src) s.src = sc.src;
-                    s.async = true;
+                    if (sc.hasAttribute("async")) s.async = true;
                     if (sc.getAttribute("data-cfasync")) s.setAttribute("data-cfasync", sc.getAttribute("data-cfasync"));
                     s.text = sc.innerHTML;
                     container.appendChild(s);
@@ -1015,31 +1012,23 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // 🔥 নিশ্চিতভাবে সঠিক বর্তমান বটে সরাসরি ভিডিও ইনবক্সে পাঠানোর ফাংশন 🔥
+        // 🔥 নিশ্চিতভাবে সঠিক @banglatrxnatok_bot-এ ভিডিও পাঠানো 🔥
         function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
             if (currentSelectedVideo) {
                 const startParam = `vid_${currentSelectedVideo.id}`;
-                
-                // ১. যদি টেলিগ্রাম ওয়েবঅ্যাপে থাকে, সরাসরি ডাটা সেন্ড বা ক্লোজ করে সঠিক চ্যাটে রিডাইরেক্ট করবে
-                if (tg) {
-                    // টেলিগ্রাম চ্যাটে সরাসরি প্যারামিটারসহ ওপেন করা
-                    const botUser = "Bachelor_Point_Season_5_bot";
-                    const directUrl = `https://t.me/${botUser}?start=${startParam}`;
-                    
-                    if (tg.openTelegramLink) {
-                        tg.openTelegramLink(directUrl);
-                    } else {
-                        window.location.href = directUrl;
-                    }
-                    
-                    // অ্যাপ বন্ধ করে সরাসরি চ্যাটে পাঠিয়ে দেবে
-                    setTimeout(() => {
-                        if (tg.close) tg.close();
-                    }, 200);
+                const targetUrl = `https://t.me/${BOT_USERNAME}?start=${startParam}`;
+
+                // টেলিগ্রামের নিজস্ব লিঙ্ক ওপেনার দিয়ে সরাসরি সঠিক চ্যাটে নিয়ে যাবে
+                if (tg && tg.openTelegramLink) {
+                    tg.openTelegramLink(targetUrl);
                 } else {
-                    window.location.href = `https://t.me/Bachelor_Point_Season_5_bot?start=${startParam}`;
+                    window.location.href = targetUrl;
+                }
+
+                if (tg && tg.close) {
+                    setTimeout(() => tg.close(), 300);
                 }
             }
         }
