@@ -332,13 +332,14 @@
         /* ভিডিওর নিচে নেটিভ ব্যানার বক্স */
         .native-ad-container {
             width: 100%;
+            min-height: 60px;
             margin-bottom: 14px;
-            padding: 8px;
+            padding: 8px 4px;
             background: var(--input-bg);
             border: 1px solid var(--card-border);
             border-radius: 12px;
             text-align: center;
-            overflow: hidden;
+            overflow: visible;
             display: none;
         }
 
@@ -540,7 +541,7 @@
     </div>
 
     <div id="mainView">
-        <!-- স্ক্রিনশটের মতো টপ হেডার -->
+        <!-- টপ হেডার -->
         <div class="top-nav">
             <div class="nav-left">
                 <i class="fa-solid fa-bars menu-bar-icon" onclick="toggleSidebar()"></i>
@@ -548,7 +549,7 @@
                     <span class="red-text">Bachelor</span> <span class="white-text">Point</span>
                 </div>
             </div>
-            <!-- সেটিংস গিয়ার বাটন (ক্লিক করলে থিম পরিবর্তন হবে) -->
+            <!-- সেটিংস গিয়ার বাটন -->
             <div class="settings-circle" onclick="toggleTheme()" title="ডার্ক / লাইট মোড">
                 <i class="fa-solid fa-gear" id="themeIcon"></i>
             </div>
@@ -629,7 +630,6 @@
     </div>
 
     <script>
-        const BOT_USERNAME = "Bachelor_Point_Season_5_bot";
         const SERVER_URL = "https://my-bot-server-bnj8.onrender.com";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
@@ -644,7 +644,6 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
-        // সাইডবার টগল
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
             const overlay = document.getElementById("sidebarOverlay");
@@ -657,7 +656,6 @@
             }
         }
 
-        // ডার্ক / লাইট মোড টগল ফাংশন
         function toggleTheme() {
             document.body.classList.toggle("light-mode");
             const isLight = document.body.classList.contains("light-mode");
@@ -711,17 +709,9 @@
             return u;
         }
 
-        // 🔥 বিজ্ঞাপন কোড লাইভ রান করানোর নিরাপদ ডায়নামিক মেথড 🔥
-        function injectAdScript(container, codeStr) {
-            if (!codeStr || !codeStr.trim()) {
-                if (container) container.style.display = "none";
-                return;
-            }
-            if (container) {
-                container.style.display = "block";
-                container.innerHTML = "";
-            }
-
+        // 🔥 সোশ্যাল বার ও পপআন্ডার স্ক্রিপ্ট এক্সিকিউটর 🔥
+        function injectAdScript(codeStr) {
+            if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
@@ -741,28 +731,53 @@
                         s.text = node.innerHTML;
                         s.async = true;
                         document.head.appendChild(s);
-                    } else if (container) {
-                        container.appendChild(node.cloneNode(true));
                     }
                 });
             }
         }
 
-        function runPopunder(popCode) {
-            if (!popCode || !popCode.trim()) return;
-            injectAdScript(null, popCode.trim());
+        // 🔥 Adsterra নেটিভ ব্যানার ফিক্সড এক্সিকিউটর 🔥
+        function injectNativeBanner(container, codeStr) {
+            if (!codeStr || !codeStr.trim() || !container) {
+                if (container) container.style.display = "none";
+                return;
+            }
+            container.style.display = "block";
+            container.innerHTML = "";
+
+            let raw = codeStr.trim();
+            const doc = new DOMParser().parseFromString(raw, "text/html");
+
+            // প্রথমে div কন্টেইনার পেজে যুক্ত করা
+            const divs = doc.querySelectorAll("div");
+            divs.forEach(d => container.appendChild(d.cloneNode(true)));
+
+            // এরপর invoke.js স্ক্রিপ্টটি লোড করানো
+            const scripts = doc.querySelectorAll("script");
+            if (scripts.length > 0) {
+                scripts.forEach(sc => {
+                    const s = document.createElement("script");
+                    if (sc.src) s.src = sc.src;
+                    s.async = true;
+                    if (sc.getAttribute("data-cfasync")) s.setAttribute("data-cfasync", sc.getAttribute("data-cfasync"));
+                    s.text = sc.innerHTML;
+                    container.appendChild(s);
+                });
+            } else if (raw.startsWith("http")) {
+                const s = document.createElement("script");
+                s.src = raw;
+                s.async = true;
+                container.appendChild(s);
+            }
         }
 
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) {
-                injectAdScript(document.getElementById("socialAdBox"), ads.social_ad);
-            }
-            if (ads.native_ad) {
-                injectAdScript(document.getElementById("nativeAdBox"), ads.native_ad);
+                injectAdScript(ads.social_ad);
             }
             if (ads.popunder_ad) {
-                runPopunder(ads.popunder_ad);
+                injectAdScript(ads.popunder_ad);
             }
         }
 
@@ -864,6 +879,12 @@
             detailImg.removeAttribute("data-retried");
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
+
+            // ভিডিও ওপেন হলে নেটিভ ব্যানার লোড করা
+            const ads = appData.ads || {};
+            if (ads.native_ad) {
+                injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
+            }
 
             resetTasks();
         }
@@ -994,21 +1015,31 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
+        // 🔥 নিশ্চিতভাবে সঠিক বর্তমান বটে সরাসরি ভিডিও ইনবক্সে পাঠানোর ফাংশন 🔥
         function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
             if (currentSelectedVideo) {
                 const startParam = `vid_${currentSelectedVideo.id}`;
-                const targetUrl = `https://t.me/${BOT_USERNAME}?start=${startParam}`;
-
-                if (tg && tg.openTelegramLink) {
-                    tg.openTelegramLink(targetUrl);
+                
+                // ১. যদি টেলিগ্রাম ওয়েবঅ্যাপে থাকে, সরাসরি ডাটা সেন্ড বা ক্লোজ করে সঠিক চ্যাটে রিডাইরেক্ট করবে
+                if (tg) {
+                    // টেলিগ্রাম চ্যাটে সরাসরি প্যারামিটারসহ ওপেন করা
+                    const botUser = "Bachelor_Point_Season_5_bot";
+                    const directUrl = `https://t.me/${botUser}?start=${startParam}`;
+                    
+                    if (tg.openTelegramLink) {
+                        tg.openTelegramLink(directUrl);
+                    } else {
+                        window.location.href = directUrl;
+                    }
+                    
+                    // অ্যাপ বন্ধ করে সরাসরি চ্যাটে পাঠিয়ে দেবে
+                    setTimeout(() => {
+                        if (tg.close) tg.close();
+                    }, 200);
                 } else {
-                    window.location.href = targetUrl;
-                }
-
-                if (tg && tg.close) {
-                    setTimeout(() => tg.close(), 300);
+                    window.location.href = `https://t.me/Bachelor_Point_Season_5_bot?start=${startParam}`;
                 }
             }
         }
