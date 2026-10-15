@@ -10,7 +10,7 @@ for pkg in ["pyTelegramBotAPI", "Flask", "Flask-CORS", "requests"]:
 
 import telebot
 from telebot import types
-from flask import Flask, jsonify, make_response, send_file, Response
+from flask import Flask, jsonify, make_response, send_file, Response, request
 from flask_cors import CORS
 import threading
 import json
@@ -149,6 +149,42 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
+# 🔥 সরাসরি ইউজারের ইনবক্সে ভিডিও পাঠানোর এপিআই 🔥
+@app.route('/api/send_video', methods=['POST'])
+def api_send_video():
+    try:
+        req_data = request.json or {}
+        user_id = req_data.get('user_id')
+        video_id = req_data.get('video_id')
+
+        if not user_id or not video_id:
+            return jsonify({'success': False, 'error': 'Missing parameters'}), 400
+
+        data = load_data()
+        target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
+
+        if target_video and target_video.get("file_id"):
+            try:
+                bot.send_video(
+                    user_id, 
+                    target_video['file_id'], 
+                    caption=f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!", 
+                    protect_content=True, 
+                    supports_streaming=True,
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                bot.send_document(
+                    user_id, 
+                    target_video['file_id'], 
+                    caption=f"🎬 **{target_video['title']}**"
+                )
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Video not found'}), 404
+    except Exception as e:
+        print("API Send Video Error:", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/')
 def home():
     if os.path.exists('index.html'):
@@ -156,7 +192,7 @@ def home():
     return "Bot Server Live 24/7!"
 
 def get_action_buttons():
-    fresh_url = f"{APP_URL}?ts={int(datetime.now().timestamp())}"
+    fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
     markup = types.InlineKeyboardMarkup(row_width=1)
     btn_watch = types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url))
     btn_update = types.InlineKeyboardButton("🔔 VIDEO UPDATE", callback_data="btn_update")
@@ -514,7 +550,7 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, f"⏳ **{len(user_list)} জন ইউজারের কাছে নোটিশ পাঠানো শুরু হয়েছে...**", reply_markup=get_admin_keyboard())
         del admin_state[chat_id]
 
-        fresh_url = f"{APP_URL}?ts={int(datetime.now().timestamp())}"
+        fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
         notice_markup = types.InlineKeyboardMarkup()
         btn_watch = types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url))
         notice_markup.add(btn_watch)
@@ -596,7 +632,7 @@ def handle_admin_inputs(message):
             "title": admin_state[chat_id]['title'],
             "thumb": admin_state[chat_id]['thumb'],
             "file_id": file_id,
-            "date": datetime.now().strftime("%d %B %Y"),
+            "date": datetime.now().strftime("%b %d, %Y"),
             "time": datetime.now().strftime("%I:%M %p")
         }
         data.setdefault("videos", []).insert(0, new_video)
