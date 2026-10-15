@@ -2,7 +2,7 @@ import subprocess
 import sys
 
 # প্রয়োজনীয় লাইব্রেরি অটো-ইন্সটল
-for pkg in ["pyTelegramBotAPI", "Flask", "Flask-CORS", "requests"]:
+for pkg in ["pyTelegramBotAPI", "Flask", "Flask-CORS", "requests", "Pillow"]:
     try:
         __import__(pkg.replace("-", "_"))
     except ImportError:
@@ -17,6 +17,8 @@ import json
 import os
 import time
 import requests
+from io import BytesIO
+from PIL import Image
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
@@ -149,37 +151,77 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
-# আপনার আসল থাম্বনেইল ডাটা লোড করার মেকানিজম
-def send_video_with_custom_thumb(user_id, target_video):
-    caption_text = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
-    thumb_url = target_video.get("thumb", "")
-
-    # ১. প্রথমে আপনার আসল থাম্বনেইল ছবিটি পোস্ট করবে (যাতে ইনবক্সে আপনার পোস্টারটিই দেখা যায়)
-    if thumb_url:
-        try:
-            if "/thumb/" in thumb_url:
-                file_id = thumb_url.split("/thumb/")[-1]
-                bot.send_photo(user_id, file_id, caption=caption_text, parse_mode="Markdown")
-            elif thumb_url.startswith("http"):
-                bot.send_photo(user_id, thumb_url, caption=caption_text, parse_mode="Markdown")
-        except Exception as e:
-            print("Thumb preview send error:", e)
-
-    # ২. এরপর মূল ভিডিও ফাইলটি ইনবক্সে পাঠাবে
+# থাম্বনেইল প্রসেসিং
+def get_clean_thumb_stream(thumb_url):
     try:
-        bot.send_video(
-            user_id, 
-            target_video['file_id'], 
-            protect_content=True, 
-            supports_streaming=True
-        )
-    except Exception:
-        bot.send_document(
-            user_id, 
-            target_video['file_id']
-        )
+        if not thumb_url:
+            return None
+        raw_bytes = None
+        if "/thumb/" in thumb_url:
+            file_id = thumb_url.split("/thumb/")[-1]
+            if file_id in thumb_memory_cache:
+                raw_bytes = thumb_memory_cache[file_id]
+            else:
+                file_info = bot.get_file(file_id)
+                raw_bytes = bot.download_file(file_info.file_path)
+        elif thumb_url.startswith("http"):
+            res = requests.get(thumb_url, timeout=5)
+            if res.status_code == 200:
+                raw_bytes = res.content
 
-# 🔥 সরাসরি ইউজারের ইনবক্সে আসল থাম্বনেইলসহ ভিডিও পাঠানোর এপিআই 🔥
+        if raw_bytes:
+            img = Image.open(BytesIO(raw_bytes))
+            img = img.convert('RGB')
+            output_io = BytesIO()
+            img.save(output_io, format='JPEG', quality=90)
+            output_io.seek(0)
+            return output_io
+    except Exception as e:
+        print("Thumb processing error:", e)
+    return None
+
+def deliver_single_video(chat_id, target_video):
+    caption_text = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
+    thumb_stream = get_clean_thumb_stream(target_video.get("thumb"))
+
+    try:
+        if thumb_stream:
+            bot.send_video(
+                chat_id,
+                target_video['file_id'],
+                thumbnail=thumb_stream,
+                caption=caption_text,
+                protect_content=True,
+                supports_streaming=True,
+                parse_mode="Markdown"
+            )
+        else:
+            bot.send_video(
+                chat_id,
+                target_video['file_id'],
+                caption=caption_text,
+                protect_content=True,
+                supports_streaming=True,
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        print("Send video error, trying fallback:", e)
+        try:
+            bot.send_video(chat_id, target_video['file_id'], caption=caption_text, supports_streaming=True)
+        except Exception:
+            bot.send_document(chat_id, target_video['file_id'], caption=caption_text)
+
+# ব্যাকগ্রাউন্ডে ভিডিও পাঠানো
+def background_send_task(user_id, video_id):
+    try:
+        data = load_data()
+        target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
+        if target_video and target_video.get("file_id"):
+            deliver_single_video(user_id, target_video)
+    except Exception as e:
+        print("Background send error:", e)
+
+# 🔥 লোডিং ছাড়া সাথে সাথে রেসপন্স দিয়ে ব্যাকগ্রাউন্ডে ভিডিও পাঠানোর এপিআই 🔥
 @app.route('/api/send_video', methods=['POST'])
 def api_send_video():
     try:
@@ -190,13 +232,9 @@ def api_send_video():
         if not user_id or not video_id:
             return jsonify({'success': False, 'error': 'Missing parameters'}), 400
 
-        data = load_data()
-        target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
-
-        if target_video and target_video.get("file_id"):
-            send_video_with_custom_thumb(user_id, target_video)
-            return jsonify({'success': True})
-        return jsonify({'success': False, 'error': 'Video not found'}), 404
+        # ব্যাকগ্রাউন্ড থ্রেডে ভিডিও পাঠানো
+        threading.Thread(target=background_send_task, args=(user_id, video_id), daemon=True).start()
+        return jsonify({'success': True})
     except Exception as e:
         print("API Send Video Error:", e)
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -320,7 +358,7 @@ def send_welcome(message):
             video_id = text_parts[1].replace("vid_", "")
             target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
             if target_video and target_video.get("file_id"):
-                send_video_with_custom_thumb(message.chat.id, target_video)
+                deliver_single_video(message.chat.id, target_video)
                 return
 
         markup = get_action_buttons()
@@ -455,8 +493,7 @@ def handle_admin_inputs(message):
 
     elif message.text == "📊 Total Users":
         data = load_data()
-        user_list = data.get("users", [])
-        bot.send_message(chat_id, f"📊 মোট সক্রিয় ইউজার: **{len(user_list)}** জন\nমোট ভিডিও: **{len(data.get('videos', []))}** টি")
+        bot.send_message(chat_id, f"📊 মোট সক্রিয় ইউজার: **{len(data.get('users', []))}** জন\nমোট ভিডিও: **{len(data.get('videos', []))}** টি")
         return
 
     elif message.text == "📁 Set Category":
@@ -491,7 +528,6 @@ def handle_admin_inputs(message):
     if chat_id not in admin_state: return
     step = admin_state[chat_id].get('step')
 
-    # ৪টি এড ইনপুট প্রসেসিং
     if step == 'ad_1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
         admin_state[chat_id]['step'] = 'ad_2'
