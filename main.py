@@ -150,7 +150,6 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
-# আপনার আসল থাম্বনেইল বাইটস আনার ফাংশন
 def get_clean_thumb_bytes(thumb_url):
     try:
         if not thumb_url:
@@ -171,28 +170,29 @@ def get_clean_thumb_bytes(thumb_url):
         print("Thumb fetch error:", e)
     return None
 
-# মূল ভিডিও ডেলিভারি মেথড
 def deliver_single_video(chat_id, target_video):
     caption_text = f"🎬 **{target_video.get('title', 'Video')}**\n\nউপভোগ করুন!"
     thumb_bytes = get_clean_thumb_bytes(target_video.get("thumb"))
 
-    # ১. থাম্বনেইলসহ পাঠানোর চেষ্টা
+    # ১. কাস্টম থাম্বনেইলসহ পাঠানোর চেষ্টা
     if thumb_bytes:
         try:
+            thumb_file = BytesIO(thumb_bytes)
+            thumb_file.name = "thumb.jpg"
             bot.send_video(
                 chat_id,
                 target_video['file_id'],
-                thumbnail=thumb_bytes,
+                thumbnail=thumb_file,
                 caption=caption_text,
                 protect_content=True,
                 supports_streaming=True,
                 parse_mode="Markdown"
             )
-            return
+            return True
         except Exception as e:
-            print("Video with custom thumb failed, sending direct:", e)
+            print("Video with thumb failed, trying direct:", e)
 
-    # ২. ফলব্যাক: সরাসরি ভিডিও ডেলিভারি
+    # ২. সরাসরি ভিডিও ডেলিভারি
     try:
         bot.send_video(
             chat_id,
@@ -202,24 +202,21 @@ def deliver_single_video(chat_id, target_video):
             supports_streaming=True,
             parse_mode="Markdown"
         )
-    except Exception:
-        bot.send_document(
-            chat_id,
-            target_video['file_id'],
-            caption=caption_text
-        )
-
-# ব্যাকগ্রাউন্ড থ্রেড
-def background_send_task(user_id, video_id):
-    try:
-        data = load_data()
-        target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
-        if target_video and target_video.get("file_id"):
-            deliver_single_video(user_id, target_video)
+        return True
     except Exception as e:
-        print("Background send error:", e)
+        print("Direct video send failed, trying document fallback:", e)
+        try:
+            bot.send_document(
+                chat_id,
+                target_video['file_id'],
+                caption=caption_text
+            )
+            return True
+        except Exception as doc_e:
+            print("Document fallback failed:", doc_e)
+            return False
 
-# 🔥 লোডিং ছাড়া সাথে সাথে ইনবক্সে ভিডিও পাঠানো নিশ্চিত করার এপিআই 🔥
+# 🔥 ১০০% নিশ্চিত ডেলিভারি এপিআই 🔥
 @app.route('/api/send_video', methods=['POST'])
 def api_send_video():
     try:
@@ -230,9 +227,17 @@ def api_send_video():
         if not user_id or not video_id:
             return jsonify({'success': False, 'error': 'Missing parameters'}), 400
 
-        # ব্যাকগ্রাউন্ড থ্রেডে সাথে সাথে এক্সিকিউট করা
-        threading.Thread(target=background_send_task, args=(user_id, video_id), daemon=True).start()
-        return jsonify({'success': True})
+        data = load_data()
+        target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
+
+        if target_video and target_video.get("file_id"):
+            success = deliver_single_video(user_id, target_video)
+            if success:
+                return jsonify({'success': True})
+            else:
+                return jsonify({'success': False, 'error': 'Failed to send to Telegram'}), 500
+
+        return jsonify({'success': False, 'error': 'Video not found'}), 404
     except Exception as e:
         print("API Send Video Error:", e)
         return jsonify({'success': False, 'error': str(e)}), 500
