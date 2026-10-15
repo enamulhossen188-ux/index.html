@@ -49,13 +49,6 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* সোশ্যাল বার কন্টেইনার */
-        #socialAdBox {
-            width: 100%;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-
         .top-nav {
             display: flex;
             align-items: center;
@@ -508,8 +501,6 @@
 </head>
 <body>
 
-    <div id="socialAdBox"></div>
-
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
         <div class="sidebar-header">
@@ -597,6 +588,7 @@
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
 
+            <!-- নেটিভ ব্যানার বক্স (টাস্ক ও ডাউনলোডের নিচে) -->
             <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
@@ -694,7 +686,7 @@
             return u;
         }
 
-        // 🔥 সোশ্যাল বার (Social Bar) ফোর্স লোডার 🔥
+        // 🔥 সোশ্যাল বার (Social Bar) ফোর্স রানার 🔥
         function executeSocialBar(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -709,10 +701,10 @@
             } else {
                 s.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
-            document.head.appendChild(s);
+            document.body.appendChild(s);
         }
 
-        // 🔥 পপআন্ডার মেকানিজম 🔥
+        // 🔥 পপআন্ডার মেকানিজম (প্রথম ক্লিকে ওপেন) 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
@@ -881,6 +873,7 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
+            // নেটিভ ব্যানার টাস্কের নিচে লোড করা
             const ads = appData.ads || {};
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
@@ -1016,7 +1009,7 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // 🔥 নিশ্চিত ২ সেকেন্ড লোডিংসহ ইনবক্সে ভিডিও পাঠানোর নির্ভরযোগ্য ফাংশন 🔥
+        // 🔥 নিশ্চিত ২ সেকেন্ড লোডিংসহ নির্ভরযোগ্য সেন্ডিং ফাংশন 🔥
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
