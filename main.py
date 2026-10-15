@@ -17,7 +17,6 @@ import json
 import os
 import time
 import requests
-from io import BytesIO
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
@@ -150,26 +149,37 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
-# আপনার আসল থাম্বনেইল বাইটস পাওয়ার ফাংশন
-def get_thumb_bytes_by_url(thumb_url):
-    try:
-        if not thumb_url:
-            return None
-        if "/thumb/" in thumb_url:
-            file_id = thumb_url.split("/thumb/")[-1]
-            if file_id in thumb_memory_cache:
-                return thumb_memory_cache[file_id]
-            file_info = bot.get_file(file_id)
-            return bot.download_file(file_info.file_path)
-        elif thumb_url.startswith("http"):
-            res = requests.get(thumb_url, timeout=5)
-            if res.status_code == 200:
-                return res.content
-    except Exception as e:
-        print("Thumb fetch error:", e)
-    return None
+# আপনার আসল থাম্বনেইল ডাটা লোড করার মেকানিজম
+def send_video_with_custom_thumb(user_id, target_video):
+    caption_text = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
+    thumb_url = target_video.get("thumb", "")
 
-# 🔥 সরাসরি ইউজারের ইনবক্সে ভিডিও এবং আপনার সেট করা থাম্বনেইল পাঠানোর এপিআই 🔥
+    # ১. প্রথমে আপনার আসল থাম্বনেইল ছবিটি পোস্ট করবে (যাতে ইনবক্সে আপনার পোস্টারটিই দেখা যায়)
+    if thumb_url:
+        try:
+            if "/thumb/" in thumb_url:
+                file_id = thumb_url.split("/thumb/")[-1]
+                bot.send_photo(user_id, file_id, caption=caption_text, parse_mode="Markdown")
+            elif thumb_url.startswith("http"):
+                bot.send_photo(user_id, thumb_url, caption=caption_text, parse_mode="Markdown")
+        except Exception as e:
+            print("Thumb preview send error:", e)
+
+    # ২. এরপর মূল ভিডিও ফাইলটি ইনবক্সে পাঠাবে
+    try:
+        bot.send_video(
+            user_id, 
+            target_video['file_id'], 
+            protect_content=True, 
+            supports_streaming=True
+        )
+    except Exception:
+        bot.send_document(
+            user_id, 
+            target_video['file_id']
+        )
+
+# 🔥 সরাসরি ইউজারের ইনবক্সে আসল থাম্বনেইলসহ ভিডিও পাঠানোর এপিআই 🔥
 @app.route('/api/send_video', methods=['POST'])
 def api_send_video():
     try:
@@ -184,37 +194,7 @@ def api_send_video():
         target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
 
         if target_video and target_video.get("file_id"):
-            caption_text = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
-            
-            # আপনার সেট করা কাস্টম থাম্বনেইল লোড করা
-            thumb_bytes = get_thumb_bytes_by_url(target_video.get("thumb"))
-
-            try:
-                if thumb_bytes:
-                    bot.send_video(
-                        user_id,
-                        target_video['file_id'],
-                        thumbnail=thumb_bytes,
-                        caption=caption_text,
-                        protect_content=True,
-                        supports_streaming=True,
-                        parse_mode="Markdown"
-                    )
-                else:
-                    bot.send_video(
-                        user_id,
-                        target_video['file_id'],
-                        caption=caption_text,
-                        protect_content=True,
-                        supports_streaming=True,
-                        parse_mode="Markdown"
-                    )
-            except Exception:
-                bot.send_document(
-                    user_id,
-                    target_video['file_id'],
-                    caption=caption_text
-                )
+            send_video_with_custom_thumb(user_id, target_video)
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'Video not found'}), 404
     except Exception as e:
@@ -340,15 +320,7 @@ def send_welcome(message):
             video_id = text_parts[1].replace("vid_", "")
             target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
             if target_video and target_video.get("file_id"):
-                caption_text = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
-                thumb_bytes = get_thumb_bytes_by_url(target_video.get("thumb"))
-                try:
-                    if thumb_bytes:
-                        bot.send_video(message.chat.id, target_video['file_id'], thumbnail=thumb_bytes, caption=caption_text, protect_content=True, supports_streaming=True, parse_mode="Markdown")
-                    else:
-                        bot.send_video(message.chat.id, target_video['file_id'], caption=caption_text, protect_content=True, supports_streaming=True, parse_mode="Markdown")
-                except Exception:
-                    bot.send_document(message.chat.id, target_video['file_id'], caption=caption_text)
+                send_video_with_custom_thumb(message.chat.id, target_video)
                 return
 
         markup = get_action_buttons()
