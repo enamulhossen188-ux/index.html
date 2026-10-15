@@ -162,19 +162,20 @@ def get_action_buttons():
 
 def get_admin_keyboard():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    b1 = types.KeyboardButton("➕ Add Video")
-    b2 = types.KeyboardButton("📢 Add Coming Soon")
-    b3 = types.KeyboardButton("🔕 Delete Video")
-    b4 = types.KeyboardButton("📊 Total Users")
-    b5 = types.KeyboardButton("📁 Set Category")
-    b6 = types.KeyboardButton("🎯 Set Ads Link")
-    b7 = types.KeyboardButton("🎥 Set Welcome Video")
-    b8 = types.KeyboardButton("🔔 Set Video Update")
-    b9 = types.KeyboardButton("📢 BOT NOTICE")
-    markup.add(b1, b2, b3, b4, b5, b6, b7, b8, b9)
+    markup.add(
+        types.KeyboardButton("➕ Add Video"),
+        types.KeyboardButton("📢 Add Coming Soon"),
+        types.KeyboardButton("🔕 Delete Video"),
+        types.KeyboardButton("📊 Total Users"),
+        types.KeyboardButton("📁 Set Category"),
+        types.KeyboardButton("🎯 Set Ads Link"),
+        types.KeyboardButton("🎥 Set Welcome Video"),
+        types.KeyboardButton("🔔 Set Video Update"),
+        types.KeyboardButton("📢 BOT NOTICE")
+    )
     return markup
 
-# এডের জন্য আলাদা আলাদা সেকশন বাটন
+# এডের জন্য আলাদা আলাদা বাটন মেনু
 def get_ads_keyboard():
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
@@ -248,6 +249,45 @@ def cancel_process(message):
     else:
         bot.send_message(chat_id, "বর্তমানে কোনো কাজ চালু নেই।", reply_markup=get_admin_keyboard() if str(chat_id) == str(ADMIN_ID) else types.ReplyKeyboardRemove())
 
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    try:
+        data = load_data()
+        user_id = message.chat.id
+        if "users" not in data: data["users"] = []
+        if user_id not in data["users"]:
+            data["users"].append(user_id)
+            save_data(data)
+
+        text_parts = message.text.split()
+        if len(text_parts) > 1 and text_parts[1].startswith("vid_"):
+            video_id = text_parts[1].replace("vid_", "")
+            target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
+            if target_video and target_video.get("file_id"):
+                try:
+                    bot.send_video(message.chat.id, target_video['file_id'], caption=f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!", protect_content=True, supports_streaming=True)
+                except Exception:
+                    bot.send_document(message.chat.id, target_video['file_id'], caption=f"🎬 **{target_video['title']}**")
+                return
+
+        markup = get_action_buttons()
+        first_name = message.from_user.first_name or "বন্ধু"
+        welcome_caption = f"**আসসালামুআলাইকুম {first_name} 🥰**\n\nআমাদের বট ২৪ ঘণ্টা সচল। নাটক দেখতে ও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন।"
+        
+        welcome_vid = data.get("welcome_video")
+        if welcome_vid:
+            try:
+                bot.send_video(message.chat.id, welcome_vid, caption=welcome_caption, reply_markup=markup, parse_mode="Markdown")
+            except Exception:
+                bot.send_message(message.chat.id, welcome_caption, reply_markup=markup, parse_mode="Markdown")
+        else:
+            bot.send_message(message.chat.id, welcome_caption, reply_markup=markup, parse_mode="Markdown")
+
+        if str(user_id) == str(ADMIN_ID):
+            bot.send_message(message.chat.id, "🛠️ **এডমিন প্যানেল সচল করা হয়েছে:**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
+    except Exception as e:
+        print("Start Error:", e)
+
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     chat_id = call.message.chat.id
@@ -270,20 +310,23 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
-    # এড সিলেকশন হ্যান্ডলার
+    # এড সেকশন মেনু কলব্যাক
     if call.data == "set_ad_tasks":
         admin_state[chat_id] = {'step': 'ad_1'}
-        bot.edit_message_text("🎯 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)", chat_id, call.message.message_id)
+        bot.send_message(chat_id, "🎯 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.answer_callback_query(call.id)
         return
 
     elif call.data == "set_ad_top":
         admin_state[chat_id] = {'step': 'set_top_ad'}
-        bot.edit_message_text("🚀 **উপরে দেখানোর সোশ্যাল বার / ব্যানার স্ক্রিপ্ট কোড বা লিংকটি লিখে দিন:**\n(বাতিল করতে /cancel লিখুন)", chat_id, call.message.message_id)
+        bot.send_message(chat_id, "🚀 **উপরে দেখানোর সোশ্যাল বার / ব্যানার স্ক্রিপ্ট কোড বা লিংকটি লিখে দিন:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.answer_callback_query(call.id)
         return
 
     elif call.data == "set_ad_native":
         admin_state[chat_id] = {'step': 'set_native_ad'}
-        bot.edit_message_text("📱 **ভিডিওর নিচে দেখানোর নেটিভ ব্যানার স্ক্রিপ্ট কোড বা লিংকটি লিখে দিন:**\n(বাতিল করতে /cancel লিখুন)", chat_id, call.message.message_id)
+        bot.send_message(chat_id, "📱 **ভিডিওর নিচে দেখানোর নেটিভ ব্যানার স্ক্রিপ্ট কোড বা লিংকটি লিখে দিন:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.answer_callback_query(call.id)
         return
 
     if call.data.startswith("delpage_"):
@@ -314,7 +357,7 @@ def handle_callbacks(call):
             cats.remove(cat_to_del)
             data["categories"] = cats
             save_data(data)
-            bot.answer_callback_query(call.id, f"✅ '{cat_to_del}' ক্যাটাগরি মুছে ফেলা হয়েছে!", show_alert=True)
+            bot.answer_callback_query(call.id, f"✅ '{cat_to_del}' মুছে ফেলা হয়েছে!", show_alert=True)
             bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_category_keyboard())
         return
 
@@ -354,8 +397,7 @@ def handle_admin_inputs(message):
 
     elif message.text == "📊 Total Users":
         data = load_data()
-        user_list = data.get("users", [])
-        bot.send_message(chat_id, f"📊 মোট সক্রিয় ইউজার: **{len(user_list)}** জন\nমোট ভিডিও: **{len(data.get('videos', []))}** টি")
+        bot.send_message(chat_id, f"📊 মোট সক্রিয় ইউজার: **{len(data.get('users', []))}** জন\nমোট ভিডিও: **{len(data.get('videos', []))}** টি")
         return
 
     elif message.text == "📁 Set Category":
@@ -365,7 +407,7 @@ def handle_admin_inputs(message):
     elif message.text == "🎯 Set Ads Link":
         bot.send_message(
             chat_id,
-            "🎯 **বিজ্ঞাপন সেটিংস:**\nআপনি যে ফরম্যাটের বিজ্ঞাপন পরিবর্তন করতে চান তা নির্বাচন করুন:",
+            "🎯 **বিজ্ঞাপন সেটিংস:**\nআপনি যে ফরম্যাটের বিজ্ঞাপন পরিবর্তন করতে চান তা নিচের বাটন থেকে সিলেক্ট করুন:",
             reply_markup=get_ads_keyboard()
         )
         return
@@ -390,7 +432,7 @@ def handle_admin_inputs(message):
     if chat_id not in admin_state: return
     step = admin_state[chat_id].get('step')
 
-    # Ads Input Handlers
+    # Ads Handlers (HTML কোড নিরাপদভাবে স্টোর করার ব্যবস্থা)
     if step == 'ad_1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
         admin_state[chat_id]['step'] = 'ad_2'
@@ -413,7 +455,7 @@ def handle_admin_inputs(message):
         ads_map["top_ad"] = message.text.strip()
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **টপ সোশ্যাল বার / ব্যানার কোড আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **টপ সোশ্যাল বার / ব্যানার কোড সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
     elif step == 'set_native_ad' and message.text:
@@ -422,7 +464,7 @@ def handle_admin_inputs(message):
         ads_map["native_ad"] = message.text.strip()
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **ভিডিওর নিচের নেটিভ ব্যানার আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **ভিডিওর নিচের নেটিভ ব্যানার কোড সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
     elif step == 'set_video_update' and message.text:
@@ -553,38 +595,12 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "✅ **ওয়েলকাম ভিডিও সেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    data = load_data()
-    user_id = message.chat.id
-    if "users" not in data: data["users"] = []
-    if user_id not in data["users"]:
-        data["users"].append(user_id)
-        save_data(data)
-
-    text_parts = message.text.split()
-    if len(text_parts) > 1 and text_parts[1].startswith("vid_"):
-        video_id = text_parts[1].replace("vid_", "")
-        target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
-        if target_video and target_video.get("file_id"):
-            try:
-                bot.send_video(message.chat.id, target_video['file_id'], caption=f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!", protect_content=True, supports_streaming=True)
-            except Exception:
-                bot.send_document(message.chat.id, target_video['file_id'], caption=f"🎬 **{target_video['title']}**")
-            return
-
-    markup = get_action_buttons()
-    first_name = message.from_user.first_name or "বন্ধু"
-    welcome_caption = f"**আসসালামুআলাইকুম {first_name} 🥰**\n\nনাটক দেখতে ও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন।"
-    bot.send_message(message.chat.id, welcome_caption, reply_markup=markup, parse_mode="Markdown")
-    if str(user_id) == str(ADMIN_ID):
-        bot.send_message(message.chat.id, "🛠️ **এডমিন প্যানেল সচল করা হয়েছে:**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
-
 def run_bot():
     while True:
         try:
             bot.polling(none_stop=True, interval=0, timeout=20)
         except Exception as e:
+            print("Bot Polling Reconnecting...", e)
             time.sleep(3)
 
 if __name__ == "__main__":
