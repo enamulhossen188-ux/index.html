@@ -16,6 +16,21 @@
             --text-color: #ffffff;
             --text-muted: #8e9bb0;
             --input-bg: #1c1e24;
+            --chip-bg: #1c1e24;
+            --chip-color: #cbd5e1;
+        }
+
+        body.light-mode {
+            --bg-color: #f1f5f9;
+            --surface-color: #ffffff;
+            --card-border: rgba(0, 0, 0, 0.08);
+            --primary-red: #e50914;
+            --neon-pink: #7c3aed;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --input-bg: #e2e8f0;
+            --chip-bg: #e2e8f0;
+            --chip-color: #334155;
         }
 
         * {
@@ -31,6 +46,7 @@
             color: var(--text-color);
             min-height: 100vh;
             padding: 14px;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         /* সোশ্যাল বার বিজ্ঞাপন বক্স */
@@ -58,8 +74,9 @@
 
         .menu-bar-icon {
             font-size: 22px;
-            color: #ffffff;
+            color: var(--text-color);
             cursor: pointer;
+            padding: 4px;
         }
 
         .brand-title {
@@ -73,7 +90,7 @@
         }
 
         .brand-title .white-text {
-            color: #ffffff;
+            color: var(--text-color);
         }
 
         .settings-circle {
@@ -88,32 +105,97 @@
             color: #ffffff;
             font-size: 16px;
             cursor: pointer;
+            transition: transform 0.2s ease;
         }
 
-        /* স্ক্রিনশটের মতো ৩টি ক্যাটাগরি বাটন */
-        .cat-btn-row {
+        .settings-circle:active {
+            transform: scale(0.92);
+        }
+
+        /* ৩-ডট / সাইডবার ড্রয়ার */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+        }
+
+        .sidebar-menu {
+            position: fixed;
+            top: 0; left: -260px;
+            width: 260px;
+            height: 100%;
+            background: var(--surface-color);
+            border-right: 1px solid var(--card-border);
+            z-index: 10000;
+            transition: left 0.3s ease;
+            padding: 24px 16px;
             display: flex;
-            gap: 10px;
-            margin-bottom: 16px;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        .cat-btn {
-            flex: 1;
-            padding: 10px 0;
-            background: #1c1e24;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        .sidebar-menu.open {
+            left: 0;
+        }
+
+        .sidebar-header {
+            font-size: 18px;
+            font-weight: 700;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
             border-radius: 10px;
-            color: #ffffff;
-            font-size: 13px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 14px;
             font-weight: 600;
-            text-align: center;
+            background: var(--input-bg);
             cursor: pointer;
         }
 
-        .cat-btn.active {
-            background: #e50914;
-            color: #ffffff;
-            border-color: #e50914;
+        /* স্ক্রিনশটের মতো ক্যাটাগরি বাটন */
+        .category-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            scrollbar-width: none;
+            margin-bottom: 6px;
+        }
+        .category-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-chip {
+            padding: 8px 16px;
+            background: var(--chip-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            color: var(--chip-color);
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .category-chip.active {
+            background: #e50914 !important;
+            color: #ffffff !important;
+            border-color: #e50914 !important;
+            box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
         }
 
         /* সার্চ বক্স */
@@ -126,15 +208,15 @@
             width: 100%;
             padding: 12px 16px 12px 42px;
             background: var(--input-bg);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--card-border);
             border-radius: 25px;
-            color: #ffffff;
+            color: var(--text-color);
             font-size: 13px;
             outline: none;
         }
 
         .search-input::placeholder {
-            color: #64748b;
+            color: var(--text-muted);
         }
 
         .search-icon {
@@ -142,7 +224,7 @@
             left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            color: #64748b;
+            color: var(--text-muted);
             font-size: 14px;
         }
 
@@ -161,6 +243,7 @@
             display: flex;
             flex-direction: column;
             cursor: pointer;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
         }
 
         .thumb-wrapper {
@@ -186,7 +269,7 @@
         .video-title {
             font-size: 14px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--text-color);
             line-height: 1.4;
         }
 
@@ -195,7 +278,7 @@
             align-items: center;
             gap: 6px;
             font-size: 11px;
-            color: #94a3b8;
+            color: var(--text-muted);
         }
 
         .video-date-row i {
@@ -211,7 +294,7 @@
         .back-btn {
             background: none;
             border: none;
-            color: #ffffff;
+            color: var(--text-color);
             font-size: 14px;
             cursor: pointer;
             margin-bottom: 14px;
@@ -435,22 +518,44 @@
     <!-- সোশ্যাল বার কন্টেইনার -->
     <div id="socialAdBox" class="social-ad-container"></div>
 
+    <!-- সাইডবার মেনু ড্রয়ার -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar-menu" id="sidebarMenu">
+        <div class="sidebar-header">
+            <span>মেনু অপশন</span>
+            <i class="fa-solid fa-xmark" onclick="toggleSidebar()" style="cursor: pointer;"></i>
+        </div>
+        <div class="sidebar-item" onclick="toggleTheme()">
+            <i class="fa-solid fa-circle-half-stroke"></i>
+            <span id="themeMenuText">ডার্ক / লাইট মোড</span>
+        </div>
+        <div class="sidebar-item" onclick="showBotNotice()">
+            <i class="fa-solid fa-bullhorn"></i>
+            <span>বট নোটিশ</span>
+        </div>
+        <div class="sidebar-item" onclick="window.location.reload()">
+            <i class="fa-solid fa-rotate-right"></i>
+            <span>রিফ্রেশ করুন</span>
+        </div>
+    </div>
+
     <div id="mainView">
         <!-- স্ক্রিনশটের মতো টপ হেডার -->
         <div class="top-nav">
             <div class="nav-left">
-                <i class="fa-solid fa-bars menu-bar-icon"></i>
+                <i class="fa-solid fa-bars menu-bar-icon" onclick="toggleSidebar()"></i>
                 <div class="brand-title">
                     <span class="red-text">Bachelor</span> <span class="white-text">Point</span>
                 </div>
             </div>
-            <div class="settings-circle">
-                <i class="fa-solid fa-gear"></i>
+            <!-- সেটিংস গিয়ার বাটন (ক্লিক করলে থিম পরিবর্তন হবে) -->
+            <div class="settings-circle" onclick="toggleTheme()" title="ডার্ক / লাইট মোড">
+                <i class="fa-solid fa-gear" id="themeIcon"></i>
             </div>
         </div>
 
-        <!-- ৩টি ক্যাটাগরি বাটন -->
-        <div class="cat-btn-row" id="categoryTabs"></div>
+        <!-- ক্যাটাগরি বাটন -->
+        <div class="category-scroll" id="categoryTabs"></div>
 
         <!-- সার্চ বক্স -->
         <div class="search-box">
@@ -524,7 +629,7 @@
     </div>
 
     <script>
-        const BOT_USERNAME = "banglatrxnatok_bot";
+        const BOT_USERNAME = "Bachelor_Point_Season_5_bot";
         const SERVER_URL = "https://my-bot-server-bnj8.onrender.com";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
@@ -538,6 +643,36 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+
+        // সাইডবার টগল
+        function toggleSidebar() {
+            const sb = document.getElementById("sidebarMenu");
+            const overlay = document.getElementById("sidebarOverlay");
+            if (sb.classList.contains("open")) {
+                sb.classList.remove("open");
+                overlay.style.display = "none";
+            } else {
+                sb.classList.add("open");
+                overlay.style.display = "block";
+            }
+        }
+
+        // ডার্ক / লাইট মোড টগল ফাংশন
+        function toggleTheme() {
+            document.body.classList.toggle("light-mode");
+            const isLight = document.body.classList.contains("light-mode");
+            const icon = document.getElementById("themeIcon");
+            if (isLight) {
+                icon.className = "fa-solid fa-moon";
+            } else {
+                icon.className = "fa-solid fa-gear";
+            }
+        }
+
+        function showBotNotice() {
+            toggleSidebar();
+            alert(appData.update_notice || "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!");
+        }
 
         function generateSvgPoster(title) {
             const cleanTitle = (title || 'Bachelor Point').replace(/[\'<>\"]/g, '').substring(0, 30);
@@ -576,71 +711,59 @@
             return u;
         }
 
-        // বিজ্ঞাপন কোড সরাসরি এক্সিকিউট করার ডায়নামিক মেথড
+        // 🔥 বিজ্ঞাপন কোড লাইভ রান করানোর নিরাপদ ডায়নামিক মেথড 🔥
         function injectAdScript(container, codeStr) {
             if (!codeStr || !codeStr.trim()) {
-                container.style.display = "none";
+                if (container) container.style.display = "none";
                 return;
             }
-            container.style.display = "block";
-            container.innerHTML = "";
-
-            const raw = codeStr.trim();
-
-            if (raw.startsWith("http://") || raw.startsWith("https://")) {
-                const ifr = document.createElement("iframe");
-                ifr.src = raw;
-                ifr.style.width = "100%";
-                ifr.style.border = "none";
-                ifr.style.overflow = "hidden";
-                ifr.scrolling = "no";
-                container.appendChild(ifr);
-                return;
+            if (container) {
+                container.style.display = "block";
+                container.innerHTML = "";
             }
 
-            const doc = new DOMParser().parseFromString(raw, "text/html");
-            const nodes = Array.from(doc.body.childNodes);
+            let raw = codeStr.trim();
+            let srcMatch = raw.match(/src=["'](.*?)["']/);
+            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
-            nodes.forEach(node => {
-                if (node.tagName === "SCRIPT") {
-                    const s = document.createElement("script");
-                    if (node.src) s.src = node.src;
-                    if (node.type) s.type = node.type;
-                    s.async = true;
-                    s.text = node.innerHTML;
-                    container.appendChild(s);
-                } else {
-                    container.appendChild(node.cloneNode(true));
-                }
-            });
-        }
-
-        function runPopunder(popCode) {
-            if (!popCode || !popCode.trim()) return;
-            const raw = popCode.trim();
-            if (raw.startsWith("http://") || raw.startsWith("https://")) {
+            if (finalSrc) {
                 const s = document.createElement("script");
-                s.src = raw;
+                s.src = finalSrc;
                 s.async = true;
+                s.crossOrigin = "anonymous";
                 document.head.appendChild(s);
             } else {
                 const doc = new DOMParser().parseFromString(raw, "text/html");
-                const scripts = doc.querySelectorAll("script");
-                scripts.forEach(sc => {
-                    const s = document.createElement("script");
-                    if (sc.src) s.src = sc.src;
-                    s.async = true;
-                    s.text = sc.innerHTML;
-                    document.head.appendChild(s);
+                Array.from(doc.body.childNodes).forEach(node => {
+                    if (node.tagName === "SCRIPT") {
+                        const s = document.createElement("script");
+                        if (node.src) s.src = node.src;
+                        s.text = node.innerHTML;
+                        s.async = true;
+                        document.head.appendChild(s);
+                    } else if (container) {
+                        container.appendChild(node.cloneNode(true));
+                    }
                 });
             }
         }
 
+        function runPopunder(popCode) {
+            if (!popCode || !popCode.trim()) return;
+            injectAdScript(null, popCode.trim());
+        }
+
         function renderAllAds() {
             const ads = appData.ads || {};
-            injectAdScript(document.getElementById("socialAdBox"), ads.social_ad || "");
-            injectAdScript(document.getElementById("nativeAdBox"), ads.native_ad || "");
-            runPopunder(ads.popunder_ad || "");
+            if (ads.social_ad) {
+                injectAdScript(document.getElementById("socialAdBox"), ads.social_ad);
+            }
+            if (ads.native_ad) {
+                injectAdScript(document.getElementById("nativeAdBox"), ads.native_ad);
+            }
+            if (ads.popunder_ad) {
+                runPopunder(ads.popunder_ad);
+            }
         }
 
         async function initData() {
@@ -651,7 +774,7 @@
                 });
                 appData = await res.json();
                 
-                const cats = appData.categories || ["BPS5", "Web Series", "Movie"];
+                const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
                 if (cats.length > 0 && !activeCategory) {
                     activeCategory = cats[0];
                 }
@@ -666,12 +789,12 @@
 
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById("categoryTabs");
-            const cats = appData.categories || ["BPS5", "Web Series", "Movie"];
+            const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
             
             let html = '';
             cats.forEach((c) => {
                 const isActive = (activeCategory.trim().toUpperCase() === c.trim().toUpperCase());
-                html += `<div class="cat-btn ${isActive ? 'active' : ''}" onclick="filterCategory('${c}')">${c}</div>`;
+                html += `<div class="category-chip ${isActive ? 'active' : ''}" onclick="filterCategory('${c}')">${c}</div>`;
             });
             tabsContainer.innerHTML = html;
         }
@@ -717,7 +840,7 @@
                             <div class="video-title">${item.title}</div>
                             <div class="video-date-row">
                                 <i class="fa-regular fa-clock"></i>
-                                <span>${item.date || 'Sep 17, 2026'}</span>
+                                <span>${item.date || '13 October 2026'}</span>
                             </div>
                         </div>
                     `;
@@ -893,4 +1016,4 @@
         initData();
     </script>
 </body>
-                        </html>
+    </html>
