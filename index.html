@@ -49,6 +49,7 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
+        /* সোশ্যাল বার বিজ্ঞাপন বক্স */
         .social-ad-container {
             width: 100%;
             margin-bottom: 12px;
@@ -57,6 +58,7 @@
             display: none;
         }
 
+        /* হেডার */
         .top-nav {
             display: flex;
             align-items: center;
@@ -110,6 +112,7 @@
             transform: scale(0.92);
         }
 
+        /* ৩-ডট / সাইডবার ড্রয়ার */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -162,6 +165,7 @@
             cursor: pointer;
         }
 
+        /* ক্যাটাগরি বাটন */
         .category-scroll {
             display: flex;
             gap: 8px;
@@ -194,6 +198,7 @@
             box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
         }
 
+        /* সার্চ বক্স */
         .search-box {
             position: relative;
             margin-bottom: 18px;
@@ -223,6 +228,7 @@
             font-size: 14px;
         }
 
+        /* ভিডিও কার্ড */
         .video-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -279,6 +285,7 @@
             color: #ef4444;
         }
 
+        /* ডিটেইলস পেজ ভিউ */
         .detail-view {
             display: none;
             padding: 4px 0;
@@ -318,23 +325,11 @@
             border-radius: 10px;
             padding: 10px 14px;
             text-align: center;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             background: rgba(255, 0, 127, 0.05);
         }
 
-        .native-ad-container {
-            width: 100%;
-            min-height: 80px;
-            margin-bottom: 14px;
-            padding: 8px 4px;
-            background: var(--input-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            text-align: center;
-            overflow: visible;
-            display: none;
-        }
-
+        /* আনলক ও টাস্ক বক্স */
         .unlock-info-box {
             display: flex;
             align-items: center;
@@ -426,12 +421,27 @@
             border: none;
             background: #10b981;
             color: #fff;
+            margin-bottom: 16px;
         }
 
         .download-btn.disabled {
             background: #1e293b;
             color: #64748b;
             pointer-events: none;
+        }
+
+        /* নেটিভ ব্যানার বক্স (টাস্ক ও ডাউনলোডের নিচে স্থাপন) */
+        .native-ad-container {
+            width: 100%;
+            min-height: 80px;
+            margin-top: 10px;
+            padding: 8px 4px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            text-align: center;
+            overflow: visible;
+            display: none;
         }
 
         .empty-msg {
@@ -508,8 +518,10 @@
 </head>
 <body>
 
+    <!-- সোশ্যাল বার কন্টেইনার -->
     <div id="socialAdBox" class="social-ad-container"></div>
 
+    <!-- সাইডবার মেনু ড্রয়ার -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
         <div class="sidebar-header">
@@ -554,6 +566,7 @@
         <div class="empty-msg" id="emptyMessage" style="display: none;">কোনো ভিডিও খুঁজে পাওয়া যায়নি!</div>
     </div>
 
+    <!-- ডিটেইলস পেজ ভিউ -->
     <div class="detail-view" id="detailView">
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         <div class="detail-card">
@@ -564,14 +577,13 @@
                 <h2 id="detailTitle" style="font-size: 15px; font-weight: 700;"></h2>
             </div>
 
-            <!-- ভিডিওর নিচে নেটিভ ব্যানার কন্টেইনার -->
-            <div id="nativeAdBox" class="native-ad-container"></div>
-
+            <!-- ১. টাস্ক আনলক তথ্য -->
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
                 <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা এড দেখে নিন ১০ সেকেন্ড করে।</span>
             </div>
 
+            <!-- ২. টাস্ক বাটনগুলো (উপরে থাকবে) -->
             <div class="task-list">
                 <div class="task-card-row">
                     <div class="task-info-left">
@@ -596,9 +608,13 @@
                 </div>
             </div>
 
+            <!-- ৩. ডাউনলোড বাটন -->
             <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
+
+            <!-- ৪. নেটিভ ব্যানার বক্স (টাস্কের একদম নিচে নামিয়ে দেওয়া হয়েছে) -->
+            <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
 
@@ -628,6 +644,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -694,32 +711,53 @@
             return u;
         }
 
-        function injectAdScript(codeStr) {
+        // 🔥 সোশ্যাল বার ফোর্স রান ইঞ্জেক্টর 🔥
+        function injectSocialBar(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
+            const s = document.createElement("script");
             if (finalSrc) {
-                const s = document.createElement("script");
                 s.src = finalSrc;
-                s.async = true;
-                s.crossOrigin = "anonymous";
-                document.head.appendChild(s);
             } else {
-                const doc = new DOMParser().parseFromString(raw, "text/html");
-                Array.from(doc.body.childNodes).forEach(node => {
-                    if (node.tagName === "SCRIPT") {
-                        const s = document.createElement("script");
-                        if (node.src) s.src = node.src;
-                        s.text = node.innerHTML;
-                        s.async = true;
-                        document.head.appendChild(s);
+                s.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            }
+            s.type = "text/javascript";
+            s.async = true;
+            document.head.appendChild(s);
+        }
+
+        // 🔥 পপআন্ডার ট্রিগার মেকানিজম (প্রথম ক্লিকে নিশ্চিত ওপেন হবে) 🔥
+        function setupPopunder(popCode) {
+            if (!popCode || !popCode.trim()) return;
+            let raw = popCode.trim();
+            let srcMatch = raw.match(/src=["'](.*?)["']/);
+            let popUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
+
+            // স্ক্রিপ্ট হিসেবে হেডে ইনজেক্ট
+            const s = document.createElement("script");
+            if (popUrl) s.src = popUrl;
+            else s.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            s.async = true;
+            document.head.appendChild(s);
+
+            // টেলিগ্রাম ব্রাউজারে প্রথম স্ক্রিন টাচে নিশ্চিত ওপেন করার ব্যাকআপ
+            if (popUrl && !popUrl.endsWith(".js")) {
+                const triggerPop = () => {
+                    if (!popunderTriggered) {
+                        popunderTriggered = true;
+                        if (tg && tg.openLink) tg.openLink(popUrl);
+                        else window.open(popUrl, "_blank");
+                        document.removeEventListener("click", triggerPop);
                     }
-                });
+                };
+                document.addEventListener("click", triggerPop, { once: true });
             }
         }
 
+        // 🔥 Adsterra নেটিভ ব্যানার এক্সিকিউটর 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -731,15 +769,17 @@
             let raw = codeStr.trim();
             const doc = new DOMParser().parseFromString(raw, "text/html");
 
+            // প্রথমে কন্টেইনার div ইনজেক্ট করা
             const divs = doc.querySelectorAll("div");
             divs.forEach(d => container.appendChild(d.cloneNode(true)));
 
+            // invoke.js লোড করানো
             const scripts = doc.querySelectorAll("script");
             if (scripts.length > 0) {
                 scripts.forEach(sc => {
                     const s = document.createElement("script");
                     if (sc.src) s.src = sc.src;
-                    if (sc.hasAttribute("async")) s.async = true;
+                    s.async = true;
                     if (sc.getAttribute("data-cfasync")) s.setAttribute("data-cfasync", sc.getAttribute("data-cfasync"));
                     s.text = sc.innerHTML;
                     container.appendChild(s);
@@ -755,10 +795,10 @@
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) {
-                injectAdScript(ads.social_ad);
+                injectSocialBar(ads.social_ad);
             }
             if (ads.popunder_ad) {
-                injectAdScript(ads.popunder_ad);
+                setupPopunder(ads.popunder_ad);
             }
         }
 
@@ -861,6 +901,7 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
+            // নেটিভ ব্যানার লোড করা (টাস্কের নিচে দেখাবে)
             const ads = appData.ads || {};
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
@@ -995,7 +1036,7 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // 🔥 সরাসরি সার্ভার ব্যাকএন্ড কল করে ইনবক্সে ভিডিও পাঠানো 🔥
+        // সরাসরি সার্ভার এপিআই দিয়ে ইনবক্সে ভিডিও সেন্ড করা
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
@@ -1006,7 +1047,7 @@
             const userId = tg?.initDataUnsafe?.user?.id;
 
             if (!userId) {
-                alert("ইউজার আইডি শনাক্ত করা যায়নি। অনুগ্রহ করে টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
+                alert("ইউজার আইডি পাওয়া যায়নি! দয়া করে টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
                 dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
                 dlBtn.classList.remove("disabled");
                 return;
@@ -1028,15 +1069,15 @@
                     dlBtn.innerHTML = `✅ ভিডিও পাঠানো হয়েছে!`;
                     setTimeout(() => {
                         if (tg && tg.close) tg.close();
-                    }, 500);
+                    }, 400);
                 } else {
-                    alert("ভিডিও পাঠানো যায়নি। অনুগ্রহ করে বটে আবার চেষ্টা করুন।");
+                    alert("ভিডিও পাঠানো যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
                     dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
                     dlBtn.classList.remove("disabled");
                 }
             } catch (err) {
-                console.error("ভিডিও সেন্ড এরর:", err);
-                alert("সার্ভারের সাথে সংযোগ বিচ্ছিন্ন হয়েছে। আবার চেষ্টা করুন।");
+                console.error("ভিডিও সেন্ড ত্রুটি:", err);
+                alert("সার্ভারের সাথে সংযোগ পাওয়া যাচ্ছে না।");
                 dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
                 dlBtn.classList.remove("disabled");
             }
