@@ -421,7 +421,6 @@
             pointer-events: none;
         }
 
-        /* নেটিভ ব্যানার বক্স (টাস্ক ও ডাউনলোডের নিচে) */
         .native-ad-container {
             width: 100%;
             min-height: 80px;
@@ -695,7 +694,7 @@
             return u;
         }
 
-        // 🔥 সোশ্যাল বার (Social Bar) ১০০% কার্যকর ইঞ্জেক্টর 🔥
+        // 🔥 সোশ্যাল বার (Social Bar) ফোর্স লোডার 🔥
         function executeSocialBar(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -713,14 +712,13 @@
             document.head.appendChild(s);
         }
 
-        // 🔥 পপআন্ডার (Popunder) নিশ্চিত ওপেনিং মেকানিজম 🔥
+        // 🔥 পপআন্ডার মেকানিজম 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let popUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
-            // স্ক্রিপ্ট হিসেবে হেডে ইনজেক্ট
             const s = document.createElement("script");
             s.type = "text/javascript";
             s.async = true;
@@ -728,7 +726,6 @@
             else s.text = raw.replace(/<\/?script[^>]*>/gi, "");
             document.head.appendChild(s);
 
-            // টেলিগ্রাম ব্রাউজারে প্রথম স্ক্রিন টাচে নিশ্চিত ওপেন করার ব্যাকআপ
             const handleFirstClick = () => {
                 if (!popunderDone) {
                     popunderDone = true;
@@ -742,7 +739,7 @@
             document.addEventListener("click", handleFirstClick, { once: true });
         }
 
-        // 🔥 Adsterra নেটিভ ব্যানার ফিক্সড এক্সিকিউটর 🔥
+        // 🔥 নেটিভ ব্যানার ফিক্সড এক্সিকিউটর 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -754,11 +751,9 @@
             let raw = codeStr.trim();
             const doc = new DOMParser().parseFromString(raw, "text/html");
 
-            // প্রথমে div কন্টেইনার ইনজেক্ট করা
             const divs = doc.querySelectorAll("div");
             divs.forEach(d => container.appendChild(d.cloneNode(true)));
 
-            // invoke.js স্ক্রিপ্ট লোড করানো
             const scripts = doc.querySelectorAll("script");
             if (scripts.length > 0) {
                 scripts.forEach(sc => {
@@ -886,7 +881,6 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
-            // নেটিভ ব্যানার টাস্কের নিচে লোড করা
             const ads = appData.ads || {};
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
@@ -916,6 +910,7 @@
             document.getElementById("task2Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
             dlBtn.className = "download-btn disabled";
+            dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
         }
 
         function goBack() {
@@ -1021,30 +1016,49 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // 🔥 কোনো লোডিং ছাড়া সরাসরি সাথে সাথে ইনবক্সে পাঠানোর ফাংশন 🔥
-        function sendToInbox() {
+        // 🔥 নিশ্চিত ২ সেকেন্ড লোডিংসহ ইনবক্সে ভিডিও পাঠানোর নির্ভরযোগ্য ফাংশন 🔥
+        async function sendToInbox() {
             if (!task1Done || !task2Done) return;
+
+            const dlBtn = document.getElementById("downloadBtn");
+            dlBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ইনবক্সে পাঠানো হচ্ছে...`;
+            dlBtn.classList.add("disabled");
 
             const userId = tg?.initDataUnsafe?.user?.id;
 
             if (!userId) {
-                alert("ইউজার আইডি পাওয়া যায়নি! টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি খুলুন।");
+                alert("ইউজার আইডি পাওয়া যায়নি! টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
                 return;
             }
 
-            // ব্যাকগ্রাউন্ডে এপিআই কল পাঠিয়ে দেওয়া
-            fetch(`${SERVER_URL}/api/send_video`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id: userId,
-                    video_id: currentSelectedVideo.id
-                })
-            }).catch(e => console.error(e));
+            try {
+                const res = await fetch(`${SERVER_URL}/api/send_video`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        video_id: currentSelectedVideo.id
+                    })
+                });
 
-            // কোনো লোডিং ছাড়া সাথে সাথে অ্যাপ বন্ধ করে ইনবক্সে চলে যাবে
-            if (tg && tg.close) {
-                tg.close();
+                const data = await res.json();
+                if (data.success) {
+                    dlBtn.innerHTML = `✅ সফল হয়েছে!`;
+                    setTimeout(() => {
+                        if (tg && tg.close) tg.close();
+                    }, 500);
+                } else {
+                    alert("ভিডিও পাঠানো যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
+                    dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                    dlBtn.classList.remove("disabled");
+                }
+            } catch (err) {
+                console.error("ভিডিও সেন্ড এরর:", err);
+                alert("সার্ভারে সংযোগ দেওয়া যাচ্ছে না। অনুগ্রহ করে ২ সেকেন্ড পর আবার চেষ্টা করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
             }
         }
 
