@@ -686,31 +686,41 @@
             return u;
         }
 
-        // 🔥 সোশ্যাল বার (Social Bar) ফোর্স রানার 🔥
+        // 🔥 সোশ্যাল বার (Social Bar) ১০০% কার্যকর ডাইনামিক লোডার 🔥
         function executeSocialBar(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let scriptUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
-            const s = document.createElement("script");
-            s.type = "text/javascript";
-            s.async = true;
             if (scriptUrl) {
+                const s = document.createElement("script");
                 s.src = scriptUrl;
+                s.async = true;
+                s.crossOrigin = "anonymous";
+                document.head.appendChild(s);
             } else {
-                s.text = raw.replace(/<\/?script[^>]*>/gi, "");
+                // সরাসরি HTML/JS স্ক্রিপ্ট হলে বডিতে ইনজেক্ট
+                const wrapper = document.createElement("div");
+                wrapper.innerHTML = raw;
+                Array.from(wrapper.querySelectorAll("script")).forEach(oldScript => {
+                    const newScript = document.createElement("script");
+                    if (oldScript.src) newScript.src = oldScript.src;
+                    newScript.text = oldScript.innerHTML;
+                    newScript.async = true;
+                    document.head.appendChild(newScript);
+                });
             }
-            document.body.appendChild(s);
         }
 
-        // 🔥 পপআন্ডার মেকানিজম (প্রথম ক্লিকে ওপেন) 🔥
+        // 🔥 পপআন্ডার মেকানিজম (প্রথম ক্লিকে নিশ্চিত ওপেন) 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let popUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
+            // স্ক্রিপ্ট হিসেবে হেডে ইনজেক্ট
             const s = document.createElement("script");
             s.type = "text/javascript";
             s.async = true;
@@ -718,6 +728,7 @@
             else s.text = raw.replace(/<\/?script[^>]*>/gi, "");
             document.head.appendChild(s);
 
+            // টেলিগ্রাম ব্রাউজারে প্রথম স্ক্রিন টাচে নিশ্চিত ওপেন করার ব্যাকআপ
             const handleFirstClick = () => {
                 if (!popunderDone) {
                     popunderDone = true;
@@ -1009,7 +1020,7 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // 🔥 নিশ্চিত ২ সেকেন্ড লোডিংসহ নির্ভরযোগ্য সেন্ডিং ফাংশন 🔥
+        // 🔥 নিশ্চিত লোডিংসহ নির্ভরযোগ্য সেন্ডিং ফাংশন 🔥
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
