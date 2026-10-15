@@ -49,7 +49,6 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* সোশ্যাল বার বিজ্ঞাপন বক্স */
         .social-ad-container {
             width: 100%;
             margin-bottom: 12px;
@@ -58,7 +57,6 @@
             display: none;
         }
 
-        /* হেডার */
         .top-nav {
             display: flex;
             align-items: center;
@@ -112,7 +110,6 @@
             transform: scale(0.92);
         }
 
-        /* ৩-ডট / সাইডবার ড্রয়ার */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -165,7 +162,6 @@
             cursor: pointer;
         }
 
-        /* ক্যাটাগরি বাটন */
         .category-scroll {
             display: flex;
             gap: 8px;
@@ -198,7 +194,6 @@
             box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
         }
 
-        /* সার্চ বক্স */
         .search-box {
             position: relative;
             margin-bottom: 18px;
@@ -228,7 +223,6 @@
             font-size: 14px;
         }
 
-        /* ভিডিও কার্ড */
         .video-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -285,7 +279,6 @@
             color: #ef4444;
         }
 
-        /* ডিটেইলস পেজ */
         .detail-view {
             display: none;
             padding: 4px 0;
@@ -329,7 +322,6 @@
             background: rgba(255, 0, 127, 0.05);
         }
 
-        /* ভিডিওর নিচে নেটিভ ব্যানার বক্স */
         .native-ad-container {
             width: 100%;
             min-height: 80px;
@@ -516,10 +508,8 @@
 </head>
 <body>
 
-    <!-- সোশ্যাল বার কন্টেইনার -->
     <div id="socialAdBox" class="social-ad-container"></div>
 
-    <!-- সাইডবার মেনু ড্রয়ার -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
         <div class="sidebar-header">
@@ -625,8 +615,6 @@
     </div>
 
     <script>
-        // ✅ আপনার আসল বটের সঠিক ইউজারনেম ফিক্স করা হলো
-        const BOT_USERNAME = "banglatrxnatok_bot";
         const SERVER_URL = "https://my-bot-server-bnj8.onrender.com";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
@@ -706,7 +694,6 @@
             return u;
         }
 
-        // 🔥 সোশ্যাল বার ও পপআন্ডার স্ক্রিপ্ট এক্সিকিউটর 🔥
         function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -733,7 +720,6 @@
             }
         }
 
-        // 🔥 Adsterra নেটিভ ব্যানার এক্সিকিউটর 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -745,11 +731,9 @@
             let raw = codeStr.trim();
             const doc = new DOMParser().parseFromString(raw, "text/html");
 
-            // প্রথমে div কন্টেইনার পেজে যুক্ত করা
             const divs = doc.querySelectorAll("div");
             divs.forEach(d => container.appendChild(d.cloneNode(true)));
 
-            // এরপর invoke.js স্ক্রিপ্টটি লোড করানো
             const scripts = doc.querySelectorAll("script");
             if (scripts.length > 0) {
                 scripts.forEach(sc => {
@@ -877,7 +861,6 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
-            // ভিডিও ওপেন হলে নেটিভ ব্যানার লোড করা
             const ads = appData.ads || {};
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
@@ -1012,24 +995,50 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // 🔥 নিশ্চিতভাবে সঠিক @banglatrxnatok_bot-এ ভিডিও পাঠানো 🔥
-        function sendToInbox() {
+        // 🔥 সরাসরি সার্ভার ব্যাকএন্ড কল করে ইনবক্সে ভিডিও পাঠানো 🔥
+        async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
-            if (currentSelectedVideo) {
-                const startParam = `vid_${currentSelectedVideo.id}`;
-                const targetUrl = `https://t.me/${BOT_USERNAME}?start=${startParam}`;
+            const dlBtn = document.getElementById("downloadBtn");
+            dlBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ইনবক্সে পাঠানো হচ্ছে...`;
+            dlBtn.classList.add("disabled");
 
-                // টেলিগ্রামের নিজস্ব লিঙ্ক ওপেনার দিয়ে সরাসরি সঠিক চ্যাটে নিয়ে যাবে
-                if (tg && tg.openTelegramLink) {
-                    tg.openTelegramLink(targetUrl);
+            const userId = tg?.initDataUnsafe?.user?.id;
+
+            if (!userId) {
+                alert("ইউজার আইডি শনাক্ত করা যায়নি। অনুগ্রহ করে টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/send_video`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        video_id: currentSelectedVideo.id
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    dlBtn.innerHTML = `✅ ভিডিও পাঠানো হয়েছে!`;
+                    setTimeout(() => {
+                        if (tg && tg.close) tg.close();
+                    }, 500);
                 } else {
-                    window.location.href = targetUrl;
+                    alert("ভিডিও পাঠানো যায়নি। অনুগ্রহ করে বটে আবার চেষ্টা করুন।");
+                    dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                    dlBtn.classList.remove("disabled");
                 }
-
-                if (tg && tg.close) {
-                    setTimeout(() => tg.close(), 300);
-                }
+            } catch (err) {
+                console.error("ভিডিও সেন্ড এরর:", err);
+                alert("সার্ভারের সাথে সংযোগ বিচ্ছিন্ন হয়েছে। আবার চেষ্টা করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
             }
         }
 
