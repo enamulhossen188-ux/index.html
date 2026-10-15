@@ -149,30 +149,31 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
-# 🔥 কোনো থাম্বনেইল ছাড়া সরাসরি ক্লিন ভিডিও পাঠানোর ফাংশন 🔥
+# 🔥 কোনো থাম্বনেইল ছাড়া ১০০% ক্লিন ভিডিও পাঠানোর ফাংশন 🔥
 def deliver_single_video(chat_id, target_video):
     caption_text = f"🎬 **{target_video.get('title', 'Video')}**\n\nউপভোগ করুন!"
     try:
-        bot.send_video(
+        # send_document দিলে টেলিগ্রাম কোনো থাম্বনেইল কভার স্ক্রিনে দেখায় না
+        bot.send_document(
             chat_id,
             target_video['file_id'],
             caption=caption_text,
             protect_content=True,
-            supports_streaming=True,
             parse_mode="Markdown"
         )
         return True
     except Exception as e:
-        print("Send video error, trying fallback:", e)
+        print("Document send failed, trying normal video fallback:", e)
         try:
-            bot.send_document(
+            bot.send_video(
                 chat_id,
                 target_video['file_id'],
-                caption=caption_text
+                caption=caption_text,
+                supports_streaming=True
             )
             return True
-        except Exception as doc_e:
-            print("Document fallback failed:", doc_e)
+        except Exception as vid_e:
+            print("All video send failed:", vid_e)
             return False
 
 @app.route('/api/send_video', methods=['POST'])
@@ -229,7 +230,6 @@ def get_admin_keyboard():
     )
     return markup
 
-# 🔥 নতুন অ্যাড সেটিংস মেনু (সেট এবং ডিলিট করার বাটনসহ) 🔥
 def get_ads_keyboard():
     data = load_data()
     ads = data.get("ads", {})
@@ -372,7 +372,6 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
-    # অ্যাড সেট অপশন
     if call.data == "set_ad_tasks":
         admin_state[chat_id] = {'step': 'ad_1'}
         bot.send_message(chat_id, "🔗 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
