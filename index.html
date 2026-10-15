@@ -49,13 +49,11 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* সোশ্যাল বার বিজ্ঞাপন বক্স */
-        .social-ad-container {
+        /* সোশ্যাল বার কন্টেইনার */
+        #socialAdBox {
             width: 100%;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             text-align: center;
-            overflow: hidden;
-            display: none;
         }
 
         /* হেডার */
@@ -112,7 +110,7 @@
             transform: scale(0.92);
         }
 
-        /* ৩-ডট / সাইডবার ড্রয়ার */
+        /* সাইডবার ড্রয়ার */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -430,11 +428,11 @@
             pointer-events: none;
         }
 
-        /* নেটিভ ব্যানার বক্স (টাস্ক ও ডাউনলোডের নিচে স্থাপন) */
+        /* 🔥 নেটিভ ব্যানার বক্স (টাস্ক ও ডাউনলোডের নিচে) 🔥 */
         .native-ad-container {
             width: 100%;
             min-height: 80px;
-            margin-top: 10px;
+            margin-top: 14px;
             padding: 8px 4px;
             background: var(--input-bg);
             border: 1px solid var(--card-border);
@@ -519,7 +517,7 @@
 <body>
 
     <!-- সোশ্যাল বার কন্টেইনার -->
-    <div id="socialAdBox" class="social-ad-container"></div>
+    <div id="socialAdBox"></div>
 
     <!-- সাইডবার মেনু ড্রয়ার -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
@@ -608,12 +606,12 @@
                 </div>
             </div>
 
-            <!-- ৩. ডাউনলোড বাটন -->
+            <!-- ৩. ডাউনলোড বাটন (টাস্কের ঠিক নিচে) -->
             <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
 
-            <!-- ৪. নেটিভ ব্যানার বক্স (টাস্কের একদম নিচে নামিয়ে দেওয়া হয়েছে) -->
+            <!-- ৪. নেটিভ ব্যানার বক্স (টাস্ক ও ডাউনলোডের নিচে থাকবে) -->
             <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
@@ -644,7 +642,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderTriggered = false;
+        let popunderDone = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -711,53 +709,52 @@
             return u;
         }
 
-        // 🔥 সোশ্যাল বার ফোর্স রান ইঞ্জেক্টর 🔥
-        function injectSocialBar(codeStr) {
+        // 🔥 সোশ্যাল বার সরাসরি ব্রাউজারে ইনজেক্ট করে রান করানো 🔥
+        function executeSocialBar(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
-            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
+            let scriptUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
             const s = document.createElement("script");
-            if (finalSrc) {
-                s.src = finalSrc;
+            s.type = "text/javascript";
+            s.async = true;
+            if (scriptUrl) {
+                s.src = scriptUrl;
             } else {
                 s.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
-            s.type = "text/javascript";
-            s.async = true;
-            document.head.appendChild(s);
+            document.body.appendChild(s);
         }
 
-        // 🔥 পপআন্ডার ট্রিগার মেকানিজম (প্রথম ক্লিকে নিশ্চিত ওপেন হবে) 🔥
-        function setupPopunder(popCode) {
+        // 🔥 পপআন্ডার ব্রাউজার মেকানিজম 🔥
+        function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let popUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
-            // স্ক্রিপ্ট হিসেবে হেডে ইনজেক্ট
             const s = document.createElement("script");
+            s.type = "text/javascript";
+            s.async = true;
             if (popUrl) s.src = popUrl;
             else s.text = raw.replace(/<\/?script[^>]*>/gi, "");
-            s.async = true;
             document.head.appendChild(s);
 
-            // টেলিগ্রাম ব্রাউজারে প্রথম স্ক্রিন টাচে নিশ্চিত ওপেন করার ব্যাকআপ
-            if (popUrl && !popUrl.endsWith(".js")) {
-                const triggerPop = () => {
-                    if (!popunderTriggered) {
-                        popunderTriggered = true;
+            const handleFirstClick = () => {
+                if (!popunderDone) {
+                    popunderDone = true;
+                    if (popUrl && !popUrl.endsWith(".js")) {
                         if (tg && tg.openLink) tg.openLink(popUrl);
                         else window.open(popUrl, "_blank");
-                        document.removeEventListener("click", triggerPop);
                     }
-                };
-                document.addEventListener("click", triggerPop, { once: true });
-            }
+                    document.removeEventListener("click", handleFirstClick);
+                }
+            };
+            document.addEventListener("click", handleFirstClick, { once: true });
         }
 
-        // 🔥 Adsterra নেটিভ ব্যানার এক্সিকিউটর 🔥
+        // 🔥 Adsterra নেটিভ ব্যানার ফিক্সড এক্সিকিউটর 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -769,11 +766,11 @@
             let raw = codeStr.trim();
             const doc = new DOMParser().parseFromString(raw, "text/html");
 
-            // প্রথমে কন্টেইনার div ইনজেক্ট করা
+            // প্রথমে div কন্টেইনার ইনজেক্ট করা
             const divs = doc.querySelectorAll("div");
             divs.forEach(d => container.appendChild(d.cloneNode(true)));
 
-            // invoke.js লোড করানো
+            // invoke.js স্ক্রিপ্ট লোড করানো
             const scripts = doc.querySelectorAll("script");
             if (scripts.length > 0) {
                 scripts.forEach(sc => {
@@ -795,10 +792,10 @@
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) {
-                injectSocialBar(ads.social_ad);
+                executeSocialBar(ads.social_ad);
             }
             if (ads.popunder_ad) {
-                setupPopunder(ads.popunder_ad);
+                executePopunder(ads.popunder_ad);
             }
         }
 
@@ -901,7 +898,7 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
-            // নেটিভ ব্যানার লোড করা (টাস্কের নিচে দেখাবে)
+            // নেটিভ ব্যানার টাস্কের নিচে লোড করা
             const ads = appData.ads || {};
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
