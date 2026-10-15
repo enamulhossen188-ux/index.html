@@ -42,11 +42,13 @@ def get_default_data():
     return {
         "users": [],
         "categories": ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"],
+        "sub_categories": {},
         "ads": {
             "ad1": "https://google.com",
             "ad2": "https://google.com",
-            "top_ad": "",
-            "native_ad": ""
+            "social_ad": "",
+            "native_ad": "",
+            "popunder_ad": ""
         },
         "welcome_video": "",
         "update_notice": "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!",
@@ -76,6 +78,8 @@ def load_data(force_refresh=False):
     if data and "videos" in data:
         if "ads" not in data:
             data["ads"] = {}
+        if "sub_categories" not in data:
+            data["sub_categories"] = {}
         cached_data = data
         last_cache_time = current_time
         return cached_data
@@ -175,13 +179,14 @@ def get_admin_keyboard():
     )
     return markup
 
-# এডের জন্য আলাদা আলাদা বাটন মেনু
+# 🔥 ৪টি আলাদা বিজ্ঞাপনের বাটন 🔥
 def get_ads_keyboard():
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton("🔗 Task 1 & Task 2 Link", callback_data="set_ad_tasks"),
-        types.InlineKeyboardButton("🚀 Top Social Bar / Banner", callback_data="set_ad_top"),
-        types.InlineKeyboardButton("📱 Native Banner (ভিডিওর নিচে)", callback_data="set_ad_native"),
+        types.InlineKeyboardButton("🔗 1. Task 1 & Task 2 Link", callback_data="set_ad_tasks"),
+        types.InlineKeyboardButton("🚀 2. Social Bar Ad Code", callback_data="set_ad_social"),
+        types.InlineKeyboardButton("📱 3. Native Banner Ad Code", callback_data="set_ad_native"),
+        types.InlineKeyboardButton("💥 4. Popunder Ad Code", callback_data="set_ad_popunder"),
         types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu")
     )
     return markup
@@ -310,22 +315,28 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
-    # এড সেকশন মেনু কলব্যাক
+    # ৪টি আলাদা বিজ্ঞাপনের বাটন হ্যান্ডলার
     if call.data == "set_ad_tasks":
         admin_state[chat_id] = {'step': 'ad_1'}
-        bot.send_message(chat_id, "🎯 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "🔗 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
 
-    elif call.data == "set_ad_top":
-        admin_state[chat_id] = {'step': 'set_top_ad'}
-        bot.send_message(chat_id, "🚀 **উপরে দেখানোর সোশ্যাল বার / ব্যানার স্ক্রিপ্ট কোড বা লিংকটি লিখে দিন:**\n(বাতিল করতে /cancel লিখুন)")
+    elif call.data == "set_ad_social":
+        admin_state[chat_id] = {'step': 'set_social_ad'}
+        bot.send_message(chat_id, "🚀 **সোশ্যাল বার (Social Bar) স্ক্রিপ্ট কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
 
     elif call.data == "set_ad_native":
         admin_state[chat_id] = {'step': 'set_native_ad'}
-        bot.send_message(chat_id, "📱 **ভিডিওর নিচে দেখানোর নেটিভ ব্যানার স্ক্রিপ্ট কোড বা লিংকটি লিখে দিন:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "📱 **ভিডিওর নিচে দেখানোর নেটিভ ব্যানার (Native Banner) কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.answer_callback_query(call.id)
+        return
+
+    elif call.data == "set_ad_popunder":
+        admin_state[chat_id] = {'step': 'set_popunder_ad'}
+        bot.send_message(chat_id, "💥 **পপআন্ডার (Popunder) স্ক্রিপ্ট কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
 
@@ -407,7 +418,7 @@ def handle_admin_inputs(message):
     elif message.text == "🎯 Set Ads Link":
         bot.send_message(
             chat_id,
-            "🎯 **বিজ্ঞাপন সেটিংস:**\nআপনি যে ফরম্যাটের বিজ্ঞাপন পরিবর্তন করতে চান তা নিচের বাটন থেকে সিলেক্ট করুন:",
+            "🎯 **বিজ্ঞাপন সেটিংস:**\nযে ফরম্যাটের বিজ্ঞাপন পরিবর্তন করতে চান তা নির্বাচন করুন:",
             reply_markup=get_ads_keyboard()
         )
         return
@@ -432,7 +443,7 @@ def handle_admin_inputs(message):
     if chat_id not in admin_state: return
     step = admin_state[chat_id].get('step')
 
-    # Ads Handlers (HTML কোড নিরাপদভাবে স্টোর করার ব্যবস্থা)
+    # ৪টি এড ইনপুট প্রসেসিং
     if step == 'ad_1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
         admin_state[chat_id]['step'] = 'ad_2'
@@ -449,13 +460,13 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "✅ **টাস্ক ১ এবং ২ এর লিংক সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
-    elif step == 'set_top_ad' and message.text:
+    elif step == 'set_social_ad' and message.text:
         data = load_data(force_refresh=True)
         ads_map = data.setdefault("ads", {})
-        ads_map["top_ad"] = message.text.strip()
+        ads_map["social_ad"] = message.text.strip()
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **টপ সোশ্যাল বার / ব্যানার কোড সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **সোশ্যাল বার (Social Bar) এড কোড সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
     elif step == 'set_native_ad' and message.text:
@@ -464,7 +475,16 @@ def handle_admin_inputs(message):
         ads_map["native_ad"] = message.text.strip()
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **ভিডিওর নিচের নেটিভ ব্যানার কোড সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **নেটিভ ব্যানার (Native Banner) এড কোড সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
+        return
+
+    elif step == 'set_popunder_ad' and message.text:
+        data = load_data(force_refresh=True)
+        ads_map = data.setdefault("ads", {})
+        ads_map["popunder_ad"] = message.text.strip()
+        save_data(data)
+        del admin_state[chat_id]
+        bot.send_message(chat_id, "✅ **পপআন্ডার (Popunder) এড কোড সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
     elif step == 'set_video_update' and message.text:
@@ -600,7 +620,6 @@ def run_bot():
         try:
             bot.polling(none_stop=True, interval=0, timeout=20)
         except Exception as e:
-            print("Bot Polling Reconnecting...", e)
             time.sleep(3)
 
 if __name__ == "__main__":
