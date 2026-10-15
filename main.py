@@ -17,6 +17,7 @@ import json
 import os
 import time
 import requests
+from io import BytesIO
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
@@ -149,7 +150,26 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
-# 🔥 সরাসরি ইউজারের ইনবক্সে ভিডিও পাঠানোর এপিআই 🔥
+# আপনার আসল থাম্বনেইল বাইটস পাওয়ার ফাংশন
+def get_thumb_bytes_by_url(thumb_url):
+    try:
+        if not thumb_url:
+            return None
+        if "/thumb/" in thumb_url:
+            file_id = thumb_url.split("/thumb/")[-1]
+            if file_id in thumb_memory_cache:
+                return thumb_memory_cache[file_id]
+            file_info = bot.get_file(file_id)
+            return bot.download_file(file_info.file_path)
+        elif thumb_url.startswith("http"):
+            res = requests.get(thumb_url, timeout=5)
+            if res.status_code == 200:
+                return res.content
+    except Exception as e:
+        print("Thumb fetch error:", e)
+    return None
+
+# 🔥 সরাসরি ইউজারের ইনবক্সে ভিডিও এবং আপনার সেট করা থাম্বনেইল পাঠানোর এপিআই 🔥
 @app.route('/api/send_video', methods=['POST'])
 def api_send_video():
     try:
@@ -164,20 +184,36 @@ def api_send_video():
         target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
 
         if target_video and target_video.get("file_id"):
+            caption_text = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
+            
+            # আপনার সেট করা কাস্টম থাম্বনেইল লোড করা
+            thumb_bytes = get_thumb_bytes_by_url(target_video.get("thumb"))
+
             try:
-                bot.send_video(
-                    user_id, 
-                    target_video['file_id'], 
-                    caption=f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!", 
-                    protect_content=True, 
-                    supports_streaming=True,
-                    parse_mode="Markdown"
-                )
+                if thumb_bytes:
+                    bot.send_video(
+                        user_id,
+                        target_video['file_id'],
+                        thumbnail=thumb_bytes,
+                        caption=caption_text,
+                        protect_content=True,
+                        supports_streaming=True,
+                        parse_mode="Markdown"
+                    )
+                else:
+                    bot.send_video(
+                        user_id,
+                        target_video['file_id'],
+                        caption=caption_text,
+                        protect_content=True,
+                        supports_streaming=True,
+                        parse_mode="Markdown"
+                    )
             except Exception:
                 bot.send_document(
-                    user_id, 
-                    target_video['file_id'], 
-                    caption=f"🎬 **{target_video['title']}**"
+                    user_id,
+                    target_video['file_id'],
+                    caption=caption_text
                 )
             return jsonify({'success': True})
         return jsonify({'success': False, 'error': 'Video not found'}), 404
@@ -304,10 +340,15 @@ def send_welcome(message):
             video_id = text_parts[1].replace("vid_", "")
             target_video = next((v for v in data.get("videos", []) if str(v.get("id")) == str(video_id)), None)
             if target_video and target_video.get("file_id"):
+                caption_text = f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!"
+                thumb_bytes = get_thumb_bytes_by_url(target_video.get("thumb"))
                 try:
-                    bot.send_video(message.chat.id, target_video['file_id'], caption=f"🎬 **{target_video['title']}**\n\nউপভোগ করুন!", protect_content=True, supports_streaming=True)
+                    if thumb_bytes:
+                        bot.send_video(message.chat.id, target_video['file_id'], thumbnail=thumb_bytes, caption=caption_text, protect_content=True, supports_streaming=True, parse_mode="Markdown")
+                    else:
+                        bot.send_video(message.chat.id, target_video['file_id'], caption=caption_text, protect_content=True, supports_streaming=True, parse_mode="Markdown")
                 except Exception:
-                    bot.send_document(message.chat.id, target_video['file_id'], caption=f"🎬 **{target_video['title']}**")
+                    bot.send_document(message.chat.id, target_video['file_id'], caption=caption_text)
                 return
 
         markup = get_action_buttons()
@@ -420,7 +461,7 @@ def handle_admin_inputs(message):
     if message.text == "➕ Add Video":
         admin_state[chat_id] = {'step': 'category'}
         data = load_data(force_refresh=True)
-        cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
+        cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES"])
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         for i in range(0, len(cats), 2):
             markup.row(*[types.KeyboardButton(c) for c in cats[i:i+2]])
@@ -442,7 +483,8 @@ def handle_admin_inputs(message):
 
     elif message.text == "📊 Total Users":
         data = load_data()
-        bot.send_message(chat_id, f"📊 মোট সক্রিয় ইউজার: **{len(data.get('users', []))}** জন\nমোট ভিডিও: **{len(data.get('videos', []))}** টি")
+        user_list = data.get("users", [])
+        bot.send_message(chat_id, f"📊 মোট সক্রিয় ইউজার: **{len(user_list)}** জন\nমোট ভিডিও: **{len(data.get('videos', []))}** টি")
         return
 
     elif message.text == "📁 Set Category":
