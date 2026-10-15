@@ -41,7 +41,8 @@ thumb_memory_cache = {}
 def get_default_data():
     return {
         "users": [],
-        "categories": ["BPS5", "Web Series", "Movie"],
+        "categories": ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"],
+        "sub_categories": {},
         "ads": {
             "ad1": "https://google.com",
             "ad2": "https://google.com",
@@ -77,6 +78,8 @@ def load_data(force_refresh=False):
     if data and "videos" in data:
         if "ads" not in data:
             data["ads"] = {}
+        if "sub_categories" not in data:
+            data["sub_categories"] = {}
         cached_data = data
         last_cache_time = current_time
         return cached_data
@@ -226,7 +229,7 @@ def get_delete_view_data(page=0):
 
 def get_category_keyboard():
     data = load_data(force_refresh=True)
-    cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
+    cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
     markup = types.InlineKeyboardMarkup()
     for c in cats:
         markup.add(types.InlineKeyboardButton(f"🗑 Delete: {c}", callback_data=f"delcat_{c}"))
@@ -381,7 +384,7 @@ def handle_admin_inputs(message):
     if message.text == "➕ Add Video":
         admin_state[chat_id] = {'step': 'category'}
         data = load_data(force_refresh=True)
-        cats = data.get("categories", ["BPS5", "Web Series", "Movie"])
+        cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         for i in range(0, len(cats), 2):
             markup.row(*[types.KeyboardButton(c) for c in cats[i:i+2]])
@@ -593,7 +596,7 @@ def handle_admin_inputs(message):
             "title": admin_state[chat_id]['title'],
             "thumb": admin_state[chat_id]['thumb'],
             "file_id": file_id,
-            "date": datetime.now().strftime("%b %d, %Y"),
+            "date": datetime.now().strftime("%d %B %Y"),
             "time": datetime.now().strftime("%I:%M %p")
         }
         data.setdefault("videos", []).insert(0, new_video)
