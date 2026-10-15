@@ -17,7 +17,6 @@ import json
 import os
 import time
 import requests
-from io import BytesIO
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
@@ -150,49 +149,9 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
-def get_clean_thumb_bytes(thumb_url):
-    try:
-        if not thumb_url:
-            return None
-        if "/thumb/" in thumb_url:
-            file_id = thumb_url.split("/thumb/")[-1]
-            if file_id in thumb_memory_cache:
-                return thumb_memory_cache[file_id]
-            file_info = bot.get_file(file_id)
-            data = bot.download_file(file_info.file_path)
-            thumb_memory_cache[file_id] = data
-            return data
-        elif thumb_url.startswith("http"):
-            res = requests.get(thumb_url, timeout=5)
-            if res.status_code == 200:
-                return res.content
-    except Exception as e:
-        print("Thumb fetch error:", e)
-    return None
-
+# 🔥 কোনো থাম্বনেইল ছাড়া সরাসরি ক্লিন ভিডিও পাঠানোর ফাংশন 🔥
 def deliver_single_video(chat_id, target_video):
     caption_text = f"🎬 **{target_video.get('title', 'Video')}**\n\nউপভোগ করুন!"
-    thumb_bytes = get_clean_thumb_bytes(target_video.get("thumb"))
-
-    # ১. কাস্টম থাম্বনেইলসহ পাঠানোর চেষ্টা
-    if thumb_bytes:
-        try:
-            thumb_file = BytesIO(thumb_bytes)
-            thumb_file.name = "thumb.jpg"
-            bot.send_video(
-                chat_id,
-                target_video['file_id'],
-                thumbnail=thumb_file,
-                caption=caption_text,
-                protect_content=True,
-                supports_streaming=True,
-                parse_mode="Markdown"
-            )
-            return True
-        except Exception as e:
-            print("Video with thumb failed, trying direct:", e)
-
-    # ২. সরাসরি ভিডিও ডেলিভারি
     try:
         bot.send_video(
             chat_id,
@@ -204,7 +163,7 @@ def deliver_single_video(chat_id, target_video):
         )
         return True
     except Exception as e:
-        print("Direct video send failed, trying document fallback:", e)
+        print("Send video error, trying fallback:", e)
         try:
             bot.send_document(
                 chat_id,
@@ -216,7 +175,6 @@ def deliver_single_video(chat_id, target_video):
             print("Document fallback failed:", doc_e)
             return False
 
-# 🔥 ১০০% নিশ্চিত ডেলিভারি এপিআই 🔥
 @app.route('/api/send_video', methods=['POST'])
 def api_send_video():
     try:
@@ -234,8 +192,7 @@ def api_send_video():
             success = deliver_single_video(user_id, target_video)
             if success:
                 return jsonify({'success': True})
-            else:
-                return jsonify({'success': False, 'error': 'Failed to send to Telegram'}), 500
+            return jsonify({'success': False, 'error': 'Failed to send'}), 500
 
         return jsonify({'success': False, 'error': 'Video not found'}), 404
     except Exception as e:
@@ -272,13 +229,24 @@ def get_admin_keyboard():
     )
     return markup
 
+# 🔥 নতুন অ্যাড সেটিংস মেনু (সেট এবং ডিলিট করার বাটনসহ) 🔥
 def get_ads_keyboard():
+    data = load_data()
+    ads = data.get("ads", {})
+    
+    s_status = "✅ আছে" if ads.get("social_ad") else "❌ নেই"
+    n_status = "✅ আছে" if ads.get("native_ad") else "❌ নেই"
+    p_status = "✅ আছে" if ads.get("popunder_ad") else "❌ নেই"
+
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton("🔗 1. Task 1 & Task 2 Link", callback_data="set_ad_tasks"),
-        types.InlineKeyboardButton("🚀 2. Social Bar Ad Code", callback_data="set_ad_social"),
-        types.InlineKeyboardButton("📱 3. Native Banner Ad Code", callback_data="set_ad_native"),
-        types.InlineKeyboardButton("💥 4. Popunder Ad Code", callback_data="set_ad_popunder"),
+        types.InlineKeyboardButton("🔗 ১. Task 1 & Task 2 Link সেট করুন", callback_data="set_ad_tasks"),
+        types.InlineKeyboardButton(f"🚀 ২. সোশ্যাল বার সেট করুন ({s_status})", callback_data="set_ad_social"),
+        types.InlineKeyboardButton("🗑️ ২. সোশ্যাল বার রিমুভ / বন্ধ করুন", callback_data="del_ad_social"),
+        types.InlineKeyboardButton(f"📱 ৩. নেটিভ ব্যানার সেট করুন ({n_status})", callback_data="set_ad_native"),
+        types.InlineKeyboardButton("🗑️ ৩. নেটিভ ব্যানার রিমুভ / বন্ধ করুন", callback_data="del_ad_native"),
+        types.InlineKeyboardButton(f"💥 ৪. পপআন্ডার সেট করুন ({p_status})", callback_data="set_ad_popunder"),
+        types.InlineKeyboardButton("🗑️ ৪. পপআন্ডার রিমুভ / বন্ধ করুন", callback_data="del_ad_popunder"),
         types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu")
     )
     return markup
@@ -404,6 +372,7 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
+    # অ্যাড সেট অপশন
     if call.data == "set_ad_tasks":
         admin_state[chat_id] = {'step': 'ad_1'}
         bot.send_message(chat_id, "🔗 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
@@ -416,16 +385,40 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
+    elif call.data == "del_ad_social":
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["social_ad"] = ""
+        save_data(data)
+        bot.answer_callback_query(call.id, "🗑️ সোশ্যাল বার অ্যাড মুছে দেওয়া হয়েছে!", show_alert=True)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
+        return
+
     elif call.data == "set_ad_native":
         admin_state[chat_id] = {'step': 'set_native_ad'}
         bot.send_message(chat_id, "📱 **ভিডিওর নিচে দেখানোর নেটিভ ব্যানার (Native Banner) কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
 
+    elif call.data == "del_ad_native":
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["native_ad"] = ""
+        save_data(data)
+        bot.answer_callback_query(call.id, "🗑️ নেটিভ ব্যানার অ্যাড মুছে দেওয়া হয়েছে!", show_alert=True)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
+        return
+
     elif call.data == "set_ad_popunder":
         admin_state[chat_id] = {'step': 'set_popunder_ad'}
         bot.send_message(chat_id, "💥 **পপআন্ডার (Popunder) স্ক্রিপ্ট কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
+        return
+
+    elif call.data == "del_ad_popunder":
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["popunder_ad"] = ""
+        save_data(data)
+        bot.answer_callback_query(call.id, "🗑️ পপআন্ডার অ্যাড মুছে দেওয়া হয়েছে!", show_alert=True)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
 
     if call.data.startswith("delpage_"):
@@ -507,7 +500,7 @@ def handle_admin_inputs(message):
     elif message.text == "🎯 Set Ads Link":
         bot.send_message(
             chat_id,
-            "🎯 **বিজ্ঞাপন সেটিংস:**\nযে ফরম্যাটের বিজ্ঞাপন পরিবর্তন করতে চান তা নির্বাচন করুন:",
+            "🎯 **বিজ্ঞাপন সেটিংস ও নিয়ন্ত্রণ:**\nনতুন কোড বসাতে পারেন অথবা কোনো অ্যাড পছন্দ না হলে রিমুভ বাটনে চাপ দিয়ে বন্ধ করতে পারেন:",
             reply_markup=get_ads_keyboard()
         )
         return
