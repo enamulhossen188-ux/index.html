@@ -49,14 +49,12 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* সোশ্যাল বার কন্টেইনার */
         #socialAdBox {
             width: 100%;
             margin-bottom: 8px;
             text-align: center;
         }
 
-        /* হেডার */
         .top-nav {
             display: flex;
             align-items: center;
@@ -110,7 +108,6 @@
             transform: scale(0.92);
         }
 
-        /* সাইডবার ড্রয়ার */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -163,7 +160,6 @@
             cursor: pointer;
         }
 
-        /* ক্যাটাগরি বাটন */
         .category-scroll {
             display: flex;
             gap: 8px;
@@ -196,7 +192,6 @@
             box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
         }
 
-        /* সার্চ বক্স */
         .search-box {
             position: relative;
             margin-bottom: 18px;
@@ -226,7 +221,6 @@
             font-size: 14px;
         }
 
-        /* ভিডিও কার্ড */
         .video-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -283,7 +277,6 @@
             color: #ef4444;
         }
 
-        /* ডিটেইলস পেজ ভিউ */
         .detail-view {
             display: none;
             padding: 4px 0;
@@ -327,7 +320,6 @@
             background: rgba(255, 0, 127, 0.05);
         }
 
-        /* আনলক ও টাস্ক বক্স */
         .unlock-info-box {
             display: flex;
             align-items: center;
@@ -428,7 +420,6 @@
             pointer-events: none;
         }
 
-        /* 🔥 নেটিভ ব্যানার বক্স (টাস্ক ও ডাউনলোডের নিচে) 🔥 */
         .native-ad-container {
             width: 100%;
             min-height: 80px;
@@ -516,10 +507,8 @@
 </head>
 <body>
 
-    <!-- সোশ্যাল বার কন্টেইনার -->
     <div id="socialAdBox"></div>
 
-    <!-- সাইডবার মেনু ড্রয়ার -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
         <div class="sidebar-header">
@@ -564,7 +553,6 @@
         <div class="empty-msg" id="emptyMessage" style="display: none;">কোনো ভিডিও খুঁজে পাওয়া যায়নি!</div>
     </div>
 
-    <!-- ডিটেইলস পেজ ভিউ -->
     <div class="detail-view" id="detailView">
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         <div class="detail-card">
@@ -575,13 +563,11 @@
                 <h2 id="detailTitle" style="font-size: 15px; font-weight: 700;"></h2>
             </div>
 
-            <!-- ১. টাস্ক আনলক তথ্য -->
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
                 <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা এড দেখে নিন ১০ সেকেন্ড করে।</span>
             </div>
 
-            <!-- ২. টাস্ক বাটনগুলো (উপরে থাকবে) -->
             <div class="task-list">
                 <div class="task-card-row">
                     <div class="task-info-left">
@@ -606,12 +592,10 @@
                 </div>
             </div>
 
-            <!-- ৩. ডাউনলোড বাটন (টাস্কের ঠিক নিচে) -->
             <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
 
-            <!-- ৪. নেটিভ ব্যানার বক্স (টাস্ক ও ডাউনলোডের নিচে থাকবে) -->
             <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
@@ -709,7 +693,6 @@
             return u;
         }
 
-        // 🔥 সোশ্যাল বার সরাসরি ব্রাউজারে ইনজেক্ট করে রান করানো 🔥
         function executeSocialBar(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -727,7 +710,6 @@
             document.body.appendChild(s);
         }
 
-        // 🔥 পপআন্ডার ব্রাউজার মেকানিজম 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
@@ -754,7 +736,6 @@
             document.addEventListener("click", handleFirstClick, { once: true });
         }
 
-        // 🔥 Adsterra নেটিভ ব্যানার ফিক্সড এক্সিকিউটর 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -766,11 +747,9 @@
             let raw = codeStr.trim();
             const doc = new DOMParser().parseFromString(raw, "text/html");
 
-            // প্রথমে div কন্টেইনার ইনজেক্ট করা
             const divs = doc.querySelectorAll("div");
             divs.forEach(d => container.appendChild(d.cloneNode(true)));
 
-            // invoke.js স্ক্রিপ্ট লোড করানো
             const scripts = doc.querySelectorAll("script");
             if (scripts.length > 0) {
                 scripts.forEach(sc => {
@@ -898,7 +877,6 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
-            // নেটিভ ব্যানার টাস্কের নিচে লোড করা
             const ads = appData.ads || {};
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
@@ -1033,50 +1011,30 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // সরাসরি সার্ভার এপিআই দিয়ে ইনবক্সে ভিডিও সেন্ড করা
-        async function sendToInbox() {
+        // 🔥 কোনো লোডিং ছাড়া সরাসরি সাথে সাথে ইনবক্সে পাঠানোর ফাংশন 🔥
+        function sendToInbox() {
             if (!task1Done || !task2Done) return;
-
-            const dlBtn = document.getElementById("downloadBtn");
-            dlBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ইনবক্সে পাঠানো হচ্ছে...`;
-            dlBtn.classList.add("disabled");
 
             const userId = tg?.initDataUnsafe?.user?.id;
 
             if (!userId) {
-                alert("ইউজার আইডি পাওয়া যায়নি! দয়া করে টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
-                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
-                dlBtn.classList.remove("disabled");
+                alert("ইউজার আইডি পাওয়া যায়নি! টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি খুলুন।");
                 return;
             }
 
-            try {
-                const response = await fetch(`${SERVER_URL}/api/send_video`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        video_id: currentSelectedVideo.id
-                    })
-                });
+            // ব্যাকগ্রাউন্ডে এপিআই কল পাঠিয়ে দেওয়া
+            fetch(`${SERVER_URL}/api/send_video`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    video_id: currentSelectedVideo.id
+                })
+            }).catch(e => console.error(e));
 
-                const result = await response.json();
-
-                if (result.success) {
-                    dlBtn.innerHTML = `✅ ভিডিও পাঠানো হয়েছে!`;
-                    setTimeout(() => {
-                        if (tg && tg.close) tg.close();
-                    }, 400);
-                } else {
-                    alert("ভিডিও পাঠানো যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
-                    dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
-                    dlBtn.classList.remove("disabled");
-                }
-            } catch (err) {
-                console.error("ভিডিও সেন্ড ত্রুটি:", err);
-                alert("সার্ভারের সাথে সংযোগ পাওয়া যাচ্ছে না।");
-                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
-                dlBtn.classList.remove("disabled");
+            // কোনো লোডিং ছাড়া সাথে সাথে অ্যাপ বন্ধ করে ইনবক্সে চলে যাবে
+            if (tg && tg.close) {
+                tg.close();
             }
         }
 
