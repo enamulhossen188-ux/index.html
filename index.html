@@ -49,6 +49,16 @@
             transition: background 0.3s ease;
         }
 
+        /* উপরে সোশ্যাল বার / ব্যানার কন্টেইনার */
+        .top-ad-wrapper {
+            width: 100%;
+            margin-bottom: 12px;
+            display: none;
+            text-align: center;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
         .header {
             display: flex;
             align-items: center;
@@ -286,6 +296,19 @@
             background: rgba(255, 0, 127, 0.03);
         }
 
+        /* ভিডিওর নিচে নেটিভ ব্যানার কন্টেইনার */
+        .native-ad-wrapper {
+            display: none;
+            width: 100%;
+            margin-bottom: 14px;
+            padding: 6px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            text-align: center;
+            overflow: hidden;
+        }
+
         .unlock-info-box {
             display: flex;
             align-items: center;
@@ -512,6 +535,9 @@
 </head>
 <body>
 
+    <!-- টপ সোশ্যাল বার / ব্যানার সেকশন -->
+    <div id="topAdSection" class="top-ad-wrapper"></div>
+
     <div class="header">
         <h1><i class="fa-solid fa-circle-play"></i> Bangla TRX Natok</h1>
         <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn"><i class="fa-solid fa-moon"></i> Dark</button>
@@ -540,6 +566,9 @@
             <div class="detail-title-card">
                 <h2 id="detailTitle" style="font-size: 15px; font-weight: 700;"></h2>
             </div>
+
+            <!-- ভিডিওর নিচে নেটিভ ব্যানার সেকশন -->
+            <div id="nativeAdSection" class="native-ad-wrapper"></div>
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
@@ -608,7 +637,6 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
-        // 🔥 অফলাইন হলেও ১০০% গ্যারান্টিযুক্ত ব্যানার (কখনোই স্ক্রিন কালো হবে না)
         function generateSvgPoster(title) {
             const cleanTitle = (title || 'Bangla Natok').replace(/[\'<>\"]/g, '').substring(0, 30);
             const svgContent = `
@@ -633,7 +661,6 @@
             const title = img.getAttribute("data-title") || "Bangla Natok";
             const original = img.getAttribute("data-original");
             
-            // Weserv ট্রাই করার পর ব্যর্থ হলে সাথে সাথে SVG পোস্টার আঁকবে
             if (!img.dataset.retried && original && original.includes("/thumb/")) {
                 img.dataset.retried = "true";
                 img.src = `https://images.weserv.nl/?url=${encodeURIComponent(original)}&w=640&fit=cover&output=jpg&q=85`;
@@ -654,6 +681,33 @@
             return u;
         }
 
+        // অ্যাড রেন্ডারার ফাংশন
+        function renderCustomAds() {
+            const topAd = appData.ads?.top_ad;
+            const nativeAd = appData.ads?.native_ad;
+
+            const topContainer = document.getElementById("topAdSection");
+            const nativeContainer = document.getElementById("nativeAdSection");
+
+            if (topAd && topAd.trim()) {
+                topContainer.style.display = "block";
+                topContainer.innerHTML = topAd.trim().startsWith("http") 
+                    ? `<iframe src="${topAd}" width="100%" height="60" frameborder="0" scrolling="no"></iframe>`
+                    : topAd;
+            } else {
+                topContainer.style.display = "none";
+            }
+
+            if (nativeAd && nativeAd.trim()) {
+                nativeContainer.style.display = "block";
+                nativeContainer.innerHTML = nativeAd.trim().startsWith("http") 
+                    ? `<iframe src="${nativeAd}" width="100%" height="150" frameborder="0" scrolling="no"></iframe>`
+                    : nativeAd;
+            } else {
+                nativeContainer.style.display = "none";
+            }
+        }
+
         async function initData() {
             try {
                 const res = await fetch(`${SERVER_URL}/api/data?t=${Date.now()}`, {
@@ -669,6 +723,7 @@
                 
                 renderCategoryTabs();
                 renderVideos();
+                renderCustomAds();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
