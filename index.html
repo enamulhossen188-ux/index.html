@@ -588,7 +588,7 @@
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
 
-            <!-- নেটিভ ব্যানার বক্স (টাস্ক ও ডাউনলোডের নিচে) -->
+            <!-- নেটিভ ব্যানার বক্স -->
             <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
@@ -619,7 +619,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderDone = false;
+        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -686,60 +686,50 @@
             return u;
         }
 
-        // 🔥 সোশ্যাল বার (Social Bar) ফোর্স লোডার 🔥
-        function executeSocialBar(codeStr) {
-            if (!codeStr || !codeStr.trim()) return;
-            let raw = codeStr.trim();
+        // 🔥 URL বা Script ট্যাগ আলাদা করে সরাসরি হেড-এ ইনজেক্ট করা 🔥
+        function parseAndInjectScript(rawCode) {
+            if (!rawCode || !rawCode.trim()) return null;
+            let raw = rawCode.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let scriptUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
+            const scriptElem = document.createElement("script");
+            scriptElem.type = "text/javascript";
             if (scriptUrl) {
-                const s = document.createElement("script");
-                s.src = scriptUrl;
-                s.async = true;
-                s.crossOrigin = "anonymous";
-                document.head.appendChild(s);
+                scriptElem.src = scriptUrl;
             } else {
-                const wrapper = document.createElement("div");
-                wrapper.innerHTML = raw;
-                Array.from(wrapper.querySelectorAll("script")).forEach(oldScript => {
-                    const newScript = document.createElement("script");
-                    if (oldScript.src) newScript.src = oldScript.src;
-                    newScript.text = oldScript.innerHTML;
-                    newScript.async = true;
-                    document.head.appendChild(newScript);
-                });
+                scriptElem.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
+            document.head.appendChild(scriptElem);
+            return scriptUrl;
         }
 
-        // 🔥 পপআন্ডার মেকানিজম (প্রথম ক্লিকে ওপেন) 🔥
+        // 🔥 সোশ্যাল বার ফোর্স লোডার 🔥
+        function executeSocialBar(codeStr) {
+            parseAndInjectScript(codeStr);
+        }
+
+        // 🔥 পপআন্ডার ব্রাউজার সিকিউরিটি বাইপাস মেকানিজম 🔥
         function executePopunder(popCode) {
-            if (!popCode || !popCode.trim()) return;
-            let raw = popCode.trim();
-            let srcMatch = raw.match(/src=["'](.*?)["']/);
-            let popUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
+            let scriptUrl = parseAndInjectScript(popCode);
 
-            const s = document.createElement("script");
-            s.type = "text/javascript";
-            s.async = true;
-            if (popUrl) s.src = popUrl;
-            else s.text = raw.replace(/<\/?script[^>]*>/gi, "");
-            document.head.appendChild(s);
-
-            const handleFirstClick = () => {
-                if (!popunderDone) {
-                    popunderDone = true;
-                    if (popUrl && !popUrl.endsWith(".js")) {
-                        if (tg && tg.openLink) tg.openLink(popUrl);
-                        else window.open(popUrl, "_blank");
+            // ইউজারের প্রথম স্পর্শেই টেলিগ্রামের মাধ্যমে ব্যাকগ্রাউন্ডে লিংক ওপেন করা
+            const handleFirstInteraction = () => {
+                if (!popunderTriggered) {
+                    popunderTriggered = true;
+                    if (scriptUrl && !scriptUrl.endsWith(".js")) {
+                        if (tg && tg.openLink) tg.openLink(scriptUrl);
+                        else window.open(scriptUrl, "_blank");
                     }
-                    document.removeEventListener("click", handleFirstClick);
+                    document.removeEventListener("touchstart", handleFirstInteraction);
+                    document.removeEventListener("click", handleFirstInteraction);
                 }
             };
-            document.addEventListener("click", handleFirstClick, { once: true });
+            document.addEventListener("touchstart", handleFirstInteraction, { once: true, passive: true });
+            document.addEventListener("click", handleFirstInteraction, { once: true });
         }
 
-        // 🔥 নেটিভ ব্যানার ফিক্সড এক্সিকিউটর 🔥
+        // 🔥 নেটিভ ব্যানার ইনজেক্টর 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -759,7 +749,6 @@
                 scripts.forEach(sc => {
                     const s = document.createElement("script");
                     if (sc.src) s.src = sc.src;
-                    s.async = true;
                     if (sc.getAttribute("data-cfasync")) s.setAttribute("data-cfasync", sc.getAttribute("data-cfasync"));
                     s.text = sc.innerHTML;
                     container.appendChild(s);
@@ -767,7 +756,6 @@
             } else if (raw.startsWith("http")) {
                 const s = document.createElement("script");
                 s.src = raw;
-                s.async = true;
                 container.appendChild(s);
             }
         }
@@ -881,7 +869,6 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
-            // নেটিভ ব্যানার টাস্কের নিচে লোড করা
             const ads = appData.ads || {};
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
@@ -1017,7 +1004,6 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // 🔥 নিশ্চিত লোডিংসহ নির্ভরযোগ্য সেন্ডিং ফাংশন 🔥
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
@@ -1057,7 +1043,7 @@
                 }
             } catch (err) {
                 console.error("ভিডিও সেন্ড এরর:", err);
-                alert("সার্ভারে সংযোগ দেওয়া যাচ্ছে না। অনুগ্রহ করে ২ সেকেন্ড পর আবার চেষ্টা করুন।");
+                alert("সার্ভারে সংযোগ দেওয়া যাচ্ছে না। অনুগ্রহ করে আবার চেষ্টা করুন।");
                 dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
                 dlBtn.classList.remove("disabled");
             }
