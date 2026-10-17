@@ -28,7 +28,7 @@ DB_CHANNEL_ID = -1004330425245  # নিজস্ব প্রাইভেট �
 RENDER_SERVER_URL = "https://my-bot-server-bnj8.onrender.com"
 # ====================================================
 
-bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
+bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
 app = Flask(__name__)
 CORS(app)
 
@@ -173,15 +173,15 @@ def get_thumb_stream_for_video(thumb_url):
             thumb_stream.name = "thumb.jpg"
             return thumb_stream
     except Exception as e:
-        print("Thumb fetch error:", e)
+        print("Thumb stream error:", e)
     return None
 
-# 🔥 ভিডিও প্লেয়ার ফরম্যাটে ইনবক্সে পাঠানো (স্ক্রিনশটের মতো) 🔥
+# 🔥 সাধারণ ভিডিও প্লেয়ার হিসেবে ইনবক্সে পাঠানো 🔥
 def deliver_single_video(chat_id, target_video):
     caption_text = f"🎬 **{target_video.get('title', 'Video')}**\n\nউপভোগ করুন!"
     thumb_stream = get_thumb_stream_for_video(target_video.get("thumb"))
 
-    # থাম্বনেইল ফাইলসহ ভিডিও প্লেয়ার হিসেবে ডেলিভারি
+    # ১. থাম্বনেইল বাইনারিসহ পাঠানোর চেষ্টা
     if thumb_stream:
         try:
             bot.send_video(
@@ -197,7 +197,7 @@ def deliver_single_video(chat_id, target_video):
         except Exception as e:
             print("Video with thumb stream error:", e)
 
-    # সাধারণ ভিডিও প্লেয়ার হিসেবে ডেলিভারি
+    # ২. সরাসরি ভিডিও প্লেয়ার হিসেবে পাঠানো
     try:
         bot.send_video(
             chat_id,
@@ -209,8 +209,12 @@ def deliver_single_video(chat_id, target_video):
         )
         return True
     except Exception as e:
-        print("Direct send_video failed:", e)
-        return False
+        print("Direct send_video failed, fallback:", e)
+        try:
+            bot.send_document(chat_id, target_video['file_id'], caption=caption_text)
+            return True
+        except Exception:
+            return False
 
 @app.route('/api/send_video', methods=['POST'])
 def api_send_video():
@@ -711,7 +715,6 @@ def handle_admin_inputs(message):
         incoming_file_id = message.video.file_id if message.video else message.document.file_id
         final_video_file_id = incoming_file_id
 
-        # থাম্বনেইলসহ টেলিগ্রাম চ্যানেলে ভিডিও সেভ করা
         thumb_photo_id = admin_state[chat_id].get('thumb_photo_id')
         if thumb_photo_id:
             try:
@@ -756,16 +759,29 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "✅ **ওয়েলকাম ভিডিও সেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
+# 🔥 সার্ভার যাতে ঘুমিয়ে না পড়ে তার জন্য অটো-পিং মেকানিজম 🔥
+def keep_alive_ping():
+    while True:
+        try:
+            time.sleep(600)  # প্রতি ১০ মিনিটে পিং করবে
+            requests.get(RENDER_SERVER_URL, timeout=10)
+        except Exception:
+            pass
+
 def run_bot():
     while True:
         try:
-            bot.polling(none_stop=True, interval=0, timeout=20)
+            bot.polling(none_stop=True, interval=0, timeout=30)
         except Exception as e:
+            print("Polling Error caught:", e)
             time.sleep(3)
 
 if __name__ == "__main__":
-    t = threading.Thread(target=run_bot)
-    t.daemon = True
-    t.start()
+    t_ping = threading.Thread(target=keep_alive_ping, daemon=True)
+    t_ping.start()
+
+    t_bot = threading.Thread(target=run_bot, daemon=True)
+    t_bot.start()
+
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
