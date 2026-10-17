@@ -49,14 +49,6 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* সোশ্যাল বার রাখার ফ্রেম */
-        #socialAdBox {
-            width: 100%;
-            display: none;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-
         .top-nav {
             display: flex;
             align-items: center;
@@ -509,9 +501,6 @@
 </head>
 <body>
 
-    <!-- সোশ্যাল বার কন্টেইনার -->
-    <div id="socialAdBox"></div>
-
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
         <div class="sidebar-header">
@@ -599,7 +588,7 @@
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
 
-            <!-- নেটিভ ব্যানার বক্স (টাস্কের নিচে থাকবে) -->
+            <!-- নেটিভ ব্যানার বক্স -->
             <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
@@ -630,7 +619,6 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -697,63 +685,51 @@
             return u;
         }
 
-        // 🔥 সোশ্যাল বার (Social Bar) ১০০% কার্যকর রানার 🔥
-        function executeSocialBar(rawCode) {
-            if (!rawCode || !rawCode.trim()) return;
-            const container = document.getElementById("socialAdBox");
-            if (!container) return;
-            container.style.display = "block";
-
-            let raw = rawCode.trim();
+        // 🔥 বিজ্ঞাপন স্ক্রিপ্ট সঠিক পদ্ধতিতে লোড করার ইঞ্জিন 🔥
+        function safelyRunScript(codeStr) {
+            if (!codeStr || !codeStr.trim()) return;
+            let raw = codeStr.trim();
+            
+            // স্ক্রিপ্ট লিংক আলাদা করা
             let srcMatch = raw.match(/src=["'](.*?)["']/);
-            let scriptUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
+            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
-            // ফ্রেশ স্ক্রিপ্ট তৈরি করে বডিতে ইনজেক্ট
-            const s = document.createElement("script");
-            s.type = "text/javascript";
-            if (scriptUrl) {
-                s.src = scriptUrl;
+            const scriptElem = document.createElement("script");
+            scriptElem.type = "text/javascript";
+            
+            if (finalSrc) {
+                scriptElem.src = finalSrc;
             } else {
-                s.text = raw.replace(/<\/?script[^>]*>/gi, "");
+                scriptElem.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
-            document.body.appendChild(s);
+            
+            document.head.appendChild(scriptElem);
         }
 
-        // 🔥 পপআন্ডার (Popunder) ১০০% নিশ্চিত ওপেনিং মেকানিজম 🔥
-        function executePopunder(rawCode) {
-            if (!rawCode || !rawCode.trim()) return;
-            let raw = rawCode.trim();
-            let srcMatch = raw.match(/src=["'](.*?)["']/);
-            let scriptUrl = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
+        // 🔥 পপআন্ডার কার্যকর করা (সরাসরি কোড ওপেন হবে না) 🔥
+        function executePopunder(popCode) {
+            if (!popCode || !popCode.trim()) return;
+            let raw = popCode.trim();
 
-            // ১. স্ক্রিপ্ট হিসেবে হেডে ইনজেক্ট করা
-            const s = document.createElement("script");
-            s.type = "text/javascript";
-            if (scriptUrl) {
-                s.src = scriptUrl;
-            } else {
-                s.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            // যদি এটি সরাসরি ডিরেক্ট লিংক হয় (কোনো .js স্ক্রিপ্ট না হয়)
+            let isJsFile = raw.includes(".js");
+            if (!isJsFile && raw.startsWith("http")) {
+                const triggerDirect = () => {
+                    if (tg && tg.openLink) tg.openLink(raw);
+                    else window.open(raw, "_blank");
+                    document.removeEventListener("click", triggerDirect);
+                };
+                document.addEventListener("click", triggerDirect, { once: true });
+                return;
             }
-            document.head.appendChild(s);
 
-            // ২. স্ক্রিনে প্রথম টাচ বা ক্লিকেই নিশ্চিত ব্যাকগ্রাউন্ড ওপেন
-            const triggerPop = () => {
-                if (!popunderTriggered) {
-                    popunderTriggered = true;
-                    if (scriptUrl) {
-                        // যদি স্ক্রিপ্ট লিঙ্ক হয়, সরাসরি বিজ্ঞাপনের লিঙ্ক বের করে ওপেন করা
-                        if (tg && tg.openLink) {
-                            tg.openLink(scriptUrl);
-                        } else {
-                            window.open(scriptUrl, "_blank");
-                        }
-                    }
-                    document.removeEventListener("touchstart", triggerPop);
-                    document.removeEventListener("click", triggerPop);
-                }
-            };
-            document.addEventListener("touchstart", triggerPop, { once: true, passive: true });
-            document.addEventListener("click", triggerPop, { once: true });
+            // যদি এটি Adsterra স্ক্রিপ্ট কোড হয়, তবে সাধারণ স্ক্রিপ্ট হিসেবে ব্যাকগ্রাউন্ডে ইনজেক্ট হবে
+            safelyRunScript(raw);
+        }
+
+        // 🔥 সোশ্যাল বার কার্যকর করা 🔥
+        function executeSocialBar(socialCode) {
+            safelyRunScript(socialCode);
         }
 
         // 🔥 নেটিভ ব্যানার ইনজেক্টর 🔥
@@ -896,6 +872,7 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
+            // নেটিভ ব্যানার টাস্কের নিচে লোড করা
             const ads = appData.ads || {};
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
