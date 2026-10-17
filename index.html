@@ -685,17 +685,17 @@
             return u;
         }
 
-        // 🔥 বিজ্ঞাপন স্ক্রিপ্ট সঠিক পদ্ধতিতে লোড করার ইঞ্জিন 🔥
-        function safelyRunScript(codeStr) {
+        // 🔥 কোনো ব্রাউজার রিডাইরেক্ট ছাড়া শুধু স্ক্রিপ্ট এক্সিকিউট করা 🔥
+        function injectAdScriptSilently(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
             
-            // স্ক্রিপ্ট লিংক আলাদা করা
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
 
             const scriptElem = document.createElement("script");
             scriptElem.type = "text/javascript";
+            scriptElem.async = true;
             
             if (finalSrc) {
                 scriptElem.src = finalSrc;
@@ -706,30 +706,33 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 পপআন্ডার কার্যকর করা (সরাসরি কোড ওপেন হবে না) 🔥
+        // 🔥 পপআন্ডার ইঞ্জিন: কখনোই .js লিংকে সরাসরি যাবে না 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
 
-            // যদি এটি সরাসরি ডিরেক্ট লিংক হয় (কোনো .js স্ক্রিপ্ট না হয়)
-            let isJsFile = raw.includes(".js");
-            if (!isJsFile && raw.startsWith("http")) {
-                const triggerDirect = () => {
-                    if (tg && tg.openLink) tg.openLink(raw);
-                    else window.open(raw, "_blank");
-                    document.removeEventListener("click", triggerDirect);
+            // যদি এটি সরাসরি Adsterra ডিরেক্ট লিংক হয় (যেমন: https://... কোনো .js ছাড়া)
+            if (raw.startsWith("http") && !raw.includes(".js")) {
+                let popDone = false;
+                const openDirectLink = () => {
+                    if (!popDone) {
+                        popDone = true;
+                        if (tg && tg.openLink) tg.openLink(raw);
+                        else window.open(raw, "_blank");
+                        document.removeEventListener("click", openDirectLink);
+                    }
                 };
-                document.addEventListener("click", triggerDirect, { once: true });
+                document.addEventListener("click", openDirectLink, { once: true });
                 return;
             }
 
-            // যদি এটি Adsterra স্ক্রিপ্ট কোড হয়, তবে সাধারণ স্ক্রিপ্ট হিসেবে ব্যাকগ্রাউন্ডে ইনজেক্ট হবে
-            safelyRunScript(raw);
+            // স্ক্রিপ্ট হলে ব্যাকগ্রাউন্ডে ইনজেক্ট হবে (Adsterra নিজেই ক্লিকে অ্যাড ওপেন করবে)
+            injectAdScriptSilently(raw);
         }
 
-        // 🔥 সোশ্যাল বার কার্যকর করা 🔥
+        // 🔥 সোশ্যাল বার ইঞ্জিন 🔥
         function executeSocialBar(socialCode) {
-            safelyRunScript(socialCode);
+            injectAdScriptSilently(socialCode);
         }
 
         // 🔥 নেটিভ ব্যানার ইনজেক্টর 🔥
@@ -872,7 +875,6 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
-            // নেটিভ ব্যানার টাস্কের নিচে লোড করা
             const ads = appData.ads || {};
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
