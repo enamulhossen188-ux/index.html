@@ -679,7 +679,7 @@
             return u;
         }
 
-        // 🔥 বিজ্ঞাপন স্ক্রিপ্ট কার্যকর করার নিরাপদ ইনজেক্টর 🔥
+        // 🔥 Cloudflare bypass ও সব ধরনের Adsterra স্ক্রিপ্ট সাপোর্ট সহ পারফেক্ট ইনজেক্টর 🔥
         function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -690,6 +690,7 @@
             const scriptElem = document.createElement("script");
             scriptElem.type = "text/javascript";
             scriptElem.async = true;
+            scriptElem.setAttribute("data-cfasync", "false");
 
             if (finalSrc) {
                 if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
@@ -700,13 +701,19 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 পপআন্ডার ইঞ্জিন: কখনোই ব্রাউজারে .js টেক্সট হিসেবে খুলবে না 🔥
+        // 🔥 পপআন্ডার ইঞ্জিন: স্ক্রিপ্ট ট্যাগ হলে সরাসরি ব্যাকগ্রাউন্ডে রান করবে, আর ডিরেক্ট লিংক হলে ক্লিকে ওপেন হবে 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
 
-            // যদি এটি সাধারণ ডিরেক্ট লিংক হয় (.js বা script ছাড়া)
-            if (raw.startsWith("http") && !raw.includes(".js") && !raw.includes("<script")) {
+            // যদি এটি স্ক্রিপ্ট কোড হয় (<script...> বা afders.org বা cpnetwork.com বা .js)
+            if (raw.includes("<script") || raw.includes(".js") || raw.includes("afders.org") || raw.includes("cpnetwork.com")) {
+                injectAdScript(raw);
+                return;
+            }
+
+            // যদি এটি পিওর ডিরেক্ট লিংক হয়
+            if (raw.startsWith("http")) {
                 let popDone = false;
                 const openDirectLink = () => {
                     if (!popDone) {
@@ -717,11 +724,7 @@
                     }
                 };
                 document.addEventListener("click", openDirectLink, { once: true });
-                return;
             }
-
-            // স্ক্রিপ্ট হলে হেডারে লোড হবে, ক্লিক করলে Adsterra স্বয়ংক্রিয়ভাবে ব্যাকগ্রাউন্ডে পপআপ চালাবে
-            injectAdScript(raw);
         }
 
         function executeSocialBar(socialCode) {
@@ -746,13 +749,14 @@
                 scripts.forEach(sc => {
                     const s = document.createElement("script");
                     if (sc.src) s.src = sc.src;
-                    if (sc.getAttribute("data-cfasync")) s.setAttribute("data-cfasync", sc.getAttribute("data-cfasync"));
+                    s.setAttribute("data-cfasync", "false");
                     s.text = sc.innerHTML;
                     container.appendChild(s);
                 });
             } else if (raw.startsWith("http")) {
                 const s = document.createElement("script");
                 s.src = raw;
+                s.setAttribute("data-cfasync", "false");
                 container.appendChild(s);
             }
         }
