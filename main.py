@@ -33,7 +33,7 @@ CORS(app)
 
 cached_data = None
 last_cache_time = 0
-CACHE_DURATION = 120
+CACHE_DURATION = 60
 thumb_memory_cache = {}
 admin_state = {}
 
@@ -80,17 +80,19 @@ def save_data(data):
     global cached_data, last_cache_time
     cached_data = data
     last_cache_time = time.time()
-    try:
-        json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
-        sent_doc = bot.send_document(
-            DB_CHANNEL_ID,
-            ("db_backup_bot2.json", json_bytes),
-            caption=f"📦 Update: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
-        )
-        try: bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
-        except Exception: pass
-    except Exception as e:
-        print("Save Error:", e)
+    def _async_save():
+        try:
+            json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
+            sent_doc = bot.send_document(
+                DB_CHANNEL_ID,
+                ("db_backup_bot2.json", json_bytes),
+                caption=f"📦 Update: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
+            )
+            try: bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
+            except Exception: pass
+        except Exception as e:
+            print("Save Error:", e)
+    threading.Thread(target=_async_save, daemon=True).start()
 
 def upload_thumb_securely(photo_id):
     try:
@@ -120,7 +122,7 @@ def serve_thumbnail(file_id):
 
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
-    data = load_data(force_refresh=True)
+    data = load_data(force_refresh=False)
     resp = make_response(jsonify(data))
     resp.headers['Access-Control-Allow-Origin'] = '*'
     resp.headers['Cache-Control'] = 'no-cache'
@@ -323,7 +325,7 @@ def handle_callbacks(call):
         return
     elif call.data == "set_ad_native":
         admin_state[chat_id] = {'step': 'set_native_ad'}
-        bot.send_message(chat_id, "📱 **নেটিভ ব্যানার কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "📱 **নেティブ ব্যানার কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
     elif call.data == "del_ad_native":
@@ -381,7 +383,21 @@ def handle_callbacks(call):
         bot.send_message(chat_id, "📁 **যে নতুন ক্যাটাগরি যুক্ত করতে চান তার নাম লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         return
 
-# 🔥 অ্যাডমিন ইনপুট ও বাটন সচল করার সম্পূর্ণ ইঞ্জিন 🔥
+# 🔥 ব্যাকগ্রাউন্ডে ব্রডকাস্ট পাঠানো যাতে বটের কোনো বাটন বা থ্রেড কখনো ফ্রিজ না হয় 🔥
+def run_broadcast_worker(admin_chat_id, photo_id, caption_text, is_photo, user_list):
+    fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
+    notice_markup = types.InlineKeyboardMarkup()
+    notice_markup.add(types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)))
+    sent = 0
+    for uid in user_list:
+        try:
+            if is_photo: bot.send_photo(uid, photo_id, caption=caption_text, reply_markup=notice_markup)
+            else: bot.send_message(uid, f"📢 **নোটিশ:**\n\n{caption_text}", reply_markup=notice_markup, parse_mode="Markdown")
+            sent += 1
+            time.sleep(0.04)
+        except Exception: pass
+    bot.send_message(admin_chat_id, f"✅ ব্যাকগ্রাউন্ডে মোট **{sent}** জনের কাছে নোটিশ পাঠানো সম্পন্ন!")
+
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id
@@ -491,23 +507,19 @@ def handle_admin_inputs(message):
     elif step == 'notice_input' and (message.photo or message.text):
         data = load_data()
         user_list = data.get("users", [])
-        bot.send_message(chat_id, f"⏳ **{len(user_list)} জন ইউজারের কাছে নোটিশ পাঠানো হচ্ছে...**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, f"⏳ **{len(user_list)} জন ইউজারের কাছে ব্যাকগ্রাউন্ডে নোটিশ পাঠানো হচ্ছে... বট সম্পূর্ণ সচল থাকবে।**", reply_markup=get_admin_keyboard())
         del admin_state[chat_id]
-        fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
-        notice_markup = types.InlineKeyboardMarkup()
-        notice_markup.add(types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)))
+        
         is_photo = bool(message.photo)
         photo_id = message.photo[-1].file_id if is_photo else None
         caption_text = message.caption or (message.text if not is_photo else "")
-        sent = 0
-        for uid in user_list:
-            try:
-                if is_photo: bot.send_photo(uid, photo_id, caption=caption_text, reply_markup=notice_markup)
-                else: bot.send_message(uid, f"📢 **নোটিশ:**\n\n{caption_text}", reply_markup=notice_markup, parse_mode="Markdown")
-                sent += 1
-                time.sleep(0.04)
-            except Exception: pass
-        bot.send_message(chat_id, f"✅ মোট **{sent}** জনের কাছে নোটিশ পাঠানো সম্পন্ন!")
+        
+        # থ্রেড দিয়ে আলাদা করা হলো যাতে বট কখনো ফ্রিজ না হয়
+        threading.Thread(
+            target=run_broadcast_worker,
+            args=(chat_id, photo_id, caption_text, is_photo, user_list),
+            daemon=True
+        ).start()
         return
     elif step == 'cs_title' and message.text:
         admin_state[chat_id]['title'] = message.text.strip()
@@ -578,14 +590,13 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "✅ **ওয়েলকাম ভিডিও সেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
-# 🔥 থার্ড পার্টি ছাড়া স্বয়ংক্রিয় ইন্টারনাল সেলফ-পিং ইঞ্জিন 🔥
 def internal_self_pinger():
     time.sleep(15)
     while True:
         try:
             requests.get(f"{RENDER_SERVER_URL}/", timeout=10)
         except Exception: pass
-        time.sleep(240)  # প্রতি ৪ মিনিটে নিজেই নিজেকে পিং করবে
+        time.sleep(240)
 
 def run_polling_loop():
     while True:
