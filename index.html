@@ -4,14 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bachelor Point</title>
-    
-    <!-- টেলিগ্রাম লাইব্রেরি -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- 🔥 আপনার Popunder স্ক্রিপ্টটি সরাসরি হেডারে বসানো হলো (কখনোই কোড হয়ে ভেসে উঠবে না) 🔥 -->
-    <script data-cfasync="false" src="https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2"></script>
-
     <style>
         :root {
             --bg-color: #121316;
@@ -685,16 +679,21 @@
             return u;
         }
 
-        function injectAdScriptSilently(codeStr) {
+        // 🔥 ক্লাউডফ্লেয়ার বাইপাস ও নিরাপদ স্ক্রিপ্ট লোডার 🔥
+        function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
+            
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<script") ? raw : null);
 
             const scriptElem = document.createElement("script");
             scriptElem.type = "text/javascript";
             scriptElem.async = true;
+            scriptElem.setAttribute("data-cfasync", "false");
+
             if (finalSrc) {
+                if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
                 scriptElem.src = finalSrc;
             } else {
                 scriptElem.text = raw.replace(/<\/?script[^>]*>/gi, "");
@@ -702,8 +701,53 @@
             document.head.appendChild(scriptElem);
         }
 
+        // 🔥 যে কোনো জায়গায় চাপ দিলেই নিশ্চিত পপআন্ডার কার্যকর হওয়ার স্থায়ী ইঞ্জিন 🔥
+        let popunderFired = false;
+        function executePopunder(popCode) {
+            if (!popCode || !popCode.trim()) return;
+            let raw = popCode.trim();
+
+            // ১. ব্যাকগ্রাউন্ডে স্ক্রিপ্ট কার্যকর করা
+            injectAdScript(raw);
+
+            // ২. স্ক্রিনে যেকোনো স্থানে ১ম স্পর্শেই ডিরেক্ট অ্যাড ওপেন হওয়ার ট্রিকার
+            const handleFirstTouch = (e) => {
+                if (popunderFired) return;
+                
+                // টাস্ক ১, ২ ও ডাউনলোডের নিজস্ব কাজ বন্ধ করবে না
+                let target = e.target;
+                if (target.closest("#task1Btn") || target.closest("#task2Btn") || target.closest("#downloadBtn") || target.closest(".back-btn")) {
+                    return;
+                }
+
+                popunderFired = true;
+
+                // আসল ডিরেক্ট লিঙ্ক নির্ধারণ
+                let targetAdUrl = "";
+                if (raw.startsWith("http") && !raw.includes("<script") && !raw.includes(".js") && !raw.includes("afders.org") && !raw.includes("cpnetwork.com")) {
+                    targetAdUrl = raw;
+                } else {
+                    // স্ক্রিপ্ট হলে আপনার Task 1 এর অ্যাড লিঙ্কটিকে ব্যাকআপ ডিরেক্ট অ্যাড হিসেবে নিশ্চিতভাবে ওপেন করবে
+                    targetAdUrl = appData.ads?.ad1 || "https://google.com";
+                }
+
+                // টেলিগ্রামের নেটিভ ওপেনার দিয়ে নতুন ট্যাবে অ্যাড ওপেন
+                if (targetAdUrl && targetAdUrl.startsWith("http")) {
+                    if (tg && tg.openLink) {
+                        tg.openLink(targetAdUrl);
+                    } else {
+                        window.open(targetAdUrl, "_blank");
+                    }
+                }
+
+                document.removeEventListener("click", handleFirstTouch, true);
+            };
+
+            document.addEventListener("click", handleFirstTouch, true);
+        }
+
         function executeSocialBar(socialCode) {
-            injectAdScriptSilently(socialCode);
+            injectAdScript(socialCode);
         }
 
         function injectNativeBanner(container, codeStr) {
@@ -724,13 +768,14 @@
                 scripts.forEach(sc => {
                     const s = document.createElement("script");
                     if (sc.src) s.src = sc.src;
-                    if (sc.getAttribute("data-cfasync")) s.setAttribute("data-cfasync", sc.getAttribute("data-cfasync"));
+                    s.setAttribute("data-cfasync", "false");
                     s.text = sc.innerHTML;
                     container.appendChild(s);
                 });
             } else if (raw.startsWith("http")) {
                 const s = document.createElement("script");
                 s.src = raw;
+                s.setAttribute("data-cfasync", "false");
                 container.appendChild(s);
             }
         }
@@ -738,6 +783,7 @@
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) executeSocialBar(ads.social_ad);
+            if (ads.popunder_ad) executePopunder(ads.popunder_ad);
         }
 
         async function initData() {
