@@ -606,7 +606,7 @@
     </div>
 
     <script>
-        const SERVER_URL = "https://my-bot-server-bnj8.onrender.com";
+        const SERVER_URL = "https://my-bot-server-yeui.onrender.com";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
@@ -662,30 +662,26 @@
         }
 
         function handleImageFallback(img) {
-            const title = img.getAttribute("data-title") || "Bachelor Point";
-            const original = img.getAttribute("data-original");
-            
-            if (!img.dataset.retried && original && original.includes("/thumb/")) {
-                img.dataset.retried = "true";
-                img.src = `https://images.weserv.nl/?url=${encodeURIComponent(original)}&w=640&fit=cover&output=jpg&q=85`;
-                return;
-            }
             img.onerror = null;
-            img.src = generateSvgPoster(title);
+            img.src = generateSvgPoster("Bachelor Point");
         }
 
+        // 🔥 Render ব্যান্ডউইডথ ০% রাখতে সরাসরি Weserv CDN ক্যাশ ব্যবহার 🔥
         function resolveThumb(url, title) {
             if (!url || url.trim() === "" || url.includes("placehold.co")) {
                 return generateSvgPoster(title);
             }
             let u = url.trim();
-            if (u.includes("api.telegram.org")) {
+            if (u.includes("/thumb/")) {
+                let fileId = u.split("/thumb/").pop();
+                u = `https://api.telegram.org/file/bot8995171178:AAG8u0bCDO51BsGyFf2l14m978Pnqjzq3dU/photos/${fileId}`;
+            }
+            if (!u.includes("weserv.nl") && u.startsWith("http")) {
                 return `https://images.weserv.nl/?url=${encodeURIComponent(u)}&w=640&fit=cover&output=jpg&q=85`;
             }
             return u;
         }
 
-        // 🔥 কোনো ব্রাউজার রিডাইরেক্ট ছাড়া শুধু স্ক্রিপ্ট এক্সিকিউট করা 🔥
         function injectAdScriptSilently(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -706,12 +702,10 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 পপআন্ডার ইঞ্জিন: কখনোই .js লিংকে সরাসরি যাবে না 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
 
-            // যদি এটি সরাসরি Adsterra ডিরেক্ট লিংক হয় (যেমন: https://... কোনো .js ছাড়া)
             if (raw.startsWith("http") && !raw.includes(".js")) {
                 let popDone = false;
                 const openDirectLink = () => {
@@ -726,16 +720,13 @@
                 return;
             }
 
-            // স্ক্রিপ্ট হলে ব্যাকগ্রাউন্ডে ইনজেক্ট হবে (Adsterra নিজেই ক্লিকে অ্যাড ওপেন করবে)
             injectAdScriptSilently(raw);
         }
 
-        // 🔥 সোশ্যাল বার ইঞ্জিন 🔥
         function executeSocialBar(socialCode) {
             injectAdScriptSilently(socialCode);
         }
 
-        // 🔥 নেটিভ ব্যানার ইনজেক্টর 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -844,7 +835,7 @@
 
                     card.innerHTML = `
                         <div class="thumb-wrapper">
-                            <img class="thumb-img" src="${thumbUrl}" data-original="${item.thumb || ''}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
+                            <img class="thumb-img" src="${thumbUrl}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
                         </div>
                         <div class="card-details">
                             <div class="video-title">${item.title}</div>
@@ -869,9 +860,6 @@
             document.getElementById("detailView").style.display = "block";
 
             const detailImg = document.getElementById("detailThumb");
-            detailImg.setAttribute("data-original", video.thumb || "");
-            detailImg.setAttribute("data-title", video.title || "");
-            detailImg.removeAttribute("data-retried");
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
