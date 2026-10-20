@@ -10,13 +10,14 @@ for pkg in ["pyTelegramBotAPI", "Flask", "Flask-CORS", "requests"]:
 
 import telebot
 from telebot import types
-from flask import Flask, jsonify, make_response, send_file, request
+from flask import Flask, jsonify, make_response, send_file, Response, request
 from flask_cors import CORS
 import threading
 import json
 import os
 import time
 import requests
+from io import BytesIO
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
@@ -36,6 +37,7 @@ last_cache_time = 0
 CACHE_DURATION = 300
 
 admin_state = {}
+thumb_memory_cache = {}
 
 def get_default_data():
     return {
@@ -98,7 +100,7 @@ def save_data(data):
         sent_doc = bot.send_document(
             DB_CHANNEL_ID,
             ("db_backup_bot2.json", json_bytes),
-            caption=f"📦 Database Update (Zero Bandwidth): {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
+            caption=f"📦 Database Update (Live): {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
         )
         try:
             bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
@@ -111,12 +113,33 @@ def upload_thumb_securely(photo_id):
     try:
         msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumb")
         perm_file_id = msg.photo[-1].file_id
-        file_info = bot.get_file(perm_file_id)
-        tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
-        return f"https://images.weserv.nl/?url={tg_url}&w=640&fit=cover&output=jpg&q=85"
+        return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
     except Exception as e:
         print("Channel thumb error:", e)
-        return ""
+        return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
+
+# 🔥 পুরনো ও নতুন সব থাম্বনেইল দেখানোর জন্য সচল প্রক্সি রাউট 🔥
+@app.route('/thumb/<file_id>')
+def serve_thumbnail(file_id):
+    global thumb_memory_cache
+    if file_id in thumb_memory_cache:
+        resp = Response(thumb_memory_cache[file_id], mimetype="image/jpeg")
+        resp.headers['Cache-Control'] = 'public, max-age=31536000'
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+
+    try:
+        file_info = bot.get_file(file_id)
+        file_bytes = bot.download_file(file_info.file_path)
+        thumb_memory_cache[file_id] = file_bytes
+
+        resp = Response(file_bytes, mimetype="image/jpeg")
+        resp.headers['Cache-Control'] = 'public, max-age=31536000'
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
+    except Exception as e:
+        print("Image proxy failed:", e)
+        return Response(status=404)
 
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
