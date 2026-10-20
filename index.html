@@ -610,6 +610,29 @@
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
+        // 🔥 টেলিগ্রাম ওয়েবঅ্যাপে স্ক্রিপ্ট কোড ওপেন হওয়া আটকানোর গ্লোবাল গার্ড 🔥
+        if (tg && tg.openLink) {
+            const rawTgOpen = tg.openLink.bind(tg);
+            tg.openLink = function(url, options) {
+                if (url && (url.includes("afders.org") || url.includes("cpnetwork.com") || url.endsWith(".js"))) {
+                    return; // কোড পেজ কখনোই ওপেন হতে দেবে না
+                }
+                return rawTgOpen(url, options);
+            };
+        }
+
+        const rawWindowOpen = window.open;
+        window.open = function(url, target, features) {
+            if (url && (url.includes("afders.org") || url.includes("cpnetwork.com") || url.endsWith(".js"))) {
+                return null; // কোড পেজ ব্লক
+            }
+            if (url && tg && tg.openLink && url.startsWith("http")) {
+                tg.openLink(url);
+                return null;
+            }
+            return rawWindowOpen.apply(window, arguments);
+        };
+
         let appData = { videos: [], ads: {}, categories: [] };
         let activeCategory = '';
         let currentSelectedVideo = null;
@@ -701,7 +724,7 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 পপআন্ডারকে ব্যাকগ্রাউন্ডেই লোড করার পারফেক্ট মেকানিজম (কোনো কোড পেজ ওপেন হবে না) 🔥
+        // 🔥 ১০০% স্ক্রিপ্ট ব্লকার: afders.org বা কোনো .js ফাইল কখনোই ব্রাউজারে টেক্সট হয়ে খুলবে না 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
