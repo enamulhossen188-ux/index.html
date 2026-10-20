@@ -679,17 +679,20 @@
             return u;
         }
 
-        // 🔥 টেলিগ্রাম ওয়েবঅ্যাপে সরাসরি স্ক্রিপ্ট ইনজেকশন মেকানিজম 🔥
-        function injectAdScriptSilently(codeStr) {
+        // 🔥 বিজ্ঞাপন স্ক্রিপ্ট কার্যকর করার নিরাপদ ইনজেক্টর 🔥
+        function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
+            
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<script") ? raw : null);
 
             const scriptElem = document.createElement("script");
             scriptElem.type = "text/javascript";
             scriptElem.async = true;
+
             if (finalSrc) {
+                if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
                 scriptElem.src = finalSrc;
             } else {
                 scriptElem.text = raw.replace(/<\/?script[^>]*>/gi, "");
@@ -697,42 +700,32 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 টেলিগ্রাম মিনি অ্যাপ ফ্রেন্ডলি পপআন্ডার ইঞ্জিন (প্রথম ক্লিকেই কার্যকর হবে) 🔥
-        let popunderFired = false;
+        // 🔥 পপআন্ডার ইঞ্জিন: কখনোই ব্রাউজারে .js টেক্সট হিসেবে খুলবে না 🔥
         function executePopunder(popCode) {
-            if (!popCode || !popCode.trim() || popunderFired) return;
+            if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
 
-            let targetUrl = "";
-            if (raw.startsWith("http") && !raw.includes("<script")) {
-                targetUrl = raw;
-            } else {
-                let match = raw.match(/https?:\/\/[^\s"']+/);
-                if (match) targetUrl = match[0];
-            }
-
-            // স্ক্রিপ্ট হিসেবে ইনজেক্ট করা
-            injectAdScriptSilently(raw);
-
-            // কোনো লিঙ্কে থাকলে ইউজার স্ক্রিনের যেকোনো জায়গায় প্রথমবার টাচ করলেই নতুন ট্যাবে পপআপ হবে
-            if (targetUrl) {
-                const triggerPop = () => {
-                    if (!popunderFired) {
-                        popunderFired = true;
-                        if (tg && tg.openLink) {
-                            tg.openLink(targetUrl);
-                        } else {
-                            window.open(targetUrl, "_blank");
-                        }
-                        document.removeEventListener("click", triggerPop);
+            // যদি এটি সাধারণ ডিরেক্ট লিংক হয় (.js বা script ছাড়া)
+            if (raw.startsWith("http") && !raw.includes(".js") && !raw.includes("<script")) {
+                let popDone = false;
+                const openDirectLink = () => {
+                    if (!popDone) {
+                        popDone = true;
+                        if (tg && tg.openLink) tg.openLink(raw);
+                        else window.open(raw, "_blank");
+                        document.removeEventListener("click", openDirectLink);
                     }
                 };
-                document.addEventListener("click", triggerPop, { once: true });
+                document.addEventListener("click", openDirectLink, { once: true });
+                return;
             }
+
+            // স্ক্রিপ্ট হলে হেডারে লোড হবে, ক্লিক করলে Adsterra স্বয়ংক্রিয়ভাবে ব্যাকগ্রাউন্ডে পপআপ চালাবে
+            injectAdScript(raw);
         }
 
         function executeSocialBar(socialCode) {
-            injectAdScriptSilently(socialCode);
+            injectAdScript(socialCode);
         }
 
         function injectNativeBanner(container, codeStr) {
