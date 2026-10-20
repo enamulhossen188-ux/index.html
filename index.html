@@ -610,18 +610,6 @@
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
-        // 🔥 টেলিগ্রাম ওয়েবঅ্যাপে window.open ব্লক হওয়া রোধ করার পারফেক্ট ব্রিজ 🔥
-        const originalOpen = window.open;
-        window.open = function(url, target, features) {
-            if (url && typeof url === 'string' && url.startsWith('http')) {
-                if (tg && tg.openLink) {
-                    tg.openLink(url);
-                    return null;
-                }
-            }
-            return originalOpen.apply(window, arguments);
-        };
-
         let appData = { videos: [], ads: {}, categories: [] };
         let activeCategory = '';
         let currentSelectedVideo = null;
@@ -691,7 +679,7 @@
             return u;
         }
 
-        // 🔥 Adsterra ও সাধারণ স্ক্রিপ্ট নির্বিঘ্নে পেজে লোড করার মেকানিজম 🔥
+        // 🔥 বিজ্ঞাপন স্ক্রিপ্ট নিরাপদ ইনজেক্টর 🔥
         function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -713,49 +701,35 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 পপআন্ডার ইঞ্জিন: স্ক্রিপ্ট রান হওয়ার পর ইউজার ক্লিক করলে টেলিগ্রাম সরাসরি অ্যাড ওপেন করবে 🔥
-        let popunderFired = false;
+        // 🔥 পপআন্ডারকে ব্যাকগ্রাউন্ডেই লোড করার পারফেক্ট মেকানিজম (কোনো কোড পেজ ওপেন হবে না) 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
 
-            // ১. স্ক্রিপ্টটি আগে হেডারে পুশ করা হলো
-            injectAdScript(raw);
+            // যদি এটি কোনো স্ক্রিপ্ট হয় (<script>, .js, afders.org বা cpnetwork) তবে এটি হেডারে যাবে, সরাসরি কখনো ট্যাবে ওপেন হবে না
+            if (raw.includes("<script") || raw.includes(".js") || raw.includes("afders.org") || raw.includes("cpnetwork.com")) {
+                injectAdScript(raw);
+                return;
+            }
 
-            // ২. স্ক্রিপ্টের ভেতর থেকে লিঙ্ক ডিকোড করে টেলিগ্রামের নেটিভ ওপেনারে প্রস্তুত রাখা
-            let fallbackAdLink = "https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2";
-            let srcMatch = raw.match(/src=["'](.*?)["']/);
-            if (srcMatch) fallbackAdLink = srcMatch[1];
-            else if (raw.startsWith("http")) fallbackAdLink = raw;
+            // যদি সাধারণ ডিরেক্ট লিংক হয়
+            if (raw.startsWith("http")) {
+                let popDone = false;
+                const openDirectLink = (e) => {
+                    let target = e.target;
+                    if (target.closest("#task1Btn") || target.closest("#task2Btn") || target.closest("#downloadBtn") || target.closest(".back-btn")) {
+                        return;
+                    }
 
-            const triggerPop = (e) => {
-                if (popunderFired) return;
-                
-                // টাস্ক ১, ২ ও ডাউনলোড বাটনে ক্লিক করলে পপআন্ডার বাধা দেবে না
-                let target = e.target;
-                if (target.closest("#task1Btn") || target.closest("#task2Btn") || target.closest("#downloadBtn") || target.closest(".back-btn")) {
-                    return;
-                }
-
-                popunderFired = true;
-
-                // যদি টেলিগ্রামের নিজস্ব ব্রাউজারে থাকে
-                if (tg && tg.openLink) {
-                    // স্ক্রিপ্টকে ক্লিক ইভেন্ট নিজে হ্যান্ডেল করার সময় দেওয়া হলো
-                    setTimeout(() => {
-                        // যদি স্ক্রিপ্ট নিজে অ্যাড না খুলতে পারে, তখন টেলিগ্রামের নেটিভ লিঙ্ক ইঞ্জিন কাজ করবে
-                        try {
-                            if (!window._popExecuted) {
-                                tg.openLink(fallbackAdLink);
-                            }
-                        } catch(err){}
-                    }, 100);
-                }
-
-                document.removeEventListener("click", triggerPop, { capture: true });
-            };
-
-            document.addEventListener("click", triggerPop, { capture: true });
+                    if (!popDone) {
+                        popDone = true;
+                        if (tg && tg.openLink) tg.openLink(raw);
+                        else window.open(raw, "_blank");
+                        document.removeEventListener("click", openDirectLink, { capture: true });
+                    }
+                };
+                document.addEventListener("click", openDirectLink, { capture: true });
+            }
         }
 
         function executeSocialBar(socialCode) {
