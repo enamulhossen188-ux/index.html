@@ -667,60 +667,68 @@
             img.src = generateSvgPoster(title);
         }
 
-        // 🔥 প্রাইভেট চ্যানেল থেকে আসা যেকোনো রেন্ডার লিঙ্ককে নতুন রেন্ডারের সাথে জুড়ে দেওয়া 🔥
         function resolveThumb(url, title) {
             if (!url || url.trim() === "" || url.includes("placehold.co")) {
                 return generateSvgPoster(title);
             }
             let u = url.trim();
-
             if (u.includes("/thumb/")) {
                 const fileId = u.split("/thumb/").pop();
                 return `${CURRENT_RENDER_URL}/thumb/${fileId}`;
             }
-
             return u;
         }
 
+        // 🔥 টেলিগ্রাম ওয়েবঅ্যাপে সরাসরি স্ক্রিপ্ট ইনজেকশন মেকানিজম 🔥
         function injectAdScriptSilently(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
-            
             let srcMatch = raw.match(/src=["'](.*?)["']/);
-            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
+            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<script") ? raw : null);
 
             const scriptElem = document.createElement("script");
             scriptElem.type = "text/javascript";
             scriptElem.async = true;
-            
             if (finalSrc) {
                 scriptElem.src = finalSrc;
             } else {
                 scriptElem.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
-            
             document.head.appendChild(scriptElem);
         }
 
+        // 🔥 টেলিগ্রাম মিনি অ্যাপ ফ্রেন্ডলি পপআন্ডার ইঞ্জিন (প্রথম ক্লিকেই কার্যকর হবে) 🔥
+        let popunderFired = false;
         function executePopunder(popCode) {
-            if (!popCode || !popCode.trim()) return;
+            if (!popCode || !popCode.trim() || popunderFired) return;
             let raw = popCode.trim();
 
-            if (raw.startsWith("http") && !raw.includes(".js")) {
-                let popDone = false;
-                const openDirectLink = () => {
-                    if (!popDone) {
-                        popDone = true;
-                        if (tg && tg.openLink) tg.openLink(raw);
-                        else window.open(raw, "_blank");
-                        document.removeEventListener("click", openDirectLink);
-                    }
-                };
-                document.addEventListener("click", openDirectLink, { once: true });
-                return;
+            let targetUrl = "";
+            if (raw.startsWith("http") && !raw.includes("<script")) {
+                targetUrl = raw;
+            } else {
+                let match = raw.match(/https?:\/\/[^\s"']+/);
+                if (match) targetUrl = match[0];
             }
 
+            // স্ক্রিপ্ট হিসেবে ইনজেক্ট করা
             injectAdScriptSilently(raw);
+
+            // কোনো লিঙ্কে থাকলে ইউজার স্ক্রিনের যেকোনো জায়গায় প্রথমবার টাচ করলেই নতুন ট্যাবে পপআপ হবে
+            if (targetUrl) {
+                const triggerPop = () => {
+                    if (!popunderFired) {
+                        popunderFired = true;
+                        if (tg && tg.openLink) {
+                            tg.openLink(targetUrl);
+                        } else {
+                            window.open(targetUrl, "_blank");
+                        }
+                        document.removeEventListener("click", triggerPop);
+                    }
+                };
+                document.addEventListener("click", triggerPop, { once: true });
+            }
         }
 
         function executeSocialBar(socialCode) {
@@ -737,7 +745,6 @@
 
             let raw = codeStr.trim();
             const doc = new DOMParser().parseFromString(raw, "text/html");
-
             const divs = doc.querySelectorAll("div");
             divs.forEach(d => container.appendChild(d.cloneNode(true)));
 
@@ -759,12 +766,8 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            if (ads.social_ad) {
-                executeSocialBar(ads.social_ad);
-            }
-            if (ads.popunder_ad) {
-                executePopunder(ads.popunder_ad);
-            }
+            if (ads.social_ad) executeSocialBar(ads.social_ad);
+            if (ads.popunder_ad) executePopunder(ads.popunder_ad);
         }
 
         async function initData() {
@@ -791,7 +794,6 @@
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById("categoryTabs");
             const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
-            
             let html = '';
             cats.forEach((c) => {
                 const isActive = (activeCategory.trim().toUpperCase() === c.trim().toUpperCase());
@@ -812,11 +814,9 @@
             const query = document.getElementById("searchInput").value.toLowerCase().trim();
 
             let list = appData.videos || [];
-
             if (activeCategory) {
                 list = list.filter(v => (v.category || '').trim().toUpperCase() === activeCategory.trim().toUpperCase());
             }
-
             if (query) {
                 list = list.filter(v => (v.title || '').toLowerCase().includes(query));
             }
@@ -832,7 +832,6 @@
                     card.onclick = () => openDetail(item);
                     
                     const thumbUrl = resolveThumb(item.thumb, item.title);
-
                     card.innerHTML = `
                         <div class="thumb-wrapper">
                             <img class="thumb-img" src="${thumbUrl}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
@@ -868,7 +867,6 @@
             if (ads.native_ad) {
                 injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
             }
-
             resetTasks();
         }
 
@@ -954,7 +952,6 @@
             if (taskNum === 2) task2Done = true;
 
             activeTask = null;
-
             if (task1Done && task2Done) {
                 const dlBtn = document.getElementById("downloadBtn");
                 dlBtn.className = "download-btn";
@@ -1007,7 +1004,6 @@
             dlBtn.classList.add("disabled");
 
             const userId = tg?.initDataUnsafe?.user?.id;
-
             if (!userId) {
                 alert("ইউজার আইডি পাওয়া যায়নি! টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
                 dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
