@@ -10,14 +10,13 @@ for pkg in ["pyTelegramBotAPI", "Flask", "Flask-CORS", "requests"]:
 
 import telebot
 from telebot import types
-from flask import Flask, jsonify, make_response, send_file, Response, request
+from flask import Flask, jsonify, make_response, send_file, request
 from flask_cors import CORS
 import threading
 import json
 import os
 import time
 import requests
-from io import BytesIO
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
@@ -25,7 +24,7 @@ BOT_TOKEN = "8995171178:AAG8u0bCDO51BsGyFf2l14m978Pnqjzq3dU"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245  # নিজস্ব প্রাইভেট চ্যানেল
-RENDER_SERVER_URL = "https://my-bot-server-bnj8.onrender.com"
+RENDER_SERVER_URL = "https://my-bot-server-yeui.onrender.com"
 # ====================================================
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
@@ -37,7 +36,6 @@ last_cache_time = 0
 CACHE_DURATION = 300
 
 admin_state = {}
-thumb_memory_cache = {}
 
 def get_default_data():
     return {
@@ -100,7 +98,7 @@ def save_data(data):
         sent_doc = bot.send_document(
             DB_CHANNEL_ID,
             ("db_backup_bot2.json", json_bytes),
-            caption=f"📦 Database Update (Bot 2): {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
+            caption=f"📦 Database Update (Zero Bandwidth): {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
         )
         try:
             bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
@@ -109,36 +107,17 @@ def save_data(data):
     except Exception as e:
         print("Telegram DB Save Error:", e)
 
+# 🔥 Render-এর ব্যান্ডউইডথ শেষ হওয়া বাঁচাতে ফ্রি গ্লোবাল সিডিএন প্রক্সি 🔥
 def upload_thumb_securely(photo_id):
     try:
         msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumb")
         perm_file_id = msg.photo[-1].file_id
-        return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
+        file_info = bot.get_file(perm_file_id)
+        tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+        return f"https://images.weserv.nl/?url={tg_url}&w=640&fit=cover&output=jpg&q=85"
     except Exception as e:
         print("Channel thumb error:", e)
-        return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
-
-@app.route('/thumb/<file_id>')
-def serve_thumbnail(file_id):
-    global thumb_memory_cache
-    if file_id in thumb_memory_cache:
-        resp = Response(thumb_memory_cache[file_id], mimetype="image/jpeg")
-        resp.headers['Cache-Control'] = 'public, max-age=31536000'
-        resp.headers['Access-Control-Allow-Origin'] = '*'
-        return resp
-
-    try:
-        file_info = bot.get_file(file_id)
-        file_bytes = bot.download_file(file_info.file_path)
-        thumb_memory_cache[file_id] = file_bytes
-
-        resp = Response(file_bytes, mimetype="image/jpeg")
-        resp.headers['Cache-Control'] = 'public, max-age=31536000'
-        resp.headers['Access-Control-Allow-Origin'] = '*'
-        return resp
-    except Exception as e:
-        print("Image proxy failed:", e)
-        return Response(status=404)
+        return ""
 
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
@@ -150,54 +129,8 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
-def get_thumb_stream_for_video(thumb_url):
-    try:
-        if not thumb_url:
-            return None
-        raw_bytes = None
-        if "/thumb/" in thumb_url:
-            file_id = thumb_url.split("/thumb/")[-1]
-            if file_id in thumb_memory_cache:
-                raw_bytes = thumb_memory_cache[file_id]
-            else:
-                file_info = bot.get_file(file_id)
-                raw_bytes = bot.download_file(file_info.file_path)
-                thumb_memory_cache[file_id] = raw_bytes
-        elif thumb_url.startswith("http"):
-            res = requests.get(thumb_url, timeout=5)
-            if res.status_code == 200:
-                raw_bytes = res.content
-
-        if raw_bytes:
-            thumb_stream = BytesIO(raw_bytes)
-            thumb_stream.name = "thumb.jpg"
-            return thumb_stream
-    except Exception as e:
-        print("Thumb stream error:", e)
-    return None
-
-# 🔥 সাধারণ ভিডিও প্লেয়ার হিসেবে ইনবক্সে পাঠানো 🔥
 def deliver_single_video(chat_id, target_video):
     caption_text = f"🎬 **{target_video.get('title', 'Video')}**\n\nউপভোগ করুন!"
-    thumb_stream = get_thumb_stream_for_video(target_video.get("thumb"))
-
-    # ১. থাম্বনেইল বাইনারিসহ পাঠানোর চেষ্টা
-    if thumb_stream:
-        try:
-            bot.send_video(
-                chat_id,
-                target_video['file_id'],
-                thumbnail=thumb_stream,
-                caption=caption_text,
-                supports_streaming=True,
-                protect_content=True,
-                parse_mode="Markdown"
-            )
-            return True
-        except Exception as e:
-            print("Video with thumb stream error:", e)
-
-    # ২. সরাসরি ভিডিও প্লেয়ার হিসেবে পাঠানো
     try:
         bot.send_video(
             chat_id,
@@ -703,45 +636,21 @@ def handle_admin_inputs(message):
         return
 
     elif step == 'thumb' and (message.photo or message.text):
-        admin_state[chat_id]['thumb_photo_id'] = message.photo[-1].file_id if message.photo else None
         thumb_url = upload_thumb_securely(message.photo[-1].file_id) if message.photo else message.text.strip()
         admin_state[chat_id]['thumb'] = thumb_url
         admin_state[chat_id]['step'] = 'video'
         bot.send_message(chat_id, "📥 **ভিডিও ফাইলটি পাঠান:**")
         return
 
-    # 🔥 ভিডিও আপলোড করার সময় থাম্বনেইলটি ভিডিওর সাথে স্থায়ীভাবে যুক্ত করা 🔥
     elif step == 'video' and (message.video or message.document):
         incoming_file_id = message.video.file_id if message.video else message.document.file_id
-        final_video_file_id = incoming_file_id
-
-        thumb_photo_id = admin_state[chat_id].get('thumb_photo_id')
-        if thumb_photo_id:
-            try:
-                thumb_info = bot.get_file(thumb_photo_id)
-                thumb_bytes = bot.download_file(thumb_info.file_path)
-                thumb_stream = BytesIO(thumb_bytes)
-                thumb_stream.name = "thumb.jpg"
-                
-                # চ্যানেলে থাম্বনেইলসহ পোস্ট করে সেভ করা
-                saved_msg = bot.send_video(
-                    DB_CHANNEL_ID,
-                    incoming_file_id,
-                    thumbnail=thumb_stream,
-                    caption=f"🎬 {admin_state[chat_id]['title']}",
-                    supports_streaming=True
-                )
-                final_video_file_id = saved_msg.video.file_id
-            except Exception as e:
-                print("Channel video thumb embed error:", e)
-
         data = load_data(force_refresh=True)
         new_video = {
             "id": int(time.time()),
             "category": admin_state[chat_id]['category'],
             "title": admin_state[chat_id]['title'],
             "thumb": admin_state[chat_id]['thumb'],
-            "file_id": final_video_file_id,
+            "file_id": incoming_file_id,
             "date": datetime.now().strftime("%b %d, %Y"),
             "time": datetime.now().strftime("%I:%M %p")
         }
@@ -759,11 +668,10 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "✅ **ওয়েলকাম ভিডিও সেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
-# 🔥 সার্ভার যাতে ঘুমিয়ে না পড়ে তার জন্য অটো-পিং মেকানিজম 🔥
 def keep_alive_ping():
     while True:
         try:
-            time.sleep(600)  # প্রতি ১০ মিনিটে পিং করবে
+            time.sleep(600)
             requests.get(RENDER_SERVER_URL, timeout=10)
         except Exception:
             pass
