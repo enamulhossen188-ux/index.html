@@ -679,7 +679,7 @@
             return u;
         }
 
-        // 🔥 ক্লাউডফ্লেয়ার বাইপাস ও নিরাপদ স্ক্রিপ্ট লোডার 🔥
+        // 🔥 ক্লাউডফ্লেয়ার ও টেলিগ্রাম ফ্রেন্ডলি নিরাপদ স্ক্রিপ্ট লোডার 🔥
         function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -701,55 +701,12 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 যে কোনো জায়গায় চাপ দিলেই নিশ্চিত পপআন্ডার কার্যকর হওয়ার স্থায়ী ইঞ্জিন 🔥
-        let popunderFired = false;
-        function executePopunder(popCode) {
-            if (!popCode || !popCode.trim()) return;
-            let raw = popCode.trim();
-
-            // ১. ব্যাকগ্রাউন্ডে স্ক্রিপ্ট কার্যকর করা
-            injectAdScript(raw);
-
-            // ২. স্ক্রিনে যেকোনো স্থানে ১ম স্পর্শেই ডিরেক্ট অ্যাড ওপেন হওয়ার ট্রিকার
-            const handleFirstTouch = (e) => {
-                if (popunderFired) return;
-                
-                // টাস্ক ১, ২ ও ডাউনলোডের নিজস্ব কাজ বন্ধ করবে না
-                let target = e.target;
-                if (target.closest("#task1Btn") || target.closest("#task2Btn") || target.closest("#downloadBtn") || target.closest(".back-btn")) {
-                    return;
-                }
-
-                popunderFired = true;
-
-                // আসল ডিরেক্ট লিঙ্ক নির্ধারণ
-                let targetAdUrl = "";
-                if (raw.startsWith("http") && !raw.includes("<script") && !raw.includes(".js") && !raw.includes("afders.org") && !raw.includes("cpnetwork.com")) {
-                    targetAdUrl = raw;
-                } else {
-                    // স্ক্রিপ্ট হলে আপনার Task 1 এর অ্যাড লিঙ্কটিকে ব্যাকআপ ডিরেক্ট অ্যাড হিসেবে নিশ্চিতভাবে ওপেন করবে
-                    targetAdUrl = appData.ads?.ad1 || "https://google.com";
-                }
-
-                // টেলিগ্রামের নেটিভ ওপেনার দিয়ে নতুন ট্যাবে অ্যাড ওপেন
-                if (targetAdUrl && targetAdUrl.startsWith("http")) {
-                    if (tg && tg.openLink) {
-                        tg.openLink(targetAdUrl);
-                    } else {
-                        window.open(targetAdUrl, "_blank");
-                    }
-                }
-
-                document.removeEventListener("click", handleFirstTouch, true);
-            };
-
-            document.addEventListener("click", handleFirstTouch, true);
-        }
-
+        // 🔥 ১. সোশ্যাল বার (Social Bar): পেজ লোড হলেই স্বয়ংক্রিয়ভাবে হেডারে বসবে 🔥
         function executeSocialBar(socialCode) {
             injectAdScript(socialCode);
         }
 
+        // 🔥 ২. নেটিভ ব্যানার (Native Banner): কার্ডের নিচে ব্যানার আকারে রেন্ডার হবে 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -778,6 +735,15 @@
                 s.setAttribute("data-cfasync", "false");
                 container.appendChild(s);
             }
+        }
+
+        // 🔥 ৩. পপআন্ডার (Popunder): ইউজার স্ক্রিনে যেকোনো জায়গায় ক্লিক করলে ব্যাকগ্রাউন্ডে ফায়ার হবে 🔥
+        function executePopunder(popCode) {
+            if (!popCode || !popCode.trim()) return;
+            let raw = popCode.trim();
+
+            // কোডটি স্ক্রিপ্ট হলে হেডারে ইনজেক্ট হবে (কোনো অবস্থাতেই ব্রাউজারে .js টেক্সট হিসেবে ওপেন হবে না)
+            injectAdScript(raw);
         }
 
         function renderAllAds() {
@@ -917,6 +883,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
+        // 🔥 ৪. টাস্ক ১ ও টাস্ক ২ (১০ সেকেন্ড কাউন্টডাউন ও ডিরেক্ট লিঙ্ক ভিজিট) 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
