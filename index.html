@@ -6,6 +6,54 @@
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 🔥 টেলিগ্রামের ভেতরে পপআন্ডার অ্যাড কার্যকর করার মাস্টার ইঞ্জিন 🔥 -->
+    <script>
+        (function() {
+            const tg = window.Telegram?.WebApp;
+            
+            // ১. স্ক্রিপ্ট ফাইল ওপেন হওয়া চিরতরে ব্লক করার ফিল্টার
+            function isCodeScriptUrl(url) {
+                if (!url || typeof url !== 'string') return true;
+                return url.includes('afders.org') || 
+                       url.includes('cpnetwork.com') || 
+                       url.includes('.js') || 
+                       url.includes('about:blank');
+            }
+
+            // ২. Popunder স্ক্রিপ্ট যখনই আসল বিজ্ঞাপন লিঙ্ক তৈরি করবে, টেলিগ্রাম দিয়ে তা চালু হবে
+            const originalWindowOpen = window.open;
+            window.open = function(url, target, features) {
+                if (url && typeof url === 'string') {
+                    if (isCodeScriptUrl(url)) return null; // কোড পেজ খোলা বন্ধ
+                    if (url.startsWith('http')) {
+                        if (tg && tg.openLink) {
+                            tg.openLink(url);
+                            return null;
+                        }
+                    }
+                }
+                return originalWindowOpen ? originalWindowOpen.apply(window, arguments) : null;
+            };
+
+            // ৩. স্ক্রিপ্ট যদি ডায়নামিক লিংক বানিয়ে ক্লিক করায়, তাও টেলিগ্রাম দিয়ে বিজ্ঞাপনে নিয়ে যাবে
+            const originalAnchorClick = HTMLAnchorElement.prototype.click;
+            HTMLAnchorElement.prototype.click = function() {
+                const href = this.href;
+                if (href && typeof href === 'string') {
+                    if (isCodeScriptUrl(href)) return; // কোড পেজ খোলা বন্ধ
+                    if (href.startsWith('http')) {
+                        if (tg && tg.openLink) {
+                            tg.openLink(href);
+                            return;
+                        }
+                    }
+                }
+                return originalAnchorClick.apply(this, arguments);
+            };
+        })();
+    </script>
+
     <style>
         :root {
             --bg-color: #121316;
@@ -610,29 +658,6 @@
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
-        // 🔥 টেলিগ্রাম ওয়েবঅ্যাপে স্ক্রিপ্ট কোড ওপেন হওয়া আটকানোর গ্লোবাল গার্ড 🔥
-        if (tg && tg.openLink) {
-            const rawTgOpen = tg.openLink.bind(tg);
-            tg.openLink = function(url, options) {
-                if (url && (url.includes("afders.org") || url.includes("cpnetwork.com") || url.endsWith(".js"))) {
-                    return; // কোড পেজ কখনোই ওপেন হতে দেবে না
-                }
-                return rawTgOpen(url, options);
-            };
-        }
-
-        const rawWindowOpen = window.open;
-        window.open = function(url, target, features) {
-            if (url && (url.includes("afders.org") || url.includes("cpnetwork.com") || url.endsWith(".js"))) {
-                return null; // কোড পেজ ব্লক
-            }
-            if (url && tg && tg.openLink && url.startsWith("http")) {
-                tg.openLink(url);
-                return null;
-            }
-            return rawWindowOpen.apply(window, arguments);
-        };
-
         let appData = { videos: [], ads: {}, categories: [] };
         let activeCategory = '';
         let currentSelectedVideo = null;
@@ -702,7 +727,7 @@
             return u;
         }
 
-        // 🔥 বিজ্ঞাপন স্ক্রিপ্ট নিরাপদ ইনজেক্টর 🔥
+        // 🔥 পপআন্ডার ও ব্যানার স্ক্রিপ্ট নিরাপদ লোডার 🔥
         function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -724,35 +749,13 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 ১০০% স্ক্রিপ্ট ব্লকার: afders.org বা কোনো .js ফাইল কখনোই ব্রাউজারে টেক্সট হয়ে খুলবে না 🔥
+        // 🔥 পপআন্ডার কার্যকর করার নিখুঁত ব্যবস্থা 🔥
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
 
-            // যদি এটি কোনো স্ক্রিপ্ট হয় (<script>, .js, afders.org বা cpnetwork) তবে এটি হেডারে যাবে, সরাসরি কখনো ট্যাবে ওপেন হবে না
-            if (raw.includes("<script") || raw.includes(".js") || raw.includes("afders.org") || raw.includes("cpnetwork.com")) {
-                injectAdScript(raw);
-                return;
-            }
-
-            // যদি সাধারণ ডিরেক্ট লিংক হয়
-            if (raw.startsWith("http")) {
-                let popDone = false;
-                const openDirectLink = (e) => {
-                    let target = e.target;
-                    if (target.closest("#task1Btn") || target.closest("#task2Btn") || target.closest("#downloadBtn") || target.closest(".back-btn")) {
-                        return;
-                    }
-
-                    if (!popDone) {
-                        popDone = true;
-                        if (tg && tg.openLink) tg.openLink(raw);
-                        else window.open(raw, "_blank");
-                        document.removeEventListener("click", openDirectLink, { capture: true });
-                    }
-                };
-                document.addEventListener("click", openDirectLink, { capture: true });
-            }
+            // যদি স্ক্রিপ্ট কোড হয়, এটি হেডারে লোড হবে এবং ওপরের মাস্টার ইন্টারসেপ্টর দিয়ে ব্যাকগ্রাউন্ডে বিজ্ঞাপন চালাবে
+            injectAdScript(raw);
         }
 
         function executeSocialBar(socialCode) {
