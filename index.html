@@ -588,7 +588,6 @@
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
 
-            <!-- নেটিভ ব্যানার বক্স -->
             <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
@@ -679,11 +678,9 @@
             return u;
         }
 
-        // 🔥 বিজ্ঞাপন স্ক্রিপ্ট ব্যাকগ্রাউন্ডে নিরাপদ লোডার 🔥
         function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
-            
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<script") ? raw : null);
 
@@ -701,46 +698,44 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 টেলিগ্রাম ওয়েবঅ্যাপের জন্য ১০০% কার্যকর পপআন্ডার ও ক্লিক অ্যাড ইঞ্জিন 🔥
-        let popDone = false;
+        // 🔥 টেলিগ্রাম নেটিভ পপআন্ডার ইঞ্জিন 🔥
+        let popunderTriggered = false;
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
 
-            // স্ক্রিপ্টকে ব্যাকগ্রাউন্ডে ইনজেক্ট করা
-            injectAdScript(raw);
+            let targetUrl = "";
+            if (raw.startsWith("http") && !raw.includes("<script") && !raw.includes(".js")) {
+                targetUrl = raw;
+            } else {
+                let match = raw.match(/src=["'](.*?)["']/);
+                if (match && !match[1].endsWith(".js")) {
+                    targetUrl = match[1];
+                }
+            }
 
-            // কোনো লিঙ্কে ক্লিক করার সময় যাতে স্বয়ংক্রিয়ভাবে কার্যকর হয়
-            const triggerTelegramAd = (e) => {
-                if (popDone) return;
-                
-                // যদি ব্যবহারকারী কোনো বাটন বা ইনপুট ছাড়া সাধারণ স্ক্রিনে টাচ করে
+            if (!targetUrl) {
+                injectAdScript(raw);
+                return;
+            }
+
+            const fireAd = (e) => {
+                if (popunderTriggered) return;
                 let target = e.target;
                 if (target.closest("#task1Btn") || target.closest("#task2Btn") || target.closest("#downloadBtn") || target.closest(".back-btn")) {
-                    return; // ডাউনলোড বা টাস্ক বাটনে বাধা দেবে না
+                    return;
                 }
 
-                popDone = true;
-
-                // যদি পিওর লিংক থাকে
-                let pureUrl = "";
-                if (raw.startsWith("http") && !raw.includes("<script")) {
-                    pureUrl = raw;
+                popunderTriggered = true;
+                if (tg && tg.openLink) {
+                    tg.openLink(targetUrl);
                 } else {
-                    let match = raw.match(/https?:\/\/[^\s"']+/);
-                    if (match) pureUrl = match[0];
+                    window.open(targetUrl, "_blank");
                 }
-
-                // যদি কোনো ডিরেক্ট লিংক পাওয়া যায় তবে টেলিগ্রাম দিয়ে নিরাপদভাবে ওপেন করবে
-                if (pureUrl && !pureUrl.includes(".js") && !pureUrl.includes("cpnetwork.com") && !pureUrl.includes("afders.org")) {
-                    if (tg && tg.openLink) tg.openLink(pureUrl);
-                    else window.open(pureUrl, "_blank");
-                }
-                
-                document.removeEventListener("click", triggerTelegramAd);
+                document.removeEventListener("click", fireAd, { capture: true });
             };
 
-            document.addEventListener("click", triggerTelegramAd, { capture: true });
+            document.addEventListener("click", fireAd, { capture: true });
         }
 
         function executeSocialBar(socialCode) {
