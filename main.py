@@ -107,7 +107,6 @@ def save_data(data):
     except Exception as e:
         print("Telegram DB Save Error:", e)
 
-# 🔥 Render-এর ব্যান্ডউইডথ শেষ হওয়া বাঁচাতে ফ্রি গ্লোবাল সিডিএন প্রক্সি 🔥
 def upload_thumb_securely(photo_id):
     try:
         msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumb")
