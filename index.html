@@ -662,38 +662,21 @@
         }
 
         function handleImageFallback(img) {
-            const original = img.getAttribute("data-original") || "";
             const title = img.getAttribute("data-title") || "Bachelor Point";
-
-            // প্রথম ফেইলব্যাক: নতুন রেন্ডার প্রক্সিতে চেষ্টা
-            if (!img.dataset.triedRender && original.includes("/thumb/")) {
-                img.dataset.triedRender = "true";
-                const fileId = original.split("/thumb/").pop();
-                img.src = `${CURRENT_RENDER_URL}/thumb/${fileId}`;
-                return;
-            }
-
-            // দ্বিতীয় ফেইলব্যাক: এসভিজি পোস্টার
             img.onerror = null;
             img.src = generateSvgPoster(title);
         }
 
-        // 🔥 প্রাইভেট চ্যানেল এবং সিডিএন থেকে ছবি সরাসরি টানার মূল লজিক 🔥
+        // 🔥 প্রাইভেট চ্যানেল থেকে আসা যেকোনো রেন্ডার লিঙ্ককে নতুন রেন্ডারের সাথে জুড়ে দেওয়া 🔥
         function resolveThumb(url, title) {
             if (!url || url.trim() === "" || url.includes("placehold.co")) {
                 return generateSvgPoster(title);
             }
             let u = url.trim();
 
-            // পুরনো সাসপেন্ড হওয়া অনরেন্ডার লিংক থাকলে সরাসরি নতুন রেন্ডারে রি-রুট
-            if (u.includes("onrender.com/thumb/")) {
+            if (u.includes("/thumb/")) {
                 const fileId = u.split("/thumb/").pop();
                 return `${CURRENT_RENDER_URL}/thumb/${fileId}`;
-            }
-
-            // সরাসরি টেলিগ্রাম এপিআই লিংক থাকলে ফ্রি Weserv ক্যাশে কনভার্ট
-            if (u.includes("api.telegram.org")) {
-                return `https://images.weserv.nl/?url=${encodeURIComponent(u)}&w=640&fit=cover&output=jpg&q=85`;
             }
 
             return u;
@@ -852,7 +835,7 @@
 
                     card.innerHTML = `
                         <div class="thumb-wrapper">
-                            <img class="thumb-img" src="${thumbUrl}" data-original="${item.thumb || ''}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
+                            <img class="thumb-img" src="${thumbUrl}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
                         </div>
                         <div class="card-details">
                             <div class="video-title">${item.title}</div>
@@ -877,9 +860,7 @@
             document.getElementById("detailView").style.display = "block";
 
             const detailImg = document.getElementById("detailThumb");
-            detailImg.setAttribute("data-original", video.thumb || "");
             detailImg.setAttribute("data-title", video.title || "");
-            detailImg.removeAttribute("data-tried-render");
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
