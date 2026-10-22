@@ -9,7 +9,7 @@ for pkg in ["pyTelegramBotAPI", "Flask", "Flask-CORS", "requests"]:
 
 import telebot
 from telebot import types
-from flask import Flask, jsonify, make_response, send_file, Response, request
+from flask import Flask, jsonify, make_response, send_file, Response, request, redirect
 from flask_cors import CORS
 import threading
 import json
@@ -102,23 +102,23 @@ def upload_thumb_securely(photo_id):
     except Exception:
         return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
 
+# 🔥 Render-এর ব্যান্ডউইথ ড্রেন বন্ধ করার অপ্টিমাইজড ক্যাশিং রাউট 🔥
 @app.route('/thumb/<file_id>')
 def serve_thumbnail(file_id):
-    if file_id in thumb_memory_cache:
-        resp = Response(thumb_memory_cache[file_id], mimetype="image/jpeg")
-        resp.headers['Cache-Control'] = 'public, max-age=31536000'
-        resp.headers['Access-Control-Allow-Origin'] = '*'
-        return resp
     try:
-        file_info = bot.get_file(file_id)
-        file_bytes = bot.download_file(file_info.file_path)
-        thumb_memory_cache[file_id] = file_bytes
-        resp = Response(file_bytes, mimetype="image/jpeg")
-        resp.headers['Cache-Control'] = 'public, max-age=31536000'
+        if file_id in thumb_memory_cache:
+            tg_url = thumb_memory_cache[file_id]
+        else:
+            file_info = bot.get_file(file_id)
+            tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+            thumb_memory_cache[file_id] = tg_url
+        
+        resp = redirect(tg_url, code=302)
+        resp.headers['Cache-Control'] = 'public, max-age=604800, immutable'
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
     except Exception:
-        return Response(status=404)
+        return redirect("https://placehold.co/600x400?text=No+Poster", code=302)
 
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
@@ -325,7 +325,7 @@ def handle_callbacks(call):
         return
     elif call.data == "set_ad_native":
         admin_state[chat_id] = {'step': 'set_native_ad'}
-        bot.send_message(chat_id, "📱 **নেティブ ব্যানার কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "📱 **নেটিভ ব্যানার কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
     elif call.data == "del_ad_native":
@@ -383,7 +383,6 @@ def handle_callbacks(call):
         bot.send_message(chat_id, "📁 **যে নতুন ক্যাটাগরি যুক্ত করতে চান তার নাম লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         return
 
-# 🔥 ব্যাকগ্রাউন্ডে ব্রডকাস্ট পাঠানো যাতে বটের কোনো বাটন বা থ্রেড কখনো ফ্রিজ না হয় 🔥
 def run_broadcast_worker(admin_chat_id, photo_id, caption_text, is_photo, user_list):
     fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
     notice_markup = types.InlineKeyboardMarkup()
@@ -514,7 +513,6 @@ def handle_admin_inputs(message):
         photo_id = message.photo[-1].file_id if is_photo else None
         caption_text = message.caption or (message.text if not is_photo else "")
         
-        # থ্রেড দিয়ে আলাদা করা হলো যাতে বট কখনো ফ্রিজ না হয়
         threading.Thread(
             target=run_broadcast_worker,
             args=(chat_id, photo_id, caption_text, is_photo, user_list),
@@ -572,7 +570,7 @@ def handle_admin_inputs(message):
             "id": int(time.time()),
             "category": admin_state[chat_id]['category'],
             "title": admin_state[chat_id]['title'],
-            "thumb": admin_state[chat_id]['thumb'],
+            "thumb": thumb_url if 'thumb_url' in locals() else admin_state[chat_id].get('thumb', ''),
             "file_id": incoming_file_id,
             "date": datetime.now().strftime("%b %d, %Y"),
             "time": datetime.now().strftime("%I:%M %p")
