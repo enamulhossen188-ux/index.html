@@ -287,6 +287,29 @@ def send_welcome(message):
     except Exception as e:
         print("Welcome error:", e)
 
+# 🔥 আপগ্রেডেড ব্যাকগ্রাউন্ড ব্রডকাস্ট ওয়ার্কার (টেক্সট, ছবি, ভিডিও এবং অপশনাল বাটন সাপোর্ট) 🔥
+def run_broadcast_worker(admin_chat_id, media_type, file_id, caption_text, with_btn, user_list):
+    notice_markup = None
+    if with_btn:
+        fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
+        notice_markup = types.InlineKeyboardMarkup()
+        notice_markup.add(types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)))
+    
+    sent = 0
+    for uid in user_list:
+        try:
+            if media_type == 'video':
+                bot.send_video(uid, file_id, caption=caption_text, reply_markup=notice_markup)
+            elif media_type == 'photo':
+                bot.send_photo(uid, file_id, caption=caption_text, reply_markup=notice_markup)
+            else:
+                bot.send_message(uid, caption_text, reply_markup=notice_markup)
+            sent += 1
+            time.sleep(0.04)
+        except Exception:
+            pass
+    bot.send_message(admin_chat_id, f"✅ ব্যাকগ্রাউন্ডে মোট **{sent}** জনের কাছে নোটিশ পাঠানো সম্পন্ন!")
+
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     chat_id = call.message.chat.id
@@ -301,6 +324,29 @@ def handle_callbacks(call):
         return
 
     if str(chat_id) != str(ADMIN_ID): return
+
+    # 🔥 বাটন সহ অথবা বাটন ছাড়া নোটিশ পাঠানোর হ্যান্ডলার 🔥
+    if call.data in ["bc_with_btn", "bc_without_btn"]:
+        if chat_id in admin_state and admin_state[chat_id].get('step') == 'confirm_broadcast':
+            with_btn = (call.data == "bc_with_btn")
+            st = admin_state[chat_id]
+            media_type = st.get('media_type')
+            file_id = st.get('file_id')
+            caption_text = st.get('caption')
+            del admin_state[chat_id]
+            
+            data = load_data()
+            user_list = data.get("users", [])
+            bot.delete_message(chat_id, call.message.message_id)
+            btn_txt = "বাটন সহ" if with_btn else "বাটন ছাড়া"
+            bot.send_message(chat_id, f"⏳ **{btn_txt} {len(user_list)} জন ইউজারের কাছে নোটিশ পাঠানো হচ্ছে... বট সম্পূর্ণ সচল থাকবে।**", reply_markup=get_admin_keyboard())
+            
+            threading.Thread(
+                target=run_broadcast_worker,
+                args=(chat_id, media_type, file_id, caption_text, with_btn, user_list),
+                daemon=True
+            ).start()
+        return
 
     if call.data == "close_admin_menu":
         bot.delete_message(chat_id, call.message.message_id)
@@ -383,20 +429,6 @@ def handle_callbacks(call):
         bot.send_message(chat_id, "📁 **যে নতুন ক্যাটাগরি যুক্ত করতে চান তার নাম লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         return
 
-def run_broadcast_worker(admin_chat_id, photo_id, caption_text, is_photo, user_list):
-    fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
-    notice_markup = types.InlineKeyboardMarkup()
-    notice_markup.add(types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)))
-    sent = 0
-    for uid in user_list:
-        try:
-            if is_photo: bot.send_photo(uid, photo_id, caption=caption_text, reply_markup=notice_markup)
-            else: bot.send_message(uid, f"📢 **নোটিশ:**\n\n{caption_text}", reply_markup=notice_markup, parse_mode="Markdown")
-            sent += 1
-            time.sleep(0.04)
-        except Exception: pass
-    bot.send_message(admin_chat_id, f"✅ ব্যাকগ্রাউন্ডে মোট **{sent}** জনের কাছে নোটিশ পাঠানো সম্পন্ন!")
-
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id
@@ -443,11 +475,44 @@ def handle_admin_inputs(message):
         return
     elif message.text == "📢 BOT NOTICE":
         admin_state[chat_id] = {'step': 'notice_input'}
-        bot.send_message(chat_id, "🖼 **নোটিশের ছবি পাঠান অথবা মেসেজ লিখুন:**", reply_markup=types.ReplyKeyboardRemove())
+        bot.send_message(chat_id, "📢 **নোটিশের জন্য ভিডিও, ছবি অথবা শুধু মেসেজ লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)", reply_markup=types.ReplyKeyboardRemove())
         return
 
     if chat_id not in admin_state: return
     step = admin_state[chat_id].get('step')
+
+    # 🔥 ফ্লেক্সিবল নোটিশ গ্রহণ ও বাটন কনফার্মেশন প্রসেস 🔥
+    if step == 'notice_input':
+        m_type = 'text'
+        f_id = None
+        cap = ""
+
+        if message.video:
+            m_type = 'video'
+            f_id = message.video.file_id
+            cap = message.caption or ""
+        elif message.photo:
+            m_type = 'photo'
+            f_id = message.photo[-1].file_id
+            cap = message.caption or ""
+        elif message.text:
+            m_type = 'text'
+            cap = message.text
+
+        admin_state[chat_id] = {
+            'step': 'confirm_broadcast',
+            'media_type': m_type,
+            'file_id': f_id,
+            'caption': cap
+        }
+
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        markup.add(
+            types.InlineKeyboardButton("✅ 'WATCH NOW' বাটন সহ পাঠান", callback_data="bc_with_btn"),
+            types.InlineKeyboardButton("🚫 কোনো বাটন ছাড়া সরাসরি পাঠান", callback_data="bc_without_btn")
+        )
+        bot.send_message(chat_id, "🎯 **নোটিশটি কীভাবে পাঠাতে চান বেছে নিন:**", reply_markup=markup)
+        return
 
     if step == 'ad_1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
@@ -502,22 +567,6 @@ def handle_admin_inputs(message):
             save_data(data)
             del admin_state[chat_id]
             bot.send_message(chat_id, f"✅ **'{new_c}' ক্যাটাগরি যুক্ত হয়েছে!**", reply_markup=get_admin_keyboard())
-        return
-    elif step == 'notice_input' and (message.photo or message.text):
-        data = load_data()
-        user_list = data.get("users", [])
-        bot.send_message(chat_id, f"⏳ **{len(user_list)} জন ইউজারের কাছে ব্যাকগ্রাউন্ডে নোটিশ পাঠানো হচ্ছে... বট সম্পূর্ণ সচল থাকবে।**", reply_markup=get_admin_keyboard())
-        del admin_state[chat_id]
-        
-        is_photo = bool(message.photo)
-        photo_id = message.photo[-1].file_id if is_photo else None
-        caption_text = message.caption or (message.text if not is_photo else "")
-        
-        threading.Thread(
-            target=run_broadcast_worker,
-            args=(chat_id, photo_id, caption_text, is_photo, user_list),
-            daemon=True
-        ).start()
         return
     elif step == 'cs_title' and message.text:
         admin_state[chat_id]['title'] = message.text.strip()
