@@ -24,7 +24,7 @@ BOT_TOKEN = "8995171178:AAG8u0bCDO51BsGyFf2l14m978Pnqjzq3dU"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
-RENDER_SERVER_URL = "https://my-bot-server-yeui.onrender.com"
+RENDER_SERVER_URL = "https://index-html-6f0e.onrender.com"
 # ====================================================
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
