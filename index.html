@@ -6,6 +6,10 @@
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- মনিট্যাগ অফিসিয়াল টেলিগ্রাম মিনি অ্যাপ SDK ট্যাগ -->
+    <script src="https://alwingulla.com/88/tag.min.js" async data-cfasync="false"></script>
+
     <style>
         :root {
             --bg-color: #121316;
@@ -569,7 +573,7 @@
                             <p id="task1Desc">অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task1Btn" class="visit-action-btn" onclick="startTask(1)">VISIT</button>
+                    <button id="task1Btn" class="visit-action-btn" onclick="startTask(1)">WATCH</button>
                 </div>
 
                 <div class="task-card-row">
@@ -580,7 +584,7 @@
                             <p id="task2Desc">অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task2Btn" class="visit-action-btn" onclick="startTask(2)">VISIT</button>
+                    <button id="task2Btn" class="visit-action-btn" onclick="startTask(2)">WATCH</button>
                 </div>
             </div>
 
@@ -609,7 +613,10 @@
     <script>
         const CURRENT_RENDER_URL = "https://index-html-6f0e.onrender.com";
         const tg = window.Telegram?.WebApp;
-        if (tg) tg.expand();
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
 
         let appData = { videos: [], ads: {}, categories: [] };
         let activeCategory = '';
@@ -701,7 +708,7 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ অ্যাড স্ক্রিপ্ট লোডার 🔥
+        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ জোন স্ক্রিপ্ট লোডার 🔥
         function setupMonetagMiniApp(zoneId) {
             if (!zoneId || !zoneId.trim()) return;
             const script = document.createElement("script");
@@ -746,44 +753,10 @@
             }
         }
 
-        let popunderFired = false;
-        function executePopunder(popCode) {
-            if (!popCode || !popCode.trim()) return;
-            let raw = popCode.trim();
-            injectAdScript(raw);
-
-            const handleScreenTap = (e) => {
-                if (popunderFired) return;
-                let target = e.target;
-                if (target.closest("#task1Btn") || target.closest("#task2Btn") || target.closest("#downloadBtn") || target.closest(".back-btn")) {
-                    return;
-                }
-
-                popunderFired = true;
-                let openTargetUrl = "";
-                if (raw.startsWith("http") && !raw.includes("<script") && !raw.includes(".js")) {
-                    openTargetUrl = raw;
-                } else {
-                    openTargetUrl = appData.ads?.ad1 || "https://google.com";
-                }
-
-                if (openTargetUrl && openTargetUrl.startsWith("http")) {
-                    if (tg && tg.openLink) {
-                        tg.openLink(openTargetUrl);
-                    } else {
-                        window.open(openTargetUrl, "_blank");
-                    }
-                }
-                document.removeEventListener("click", handleScreenTap, true);
-            };
-            document.addEventListener("click", handleScreenTap, true);
-        }
-
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.monetag_zone) setupMonetagMiniApp(ads.monetag_zone);
             if (ads.social_ad) executeSocialBar(ads.social_ad);
-            if (ads.popunder_ad) executePopunder(ads.popunder_ad);
         }
 
         async function initData() {
@@ -897,12 +870,12 @@
             const dlBtn = document.getElementById("downloadBtn");
 
             btn1.className = "visit-action-btn";
-            btn1.innerHTML = "VISIT";
+            btn1.innerHTML = "WATCH";
             document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
             document.getElementById("task1Desc").innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
 
             btn2.className = "visit-action-btn";
-            btn2.innerHTML = "VISIT";
+            btn2.innerHTML = "WATCH";
             document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
             document.getElementById("task2Desc").innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
 
@@ -917,7 +890,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টাস্ক ১ ও ২ (১৫ সেকেন্ড কাউন্টডাউন + মনিট্যাগ মিনি অ্যাপ অ্যাড সাপোর্ট) 🔥
+        // 🔥 টেলিগ্রাম মিনি অ্যাপ ইন-অ্যাপ ১৫ সেকেন্ড অ্যাড ও টাইমার 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -926,12 +899,14 @@
             taskStartTime = Date.now();
 
             const ads = appData.ads || {};
-            
-            // যদি মনিট্যাগ জোন আইডি থাকে তবে মিনি অ্যাপ অ্যাড দেখাবে
+
+            // ১. মনিট্যাগ অফিসিয়াল মিনি অ্যাপ ফাংশন (show_88) ইন-অ্যাপ কল
             if (ads.monetag_zone && typeof show_88 === 'function') {
-                show_88().catch(e => console.log("Monetag mini app ad skipped:", e));
+                show_88().catch(err => {
+                    console.log("Monetag in-app ad error/skipped:", err);
+                });
             } else {
-                // অন্যথায় সাধারণ লিঙ্ক খুলবে
+                // জোন আইডি না থাকলে সাধারণ ফলব্যাক লিঙ্ক
                 const adUrl = (taskNum === 1) ? (ads.ad1 || "https://google.com") : (ads.ad2 || "https://google.com");
                 if (tg && tg.openLink) {
                     tg.openLink(adUrl);
@@ -949,7 +924,7 @@
 
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১৫ সেকেন্ড টাইমার
+            // ১৫ সেকেন্ড কাউন্টডাউন
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
                 const remaining = 15 - passed;
@@ -1006,7 +981,7 @@
                     const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
 
                     btn.className = "visit-action-btn";
-                    btn.innerHTML = `VISIT`;
+                    btn.innerHTML = `WATCH`;
                     desc.innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
 
                     const remainingNeed = 15 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
@@ -1021,7 +996,7 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // 🔥 ডাউনলোড বাটনে কোনো বিজ্ঞাপন নেই, সরাসরি ইনবক্সে ভিডিও পাঠিয়ে পেজ ক্লোজ করবে 🔥
+        // 🔥 কোনো বিজ্ঞাপন ছাড়া সরাসরি ইনবক্সে ভিডিও পাঠানোর বাটন 🔥
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
@@ -1069,4 +1044,4 @@
         initData();
     </script>
 </body>
-    </html>
+                </html>
