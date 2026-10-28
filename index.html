@@ -557,7 +557,7 @@
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা এড দেখে নিন ১০ সেকেন্ড করে।</span>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা এড দেখে নিন ১৫ সেকেন্ড করে (মোট ৩০ সেকেন্ড)।</span>
             </div>
 
             <div class="task-list">
@@ -566,7 +566,7 @@
                         <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 1</h4>
-                            <p id="task1Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task1Desc">অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task1Btn" class="visit-action-btn" onclick="startTask(1)">VISIT</button>
@@ -577,13 +577,14 @@
                         <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 2</h4>
-                            <p id="task2Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task2Desc">অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task2Btn" class="visit-action-btn" onclick="startTask(2)">VISIT</button>
                 </div>
             </div>
 
+            <!-- কোনো বিজ্ঞাপন ছাড়া সরাসরি ইনবক্সে ভিডিও পাঠানোর বাটন -->
             <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
@@ -598,8 +599,8 @@
             <div class="popup-close-circle"><i class="fa-solid fa-xmark"></i></div>
             <div class="popup-title">ভেরিফিকেশন ব্যর্থ!</div>
             <div class="popup-desc">
-                আপনি সম্পূর্ণ ১০ সেকেন্ড অ্যাড দেখেন নাই!<br>
-                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">10</span> সেঃ প্রয়োজন।
+                আপনি সম্পূর্ণ ১৫ সেকেন্ড অ্যাড দেখেন নাই!<br>
+                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">15</span> সেঃ প্রয়োজন।
             </div>
             <button class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
         </div>
@@ -679,7 +680,6 @@
             return u;
         }
 
-        // 🔥 নিরাপদ স্ক্রিপ্ট লোডার 🔥
         function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -701,12 +701,21 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 ১. সোশ্যাল বার: ব্যাকগ্রাউন্ডে হেডারে বসবে 🔥
+        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ অ্যাড স্ক্রিপ্ট লোডার 🔥
+        function setupMonetagMiniApp(zoneId) {
+            if (!zoneId || !zoneId.trim()) return;
+            const script = document.createElement("script");
+            script.src = "https://alwingulla.com/88/tag.min.js";
+            script.setAttribute("data-zone", zoneId.trim());
+            script.async = true;
+            script.setAttribute("data-cfasync", "false");
+            document.head.appendChild(script);
+        }
+
         function executeSocialBar(socialCode) {
             injectAdScript(socialCode);
         }
 
-        // 🔥 ২. নেটিভ ব্যানার: কার্ডের নিচে সঠিক স্থানে লোড হবে 🔥
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -737,30 +746,22 @@
             }
         }
 
-        // 🔥 ৩. পপআন্ডার: স্ক্রিন টাচ করলেই কাজ করবে, কোনো কাঁচা কোড পেজ খুলবে না 🔥
         let popunderFired = false;
         function executePopunder(popCode) {
             if (!popCode || !popCode.trim()) return;
             let raw = popCode.trim();
-
-            // স্ক্রিপ্টটি আগে হেডারে কার্যকর রাখা
             injectAdScript(raw);
 
-            // ব্যবহারকারী স্ক্রিনের যেকোনো জায়গায় স্পর্শ করলেই পপআন্ডার ট্রিগার হবে
             const handleScreenTap = (e) => {
                 if (popunderFired) return;
-
-                // টাস্ক ১, ২ ও ডাউনলোডের ক্লিকে বাধা দেবে না
                 let target = e.target;
                 if (target.closest("#task1Btn") || target.closest("#task2Btn") || target.closest("#downloadBtn") || target.closest(".back-btn")) {
                     return;
                 }
 
                 popunderFired = true;
-
-                // যদি পিওর লিংক হয় তবে সরাসরি খুলবে, আর স্ক্রিপ্ট হলে আপনার Task 1 এর ব্যাকআপ লিংকটি দিয়ে পপআন্ডার চালাবে
                 let openTargetUrl = "";
-                if (raw.startsWith("http") && !raw.includes("<script") && !raw.includes(".js") && !raw.includes("afders.org") && !raw.includes("cpnetwork.com")) {
+                if (raw.startsWith("http") && !raw.includes("<script") && !raw.includes(".js")) {
                     openTargetUrl = raw;
                 } else {
                     openTargetUrl = appData.ads?.ad1 || "https://google.com";
@@ -773,15 +774,14 @@
                         window.open(openTargetUrl, "_blank");
                     }
                 }
-
                 document.removeEventListener("click", handleScreenTap, true);
             };
-
             document.addEventListener("click", handleScreenTap, true);
         }
 
         function renderAllAds() {
             const ads = appData.ads || {};
+            if (ads.monetag_zone) setupMonetagMiniApp(ads.monetag_zone);
             if (ads.social_ad) executeSocialBar(ads.social_ad);
             if (ads.popunder_ad) executePopunder(ads.popunder_ad);
         }
@@ -899,12 +899,12 @@
             btn1.className = "visit-action-btn";
             btn1.innerHTML = "VISIT";
             document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task1Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task1Desc").innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
 
             btn2.className = "visit-action-btn";
             btn2.innerHTML = "VISIT";
             document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task2Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task2Desc").innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
 
             dlBtn.className = "download-btn disabled";
             dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
@@ -917,7 +917,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 ৪. টাস্ক ১ ও টাস্ক ২ (১০ সেকেন্ড কাউন্টডাউন) 🔥
+        // 🔥 টাস্ক ১ ও ২ (১৫ সেকেন্ড কাউন্টডাউন + মনিট্যাগ মিনি অ্যাপ অ্যাড সাপোর্ট) 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -925,26 +925,34 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            const adUrl = (taskNum === 1) ? (appData.ads?.ad1 || "https://google.com") : (appData.ads?.ad2 || "https://google.com");
-
-            if (tg && tg.openLink) {
-                tg.openLink(adUrl);
+            const ads = appData.ads || {};
+            
+            // যদি মনিট্যাগ জোন আইডি থাকে তবে মিনি অ্যাপ অ্যাড দেখাবে
+            if (ads.monetag_zone && typeof show_88 === 'function') {
+                show_88().catch(e => console.log("Monetag mini app ad skipped:", e));
             } else {
-                window.open(adUrl, "_blank");
+                // অন্যথায় সাধারণ লিঙ্ক খুলবে
+                const adUrl = (taskNum === 1) ? (ads.ad1 || "https://google.com") : (ads.ad2 || "https://google.com");
+                if (tg && tg.openLink) {
+                    tg.openLink(adUrl);
+                } else {
+                    window.open(adUrl, "_blank");
+                }
             }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
             btn.className = "visit-action-btn running";
-            btn.innerHTML = `10s`;
+            btn.innerHTML = `15s`;
             desc.innerText = "অপেক্ষা করুন...";
 
             if (countdownTimer) clearInterval(countdownTimer);
 
+            // ১৫ সেকেন্ড টাইমার
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                const remaining = 10 - passed;
+                const remaining = 15 - passed;
 
                 if (remaining > 0) {
                     btn.innerHTML = `${remaining}s`;
@@ -989,7 +997,7 @@
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
-                if (elapsedSeconds < 10) {
+                if (elapsedSeconds < 15) {
                     clearInterval(countdownTimer);
                     const taskFailed = activeTask;
                     activeTask = null;
@@ -999,9 +1007,9 @@
 
                     btn.className = "visit-action-btn";
                     btn.innerHTML = `VISIT`;
-                    desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
+                    desc.innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
 
-                    const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
+                    const remainingNeed = 15 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
                     clearInterval(countdownTimer);
@@ -1013,6 +1021,7 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
+        // 🔥 ডাউনলোড বাটনে কোনো বিজ্ঞাপন নেই, সরাসরি ইনবক্সে ভিডিও পাঠিয়ে পেজ ক্লোজ করবে 🔥
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
