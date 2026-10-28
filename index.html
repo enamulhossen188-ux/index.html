@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- 🔥 Monetag Official Telegram Mini App SDK (Zone 10318594) 🔥 -->
-    <script src="https://sad.monetag.com/tag.min.js" data-zone="10318594" async data-cfasync="false"></script>
-    <script src="https://alwingulla.com/88/tag.min.js" data-zone="10318594" async data-cfasync="false"></script>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -562,7 +557,7 @@
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা এড দেখে নিন ১০ সেকেন্ড করে (মোট ২০ সেকেন্ড)।</span>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন (মোট ২০ সেকেন্ড)।</span>
             </div>
 
             <div class="task-list">
@@ -571,7 +566,7 @@
                         <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 1</h4>
-                            <p id="task1Desc">অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task1Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task1Btn" class="visit-action-btn" onclick="startTask(1)">VISIT</button>
@@ -582,7 +577,7 @@
                         <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 2</h4>
-                            <p id="task2Desc">অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task2Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task2Btn" class="visit-action-btn" onclick="startTask(2)">VISIT</button>
@@ -602,7 +597,7 @@
             <div class="popup-close-circle"><i class="fa-solid fa-xmark"></i></div>
             <div class="popup-title">ভেরিফিকেশন ব্যর্থ!</div>
             <div class="popup-desc">
-                আপনি সম্পূর্ণ ১০ সেকেন্ড অ্যাড দেখেন নাই!<br>
+                আপনি সম্পূর্ণ ১০ সেকেন্ড অপেক্ষা করেন নাই!<br>
                 দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">10</span> সেঃ প্রয়োজন।
             </div>
             <button class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
@@ -611,7 +606,6 @@
 
     <script>
         const CURRENT_RENDER_URL = "https://index-html-6f0e.onrender.com";
-        const MONETAG_ZONE = 10318594;
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
@@ -886,12 +880,12 @@
             btn1.className = "visit-action-btn";
             btn1.innerHTML = "VISIT";
             document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task1Desc").innerText = "অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task1Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
 
             btn2.className = "visit-action-btn";
             btn2.innerHTML = "VISIT";
             document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task2Desc").innerText = "অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task2Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
 
             dlBtn.className = "download-btn disabled";
             dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
@@ -904,21 +898,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Monetag Telegram Mini App Rewarded Ad Popup 🔥
-        function playMonetagTelegramAd() {
-            const zId = appData.ads?.monetag_zone || MONETAG_ZONE;
-            
-            // Monetag অফিশিয়াল মেথড কলিং
-            if (typeof window[`show_${zId}`] === 'function') {
-                window[`show_${zId}`]().catch(e => console.log(e));
-            } else if (typeof window.show_88 === 'function') {
-                window.show_88(zId).catch(e => console.log(e));
-            } else if (typeof window.showPromise === 'function') {
-                window.showPromise().catch(e => console.log(e));
-            }
-        }
-
-        // 🔥 বাটন চাপার সাথে সাথে বিজ্ঞাপন এবং ১০ সেকেন্ড কাউন্টডাউন 🔥
+        // 🔥 সাধারণ টাস্ক ১ ও ২: ১০ সেকেন্ড টাইমার ও লিঙ্ক ওপেন 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -926,8 +906,17 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // চাপ দেওয়া মাত্রই স্ক্রিনে বিজ্ঞাপন পপআপ হবে
-            playMonetagTelegramAd();
+            const ads = appData.ads || {};
+            const adUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
+
+            // যদি বটে লিঙ্ক দেওয়া থাকে তবে ওপেন করবে
+            if (adUrl && adUrl.startsWith("http")) {
+                if (tg && tg.openLink) {
+                    tg.openLink(adUrl);
+                } else {
+                    window.open(adUrl, "_blank");
+                }
+            }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
@@ -938,7 +927,7 @@
 
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১০ সেকেন্ড কাউন্টডাউন টাইমার
+            // ১০ সেকেন্ড কাউন্টডাউন
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
                 const remaining = 10 - passed;
@@ -996,7 +985,7 @@
 
                     btn.className = "visit-action-btn";
                     btn.innerHTML = `VISIT`;
-                    desc.innerText = "অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন";
+                    desc.innerText = "১০ সেকেন্ড অপেক্ষা করুন";
 
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
@@ -1010,6 +999,7 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
+        // 🔥 সরাসরি ইনবক্সে ভিডিও সেন্ড 🔥
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
