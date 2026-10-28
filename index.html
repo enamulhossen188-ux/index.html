@@ -557,7 +557,7 @@
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা এড দেখে নিন ১৫ সেকেন্ড করে (মোট ৩০ সেকেন্ড)।</span>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা এড দেখে নিন ১০ সেকেন্ড করে (মোট ২০ সেকেন্ড)।</span>
             </div>
 
             <div class="task-list">
@@ -566,7 +566,7 @@
                         <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 1</h4>
-                            <p id="task1Desc">অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task1Desc">অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task1Btn" class="visit-action-btn" onclick="startTask(1)">VISIT</button>
@@ -577,7 +577,7 @@
                         <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 2</h4>
-                            <p id="task2Desc">অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task2Desc">অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task2Btn" class="visit-action-btn" onclick="startTask(2)">VISIT</button>
@@ -599,8 +599,8 @@
             <div class="popup-close-circle"><i class="fa-solid fa-xmark"></i></div>
             <div class="popup-title">ভেরিফিকেশন ব্যর্থ!</div>
             <div class="popup-desc">
-                আপনি সম্পূর্ণ ১৫ সেকেন্ড অ্যাড দেখেন নাই!<br>
-                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">15</span> সেঃ প্রয়োজন।
+                আপনি সম্পূর্ণ ১০ সেকেন্ড অ্যাড দেখেন নাই!<br>
+                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">10</span> সেঃ প্রয়োজন।
             </div>
             <button class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
         </div>
@@ -701,12 +701,19 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ অ্যাড স্ক্রিপ্ট লোডার 🔥
+        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ SDK স্ক্রিপ্ট লোডার 🔥
         function setupMonetagMiniApp(zoneId) {
             if (!zoneId || !zoneId.trim()) return;
+            const zid = zoneId.trim();
+            
+            // পূর্বের কোনো ট্যাগ থাকলে রিমুভ
+            const existingScript = document.getElementById("monetag_miniapp_sdk");
+            if (existingScript) existingScript.remove();
+
             const script = document.createElement("script");
-            script.src = "https://alwingulla.com/88/tag.min.js";
-            script.setAttribute("data-zone", zoneId.trim());
+            script.id = "monetag_miniapp_sdk";
+            script.src = `https://alwingulla.com/88/tag.min.js`;
+            script.setAttribute("data-zone", zid);
             script.async = true;
             script.setAttribute("data-cfasync", "false");
             document.head.appendChild(script);
@@ -899,12 +906,12 @@
             btn1.className = "visit-action-btn";
             btn1.innerHTML = "VISIT";
             document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task1Desc").innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task1Desc").innerText = "অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন";
 
             btn2.className = "visit-action-btn";
             btn2.innerHTML = "VISIT";
             document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task2Desc").innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task2Desc").innerText = "অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন";
 
             dlBtn.className = "download-btn disabled";
             dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
@@ -917,7 +924,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টাস্ক ১ ও ২ (১৫ সেকেন্ড কাউন্টডাউন + মনিট্যাগ মিনি অ্যাপ অ্যাড সাপোর্ট) 🔥
+        // 🔥 টাস্ক ১ ও ২: ১০ সেকেন্ড কাউন্টডাউন + নিশ্চিত Monetag Ads ট্রিগার 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -926,17 +933,30 @@
             taskStartTime = Date.now();
 
             const ads = appData.ads || {};
-            
-            // যদি মনিট্যাগ জোন আইডি থাকে তবে মিনি অ্যাপ অ্যাড দেখাবে
-            if (ads.monetag_zone && typeof show_88 === 'function') {
-                show_88().catch(e => console.log("Monetag mini app ad skipped:", e));
-            } else {
-                // অন্যথায় সাধারণ লিঙ্ক খুলবে
-                const adUrl = (taskNum === 1) ? (ads.ad1 || "https://google.com") : (ads.ad2 || "https://google.com");
-                if (tg && tg.openLink) {
-                    tg.openLink(adUrl);
-                } else {
-                    window.open(adUrl, "_blank");
+            let adTriggered = false;
+
+            // ১. Monetag মিনি অ্যাপ অ্যাড ফাংশন কল
+            if (ads.monetag_zone) {
+                if (typeof show_88 === 'function') {
+                    adTriggered = true;
+                    show_88().catch(e => {
+                        console.log("Monetag Ad Show Error:", e);
+                    });
+                } else if (typeof window.showPromise === 'function') {
+                    adTriggered = true;
+                    window.showPromise().catch(e => console.log(e));
+                }
+            }
+
+            // ২. যদি Monetag লোড না হয়, তবে সাধারণ Task লিঙ্কে রিডাইরেক্ট করবে
+            if (!adTriggered) {
+                const adUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
+                if (adUrl && adUrl.startsWith("http") && !adUrl.includes("google.com")) {
+                    if (tg && tg.openLink) {
+                        tg.openLink(adUrl);
+                    } else {
+                        window.open(adUrl, "_blank");
+                    }
                 }
             }
 
@@ -944,15 +964,15 @@
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
             btn.className = "visit-action-btn running";
-            btn.innerHTML = `15s`;
+            btn.innerHTML = `10s`;
             desc.innerText = "অপেক্ষা করুন...";
 
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১৫ সেকেন্ড টাইমার
+            // ১০ সেকেন্ড কাউন্টডাউন টাইমার
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                const remaining = 15 - passed;
+                const remaining = 10 - passed;
 
                 if (remaining > 0) {
                     btn.innerHTML = `${remaining}s`;
@@ -997,7 +1017,7 @@
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
-                if (elapsedSeconds < 15) {
+                if (elapsedSeconds < 10) {
                     clearInterval(countdownTimer);
                     const taskFailed = activeTask;
                     activeTask = null;
@@ -1007,9 +1027,9 @@
 
                     btn.className = "visit-action-btn";
                     btn.innerHTML = `VISIT`;
-                    desc.innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
+                    desc.innerText = "অ্যাড দেখে ১০ সেকেন্ড অপেক্ষা করুন";
 
-                    const remainingNeed = 15 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
+                    const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
                     clearInterval(countdownTimer);
