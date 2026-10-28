@@ -42,7 +42,7 @@ def get_default_data():
         "users": [],
         "categories": ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"],
         "sub_categories": {},
-        "ads": {"ad1": "https://google.com", "ad2": "https://google.com", "social_ad": "", "native_ad": "", "popunder_ad": ""},
+        "ads": {"ad1": "https://google.com", "ad2": "https://google.com", "social_ad": "", "native_ad": "", "popunder_ad": "", "monetag_zone": ""},
         "welcome_video": "",
         "update_notice": "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!",
         "videos": []
@@ -102,7 +102,6 @@ def upload_thumb_securely(photo_id):
     except Exception:
         return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
 
-# 🔥 Render-এর ব্যান্ডউইথ ড্রেন বন্ধ করার অপ্টিমাইজড ক্যাশিং রাউট 🔥
 @app.route('/thumb/<file_id>')
 def serve_thumbnail(file_id):
     try:
@@ -183,19 +182,22 @@ def get_admin_keyboard():
 def get_ads_keyboard():
     data = load_data()
     ads = data.get("ads", {})
+    m_status = "✅ আছে" if ads.get("monetag_zone") else "❌ নেই"
     s_status = "✅ আছে" if ads.get("social_ad") else "❌ নেই"
     n_status = "✅ আছে" if ads.get("native_ad") else "❌ নেই"
     p_status = "✅ আছে" if ads.get("popunder_ad") else "❌ নেই"
 
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton("🔗 ১. Task 1 & Task 2 Link সেট করুন", callback_data="set_ad_tasks"),
-        types.InlineKeyboardButton(f"🚀 ২. সোশ্যাল বার সেট করুন ({s_status})", callback_data="set_ad_social"),
-        types.InlineKeyboardButton("🗑️ ২. সোশ্যাল বার রিমুভ / বন্ধ করুন", callback_data="del_ad_social"),
-        types.InlineKeyboardButton(f"📱 ৩. নেটিভ ব্যানার সেট করুন ({n_status})", callback_data="set_ad_native"),
-        types.InlineKeyboardButton("🗑️ ৩. নেটিভ ব্যানার রিমুভ / বন্ধ করুন", callback_data="del_ad_native"),
-        types.InlineKeyboardButton(f"💥 ৪. পপআন্ডার সেট করুন ({p_status})", callback_data="set_ad_popunder"),
-        types.InlineKeyboardButton("🗑️ ৪. পপআন্ডার রিমুভ / বন্ধ করুন", callback_data="del_ad_popunder"),
+        types.InlineKeyboardButton(f"⚡ ১. মনিট্যাগ মিনি অ্যাপ Zone ID ({m_status})", callback_data="set_ad_monetag"),
+        types.InlineKeyboardButton("🗑️ ১. মনিট্যাগ Zone ID বন্ধ করুন", callback_data="del_ad_monetag"),
+        types.InlineKeyboardButton("🔗 ২. সাধারণ Task 1 & 2 Link সেট করুন", callback_data="set_ad_tasks"),
+        types.InlineKeyboardButton(f"🚀 ৩. সোশ্যাল বার সেট করুন ({s_status})", callback_data="set_ad_social"),
+        types.InlineKeyboardButton("🗑️ ৩. সোশ্যাল বার রিমুভ / বন্ধ করুন", callback_data="del_ad_social"),
+        types.InlineKeyboardButton(f"📱 ৪. নেটিভ ব্যানার সেট করুন ({n_status})", callback_data="set_ad_native"),
+        types.InlineKeyboardButton("🗑️ ৪. নেটিভ ব্যানার রিমুভ / বন্ধ করুন", callback_data="del_ad_native"),
+        types.InlineKeyboardButton(f"💥 ৫. পপআন্ডার সেট করুন ({p_status})", callback_data="set_ad_popunder"),
+        types.InlineKeyboardButton("🗑️ ৫. পপআন্ডার রিমুভ / বন্ধ করুন", callback_data="del_ad_popunder"),
         types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu")
     )
     return markup
@@ -287,7 +289,6 @@ def send_welcome(message):
     except Exception as e:
         print("Welcome error:", e)
 
-# 🔥 আপগ্রেডেড ব্যাকগ্রাউন্ড ব্রডকাস্ট ওয়ার্কার (টেক্সট, ছবি, ভিডিও এবং অপশনাল বাটন সাপোর্ট) 🔥
 def run_broadcast_worker(admin_chat_id, media_type, file_id, caption_text, with_btn, user_list):
     notice_markup = None
     if with_btn:
@@ -320,12 +321,11 @@ def handle_callbacks(call):
         return
     elif call.data == "btn_help":
         bot.answer_callback_query(call.id)
-        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে দুটি বিজ্ঞাপন ১০ সেকেন্ড ভিজিট করুন, ইনবক্সে ভিডিও চলে আসবে।")
+        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে দুটি বিজ্ঞাপন ১৫ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
         return
 
     if str(chat_id) != str(ADMIN_ID): return
 
-    # 🔥 বাটন সহ অথবা বাটন ছাড়া নোটিশ পাঠানোর হ্যান্ডলার 🔥
     if call.data in ["bc_with_btn", "bc_without_btn"]:
         if chat_id in admin_state and admin_state[chat_id].get('step') == 'confirm_broadcast':
             with_btn = (call.data == "bc_with_btn")
@@ -352,6 +352,18 @@ def handle_callbacks(call):
         bot.delete_message(chat_id, call.message.message_id)
         bot.answer_callback_query(call.id)
         return
+    elif call.data == "set_ad_monetag":
+        admin_state[chat_id] = {'step': 'set_monetag_zone'}
+        bot.send_message(chat_id, "⚡ **মনিট্যাগ টেলিগ্রাম মিনি অ্যাপের Zone ID (যেমন: 3490898) লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.answer_callback_query(call.id)
+        return
+    elif call.data == "del_ad_monetag":
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["monetag_zone"] = ""
+        save_data(data)
+        bot.answer_callback_query(call.id, "🗑️ মনিট্যাগ Zone ID বন্ধ করা হয়েছে!", show_alert=True)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
+        return
     elif call.data == "set_ad_tasks":
         admin_state[chat_id] = {'step': 'ad_1'}
         bot.send_message(chat_id, "🔗 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
@@ -359,7 +371,7 @@ def handle_callbacks(call):
         return
     elif call.data == "set_ad_social":
         admin_state[chat_id] = {'step': 'set_social_ad'}
-        bot.send_message(chat_id, "🚀 **সোশ্যাল বার (Social Bar) স্ক্রিপ্ট বা ডিরেক্ট লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "🚀 **সোশ্যাল বার স্ক্রিপ্ট বা ডিরেক্ট লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
     elif call.data == "del_ad_social":
@@ -383,7 +395,7 @@ def handle_callbacks(call):
         return
     elif call.data == "set_ad_popunder":
         admin_state[chat_id] = {'step': 'set_popunder_ad'}
-        bot.send_message(chat_id, "💥 **পপআন্ডার (Popunder) স্ক্রিপ্ট কোড বা ডিরেক্ট লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "💥 **পপআন্ডার কোড বা লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
     elif call.data == "del_ad_popunder":
@@ -481,7 +493,6 @@ def handle_admin_inputs(message):
     if chat_id not in admin_state: return
     step = admin_state[chat_id].get('step')
 
-    # 🔥 ফ্লেক্সিবল নোটিশ গ্রহণ ও বাটন কনফার্মেশন প্রসেস 🔥
     if step == 'notice_input':
         m_type = 'text'
         f_id = None
@@ -514,7 +525,15 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "🎯 **নোটিশটি কীভাবে পাঠাতে চান বেছে নিন:**", reply_markup=markup)
         return
 
-    if step == 'ad_1' and message.text:
+    if step == 'set_monetag_zone' and message.text:
+        zone_val = message.text.strip()
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["monetag_zone"] = zone_val
+        save_data(data)
+        del admin_state[chat_id]
+        bot.send_message(chat_id, f"✅ **মনিট্যাগ Zone ID (`{zone_val}`) সেভ হয়েছে! এখন থেকে ১৫ সেকেন্ডের মিনি অ্যাপ অ্যাড চলবে।**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
+        return
+    elif step == 'ad_1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
         admin_state[chat_id]['step'] = 'ad_2'
         bot.send_message(chat_id, "🎯 **এবার Task 2 এর এড লিংক পাঠান:**")
