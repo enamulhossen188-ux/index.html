@@ -6,9 +6,6 @@
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- মনিট্যাগ অফিসিয়াল টেলিগ্রাম মিনি অ্যাপ SDK ট্যাগ -->
-    <script src="https://alwingulla.com/88/tag.min.js" async data-cfasync="false"></script>
 
     <style>
         :root {
@@ -588,12 +585,10 @@
                 </div>
             </div>
 
-            <!-- কোনো বিজ্ঞাপন ছাড়া সরাসরি ইনবক্সে ভিডিও পাঠানোর বাটন -->
             <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
 
-            <!-- নেটিভ ব্যানার বক্স -->
             <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
@@ -708,12 +703,19 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ জোন স্ক্রিপ্ট লোডার 🔥
+        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ জোন লোডার (সরাসরি সচল করার পদ্ধতি) 🔥
         function setupMonetagMiniApp(zoneId) {
-            if (!zoneId || !zoneId.trim()) return;
+            if (!zoneId) return;
+            const cleanZone = String(zoneId).trim();
+            if (!cleanZone) return;
+
+            const existingScript = document.getElementById("monetag-sdk");
+            if (existingScript) existingScript.remove();
+
             const script = document.createElement("script");
+            script.id = "monetag-sdk";
             script.src = "https://alwingulla.com/88/tag.min.js";
-            script.setAttribute("data-zone", zoneId.trim());
+            script.setAttribute("data-zone", cleanZone);
             script.async = true;
             script.setAttribute("data-cfasync", "false");
             document.head.appendChild(script);
@@ -755,7 +757,10 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            if (ads.monetag_zone) setupMonetagMiniApp(ads.monetag_zone);
+            // বট থেকে জোন আইডি আসলে তবেই মনিট্যাগ ইন-অ্যাপ স্ক্রিপ্ট চালু হবে
+            if (ads.monetag_zone) {
+                setupMonetagMiniApp(ads.monetag_zone);
+            }
             if (ads.social_ad) executeSocialBar(ads.social_ad);
         }
 
@@ -899,20 +904,13 @@
             taskStartTime = Date.now();
 
             const ads = appData.ads || {};
+            const currentZone = ads.monetag_zone ? String(ads.monetag_zone).trim() : null;
 
-            // ১. মনিট্যাগ অফিসিয়াল মিনি অ্যাপ ফাংশন (show_88) ইন-অ্যাপ কল
-            if (ads.monetag_zone && typeof show_88 === 'function') {
+            // ১. মনিট্যাগ অফিসিয়াল মিনি অ্যাপ মেথড কল (কোনো ব্রাউজার ট্যাব খুলবে না)
+            if (currentZone && typeof show_88 === 'function') {
                 show_88().catch(err => {
                     console.log("Monetag in-app ad error/skipped:", err);
                 });
-            } else {
-                // জোন আইডি না থাকলে সাধারণ ফলব্যাক লিঙ্ক
-                const adUrl = (taskNum === 1) ? (ads.ad1 || "https://google.com") : (ads.ad2 || "https://google.com");
-                if (tg && tg.openLink) {
-                    tg.openLink(adUrl);
-                } else {
-                    window.open(adUrl, "_blank");
-                }
             }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
@@ -1044,4 +1042,4 @@
         initData();
     </script>
 </body>
-                </html>
+                    </html>
