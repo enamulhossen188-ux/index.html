@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- 🔥 Monetag Telegram Mini App SDK সরাসরি লোড করা হয়েছে 🔥 -->
-    <script src="https://alwingulla.com/88/tag.min.js" data-zone="10318594" async data-cfasync="false"></script>
+    
+    <!-- 🔥 Monetag Telegram Mini App SDK (Zone: 10318594) 🔥 -->
+    <script src="https://alwingulla.com/88/tag.min.js" data-zone="10318594" data-sdk="show_88" async data-cfasync="false"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -900,14 +902,36 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Monetag Ads নির্ভরযোগ্য ট্রিগার ফাংশন 🔥
-        function triggerMonetagAd() {
-            if (typeof show_88 === 'function') {
-                return show_88().catch(() => {});
-            } else if (typeof window.showPromise === 'function') {
-                return window.showPromise().catch(() => {});
-            }
-            return Promise.resolve();
+        // 🔥 নিশ্চিত Monetag Ads ট্রিগার ফাংশন (Smart Direct Trigger) 🔥
+        function showMonetagMiniAppAd() {
+            return new Promise((resolve) => {
+                let displayed = false;
+
+                // ১. অফিসিয়াল show_88 মেথড কল
+                if (typeof window.show_88 === 'function') {
+                    displayed = true;
+                    window.show_88().then(() => resolve(true)).catch(() => resolve(false));
+                    return;
+                }
+
+                // ২. বিকল্প showPromise মেথড কল
+                if (typeof window.showPromise === 'function') {
+                    displayed = true;
+                    window.showPromise().then(() => resolve(true)).catch(() => resolve(false));
+                    return;
+                }
+
+                // ৩. যদি SDK স্ক্রিপ্ট এখনো প্রস্তুত না থাকে, তবে মনিট্যাগ ডিরেক্ট অ্যাড ওপেন করবে
+                if (!displayed) {
+                    const fallbackAd = "https://omawreew.net/4/10318594"; // আপনার জোনের ডিরেক্ট অ্যাড লিংক
+                    if (tg && tg.openLink) {
+                        tg.openLink(fallbackAd);
+                    } else {
+                        window.open(fallbackAd, "_blank");
+                    }
+                    resolve(true);
+                }
+            });
         }
 
         // 🔥 টাস্ক ১ ও ২: ১০ সেকেন্ড টাইমার ও নিশ্চিত অ্যাড প্রদর্শন 🔥
@@ -918,8 +942,8 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // Monetag Ad ট্রিগার
-            triggerMonetagAd();
+            // নিশ্চিতভাবে Monetag অ্যাড স্ক্রিনে কল করা হচ্ছে
+            showMonetagMiniAppAd();
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
