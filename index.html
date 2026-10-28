@@ -6,7 +6,8 @@
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- 🔥 Monetag Telegram Mini App Official SDK 🔥 -->
+    <!-- 🔥 Monetag Official Telegram Mini App SDK (Zone 10318594) 🔥 -->
+    <script src="https://sad.monetag.com/tag.min.js" data-zone="10318594" async data-cfasync="false"></script>
     <script src="https://alwingulla.com/88/tag.min.js" data-zone="10318594" async data-cfasync="false"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -610,7 +611,7 @@
 
     <script>
         const CURRENT_RENDER_URL = "https://index-html-6f0e.onrender.com";
-        const MONETAG_ZONE_ID = "10318594";
+        const MONETAG_ZONE = 10318594;
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
@@ -903,32 +904,21 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Monetag Telegram Mini App Ads Trigger (চাপ দেওয়া মাত্র স্ক্রিনে বিজ্ঞাপন ওপেন হবে) 🔥
-        function triggerMonetagAdPopup(taskNum) {
-            const zone = appData.ads?.monetag_zone || MONETAG_ZONE_ID;
-            let adTriggered = false;
-
-            // ১. Monetag Telegram Mini App SDK মেথড চেক
-            if (typeof window.show_88 === 'function') {
-                adTriggered = true;
-                window.show_88(zone).catch(err => console.log("show_88 error:", err));
+        // 🔥 Monetag Telegram Mini App Rewarded Ad Popup 🔥
+        function playMonetagTelegramAd() {
+            const zId = appData.ads?.monetag_zone || MONETAG_ZONE;
+            
+            // Monetag অফিশিয়াল মেথড কলিং
+            if (typeof window[`show_${zId}`] === 'function') {
+                window[`show_${zId}`]().catch(e => console.log(e));
+            } else if (typeof window.show_88 === 'function') {
+                window.show_88(zId).catch(e => console.log(e));
             } else if (typeof window.showPromise === 'function') {
-                adTriggered = true;
-                window.showPromise().catch(err => console.log("showPromise error:", err));
-            }
-
-            // ২. SDK রেডি না থাকলে ডিরেক্ট স্পন্সর লিঙ্ক ইন-অ্যাপ ব্রাউজারে ওপেন
-            if (!adTriggered) {
-                const directUrl = `https://omawreew.net/4/${zone}`;
-                if (tg && tg.openLink) {
-                    tg.openLink(directUrl);
-                } else {
-                    window.open(directUrl, "_blank");
-                }
+                window.showPromise().catch(e => console.log(e));
             }
         }
 
-        // 🔥 টাস্ক ১ ও ২: বাটন চাপার সাথে সাথে বিজ্ঞাপন এবং ১০ সেকেন্ড কাউন্টডাউন 🔥
+        // 🔥 বাটন চাপার সাথে সাথে বিজ্ঞাপন এবং ১০ সেকেন্ড কাউন্টডাউন 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -936,8 +926,8 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // চাপ দেওয়া মাত্রই অ্যাড স্ক্রিনে আসবে
-            triggerMonetagAdPopup(taskNum);
+            // চাপ দেওয়া মাত্রই স্ক্রিনে বিজ্ঞাপন পপআপ হবে
+            playMonetagTelegramAd();
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
@@ -948,7 +938,7 @@
 
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১০ সেকেন্ড কাউন্টডাউন
+            // ১০ সেকেন্ড কাউন্টডাউন টাইমার
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
                 const remaining = 10 - passed;
