@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- 🔥 Monetag Telegram Mini App SDK সরাসরি লোড করা হয়েছে 🔥 -->
+    <script src="https://alwingulla.com/88/tag.min.js" data-zone="10318594" async data-cfasync="false"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -584,12 +586,10 @@
                 </div>
             </div>
 
-            <!-- কোনো বিজ্ঞাপন ছাড়া সরাসরি ইনবক্সে ভিডিও পাঠানোর বাটন -->
             <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
 
-            <!-- নেটিভ ব্যানার বক্স -->
             <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
@@ -701,24 +701,6 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ SDK স্ক্রিপ্ট লোডার 🔥
-        function setupMonetagMiniApp(zoneId) {
-            if (!zoneId || !zoneId.trim()) return;
-            const zid = zoneId.trim();
-            
-            // পূর্বের কোনো ট্যাগ থাকলে রিমুভ
-            const existingScript = document.getElementById("monetag_miniapp_sdk");
-            if (existingScript) existingScript.remove();
-
-            const script = document.createElement("script");
-            script.id = "monetag_miniapp_sdk";
-            script.src = `https://alwingulla.com/88/tag.min.js`;
-            script.setAttribute("data-zone", zid);
-            script.async = true;
-            script.setAttribute("data-cfasync", "false");
-            document.head.appendChild(script);
-        }
-
         function executeSocialBar(socialCode) {
             injectAdScript(socialCode);
         }
@@ -767,12 +749,7 @@
                 }
 
                 popunderFired = true;
-                let openTargetUrl = "";
-                if (raw.startsWith("http") && !raw.includes("<script") && !raw.includes(".js")) {
-                    openTargetUrl = raw;
-                } else {
-                    openTargetUrl = appData.ads?.ad1 || "https://google.com";
-                }
+                let openTargetUrl = (raw.startsWith("http") && !raw.includes("<script")) ? raw : (appData.ads?.ad1 || "https://google.com");
 
                 if (openTargetUrl && openTargetUrl.startsWith("http")) {
                     if (tg && tg.openLink) {
@@ -788,7 +765,6 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            if (ads.monetag_zone) setupMonetagMiniApp(ads.monetag_zone);
             if (ads.social_ad) executeSocialBar(ads.social_ad);
             if (ads.popunder_ad) executePopunder(ads.popunder_ad);
         }
@@ -924,7 +900,17 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টাস্ক ১ ও ২: ১০ সেকেন্ড কাউন্টডাউন + নিশ্চিত Monetag Ads ট্রিগার 🔥
+        // 🔥 Monetag Ads নির্ভরযোগ্য ট্রিগার ফাংশন 🔥
+        function triggerMonetagAd() {
+            if (typeof show_88 === 'function') {
+                return show_88().catch(() => {});
+            } else if (typeof window.showPromise === 'function') {
+                return window.showPromise().catch(() => {});
+            }
+            return Promise.resolve();
+        }
+
+        // 🔥 টাস্ক ১ ও ২: ১০ সেকেন্ড টাইমার ও নিশ্চিত অ্যাড প্রদর্শন 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -932,33 +918,8 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            const ads = appData.ads || {};
-            let adTriggered = false;
-
-            // ১. Monetag মিনি অ্যাপ অ্যাড ফাংশন কল
-            if (ads.monetag_zone) {
-                if (typeof show_88 === 'function') {
-                    adTriggered = true;
-                    show_88().catch(e => {
-                        console.log("Monetag Ad Show Error:", e);
-                    });
-                } else if (typeof window.showPromise === 'function') {
-                    adTriggered = true;
-                    window.showPromise().catch(e => console.log(e));
-                }
-            }
-
-            // ২. যদি Monetag লোড না হয়, তবে সাধারণ Task লিঙ্কে রিডাইরেক্ট করবে
-            if (!adTriggered) {
-                const adUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
-                if (adUrl && adUrl.startsWith("http") && !adUrl.includes("google.com")) {
-                    if (tg && tg.openLink) {
-                        tg.openLink(adUrl);
-                    } else {
-                        window.open(adUrl, "_blank");
-                    }
-                }
-            }
+            // Monetag Ad ট্রিগার
+            triggerMonetagAd();
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
@@ -969,7 +930,7 @@
 
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১০ সেকেন্ড কাউন্টডাউন টাইমার
+            // ১০ সেকেন্ড কাউন্টডাউন
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
                 const remaining = 10 - passed;
@@ -1041,7 +1002,6 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // 🔥 ডাউনলোড বাটনে কোনো বিজ্ঞাপন নেই, সরাসরি ইনবক্সে ভিডিও পাঠিয়ে পেজ ক্লোজ করবে 🔥
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
