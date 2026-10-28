@@ -6,9 +6,9 @@
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- 🔥 Monetag Telegram Mini App SDK (Zone: 10318594) 🔥 -->
-    <script src="https://alwingulla.com/88/tag.min.js" data-zone="10318594" data-sdk="show_88" async data-cfasync="false"></script>
-    
+    <!-- 🔥 Monetag Telegram Mini App Official SDK 🔥 -->
+    <script src="https://alwingulla.com/88/tag.min.js" data-zone="10318594" async data-cfasync="false"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -610,6 +610,7 @@
 
     <script>
         const CURRENT_RENDER_URL = "https://index-html-6f0e.onrender.com";
+        const MONETAG_ZONE_ID = "10318594";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
@@ -902,39 +903,32 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 নিশ্চিত Monetag Ads ট্রিগার ফাংশন (Smart Direct Trigger) 🔥
-        function showMonetagMiniAppAd() {
-            return new Promise((resolve) => {
-                let displayed = false;
+        // 🔥 Monetag Telegram Mini App Ads Trigger (চাপ দেওয়া মাত্র স্ক্রিনে বিজ্ঞাপন ওপেন হবে) 🔥
+        function triggerMonetagAdPopup(taskNum) {
+            const zone = appData.ads?.monetag_zone || MONETAG_ZONE_ID;
+            let adTriggered = false;
 
-                // ১. অফিসিয়াল show_88 মেথড কল
-                if (typeof window.show_88 === 'function') {
-                    displayed = true;
-                    window.show_88().then(() => resolve(true)).catch(() => resolve(false));
-                    return;
-                }
+            // ১. Monetag Telegram Mini App SDK মেথড চেক
+            if (typeof window.show_88 === 'function') {
+                adTriggered = true;
+                window.show_88(zone).catch(err => console.log("show_88 error:", err));
+            } else if (typeof window.showPromise === 'function') {
+                adTriggered = true;
+                window.showPromise().catch(err => console.log("showPromise error:", err));
+            }
 
-                // ২. বিকল্প showPromise মেথড কল
-                if (typeof window.showPromise === 'function') {
-                    displayed = true;
-                    window.showPromise().then(() => resolve(true)).catch(() => resolve(false));
-                    return;
+            // ২. SDK রেডি না থাকলে ডিরেক্ট স্পন্সর লিঙ্ক ইন-অ্যাপ ব্রাউজারে ওপেন
+            if (!adTriggered) {
+                const directUrl = `https://omawreew.net/4/${zone}`;
+                if (tg && tg.openLink) {
+                    tg.openLink(directUrl);
+                } else {
+                    window.open(directUrl, "_blank");
                 }
-
-                // ৩. যদি SDK স্ক্রিপ্ট এখনো প্রস্তুত না থাকে, তবে মনিট্যাগ ডিরেক্ট অ্যাড ওপেন করবে
-                if (!displayed) {
-                    const fallbackAd = "https://omawreew.net/4/10318594"; // আপনার জোনের ডিরেক্ট অ্যাড লিংক
-                    if (tg && tg.openLink) {
-                        tg.openLink(fallbackAd);
-                    } else {
-                        window.open(fallbackAd, "_blank");
-                    }
-                    resolve(true);
-                }
-            });
+            }
         }
 
-        // 🔥 টাস্ক ১ ও ২: ১০ সেকেন্ড টাইমার ও নিশ্চিত অ্যাড প্রদর্শন 🔥
+        // 🔥 টাস্ক ১ ও ২: বাটন চাপার সাথে সাথে বিজ্ঞাপন এবং ১০ সেকেন্ড কাউন্টডাউন 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -942,8 +936,8 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // নিশ্চিতভাবে Monetag অ্যাড স্ক্রিনে কল করা হচ্ছে
-            showMonetagMiniAppAd();
+            // চাপ দেওয়া মাত্রই অ্যাড স্ক্রিনে আসবে
+            triggerMonetagAdPopup(taskNum);
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
