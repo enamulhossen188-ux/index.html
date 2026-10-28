@@ -321,7 +321,7 @@ def handle_callbacks(call):
         return
     elif call.data == "btn_help":
         bot.answer_callback_query(call.id)
-        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে দুটি বিজ্ঞাপন ১৫ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
+        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে দুটি বিজ্ঞাপন ১০ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
         return
 
     if str(chat_id) != str(ADMIN_ID): return
@@ -354,7 +354,7 @@ def handle_callbacks(call):
         return
     elif call.data == "set_ad_monetag":
         admin_state[chat_id] = {'step': 'set_monetag_zone'}
-        bot.send_message(chat_id, "⚡ **মনিট্যাগ টেলিগ্রাম মিনি অ্যাপের Zone ID (যেমন: 3490898) লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "⚡ **মনিট্যাগ টেলিগ্রাম মিনি অ্যাপের Zone ID (যেমন: 10318594) লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
     elif call.data == "del_ad_monetag":
@@ -531,7 +531,7 @@ def handle_admin_inputs(message):
         data.setdefault("ads", {})["monetag_zone"] = zone_val
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, f"✅ **মনিট্যাগ Zone ID (`{zone_val}`) সেভ হয়েছে! এখন থেকে ১৫ সেকেন্ডের মিনি অ্যাপ অ্যাড চলবে।**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
+        bot.send_message(chat_id, f"✅ **মনিট্যাগ Zone ID (`{zone_val}`) সেভ হয়েছে! এখন থেকে ১০ সেকেন্ডের মিনি অ্যাপ অ্যাড চলবে।**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
         return
     elif step == 'ad_1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
