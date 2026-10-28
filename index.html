@@ -558,7 +558,7 @@
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা এড দেখে নিন ১৫ সেকেন্ড করে (মোট ৩০ সেকেন্ড)।</span>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুইটা টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন (মোট ২০ সেকেন্ড)।</span>
             </div>
 
             <div class="task-list">
@@ -567,10 +567,10 @@
                         <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 1</h4>
-                            <p id="task1Desc">অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task1Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task1Btn" class="visit-action-btn" onclick="startTask(1)">WATCH</button>
+                    <button id="task1Btn" class="visit-action-btn" onclick="startTask(1)">START</button>
                 </div>
 
                 <div class="task-card-row">
@@ -578,17 +578,19 @@
                         <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 2</h4>
-                            <p id="task2Desc">অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task2Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task2Btn" class="visit-action-btn" onclick="startTask(2)">WATCH</button>
+                    <button id="task2Btn" class="visit-action-btn" onclick="startTask(2)">START</button>
                 </div>
             </div>
 
+            <!-- কোনো বিজ্ঞাপন ছাড়া সরাসরি ইনবক্সে ভিডিও পাঠানোর বাটন -->
             <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
 
+            <!-- নেটিভ ব্যানার বক্স -->
             <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
@@ -598,8 +600,8 @@
             <div class="popup-close-circle"><i class="fa-solid fa-xmark"></i></div>
             <div class="popup-title">ভেরিফিকেশন ব্যর্থ!</div>
             <div class="popup-desc">
-                আপনি সম্পূর্ণ ১৫ সেকেন্ড অ্যাড দেখেন নাই!<br>
-                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">15</span> সেঃ প্রয়োজন।
+                আপনি সম্পূর্ণ ১০ সেকেন্ড অপেক্ষা করেন নাই!<br>
+                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">10</span> সেঃ প্রয়োজন।
             </div>
             <button class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
         </div>
@@ -703,7 +705,7 @@
             document.head.appendChild(scriptElem);
         }
 
-        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ জোন লোডার (সরাসরি সচল করার পদ্ধতি) 🔥
+        // 🔥 মনিট্যাগ টেলিগ্রাম মিনি অ্যাপ জোন লোডার 🔥
         function setupMonetagMiniApp(zoneId) {
             if (!zoneId) return;
             const cleanZone = String(zoneId).trim();
@@ -757,7 +759,6 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            // বট থেকে জোন আইডি আসলে তবেই মনিট্যাগ ইন-অ্যাপ স্ক্রিপ্ট চালু হবে
             if (ads.monetag_zone) {
                 setupMonetagMiniApp(ads.monetag_zone);
             }
@@ -875,14 +876,14 @@
             const dlBtn = document.getElementById("downloadBtn");
 
             btn1.className = "visit-action-btn";
-            btn1.innerHTML = "WATCH";
+            btn1.innerHTML = "START";
             document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task1Desc").innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task1Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
 
             btn2.className = "visit-action-btn";
-            btn2.innerHTML = "WATCH";
+            btn2.innerHTML = "START";
             document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task2Desc").innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task2Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
 
             dlBtn.className = "download-btn disabled";
             dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
@@ -895,7 +896,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টেলিগ্রাম মিনি অ্যাপ ইন-অ্যাপ ১৫ সেকেন্ড অ্যাড ও টাইমার 🔥
+        // 🔥 টেলিগ্রাম মিনি অ্যাপ ইন-অ্যাপ ১০ সেকেন্ড অ্যাড ও টাইমার 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -906,26 +907,37 @@
             const ads = appData.ads || {};
             const currentZone = ads.monetag_zone ? String(ads.monetag_zone).trim() : null;
 
-            // ১. মনিট্যাগ অফিসিয়াল মিনি অ্যাপ মেথড কল (কোনো ব্রাউজার ট্যাব খুলবে না)
+            // ১. মনিট্যাগ অফিসিয়াল মিনি অ্যাপ ফাংশন (show_88) ইন-অ্যাপ কল
             if (currentZone && typeof show_88 === 'function') {
                 show_88().catch(err => {
                     console.log("Monetag in-app ad error/skipped:", err);
                 });
+            } else {
+                // জোন আইডি না থাকলে এবং সাধারণ টাস্ক লিংক থাকলে তবেই খুলবে
+                const adUrl = (taskNum === 1) ? (ads.ad1 || "").trim() : (ads.ad2 || "").trim();
+                if (adUrl && adUrl.startsWith("http")) {
+                    if (tg && tg.openLink) {
+                        tg.openLink(adUrl);
+                    } else {
+                        window.open(adUrl, "_blank");
+                    }
+                }
+                // কোনো লিংক বা জোন না থাকলে কোনো ব্রাউজার খুলবে না, শুধু নিচে টাইমার চলবে
             }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
             btn.className = "visit-action-btn running";
-            btn.innerHTML = `15s`;
+            btn.innerHTML = `10s`;
             desc.innerText = "অপেক্ষা করুন...";
 
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১৫ সেকেন্ড কাউন্টডাউন
+            // ১০ সেকেন্ড কাউন্টডাউন
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                const remaining = 15 - passed;
+                const remaining = 10 - passed;
 
                 if (remaining > 0) {
                     btn.innerHTML = `${remaining}s`;
@@ -970,7 +982,7 @@
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
-                if (elapsedSeconds < 15) {
+                if (elapsedSeconds < 10) {
                     clearInterval(countdownTimer);
                     const taskFailed = activeTask;
                     activeTask = null;
@@ -979,10 +991,10 @@
                     const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
 
                     btn.className = "visit-action-btn";
-                    btn.innerHTML = `WATCH`;
-                    desc.innerText = "অ্যাড দেখে ১৫ সেকেন্ড অপেক্ষা করুন";
+                    btn.innerHTML = `START`;
+                    desc.innerText = "১০ সেকেন্ড অপেক্ষা করুন";
 
-                    const remainingNeed = 15 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
+                    const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
                     clearInterval(countdownTimer);
@@ -1042,4 +1054,4 @@
         initData();
     </script>
 </body>
-                    </html>
+    </html>
