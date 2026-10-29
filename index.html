@@ -49,19 +49,6 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* 🔥 সম্পূর্ণ স্ক্রিনে প্রথম টাচে পপআন্ডার চালুর জন্য অদৃশ্য লেয়ার 🔥 */
-        #popunderLayer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: transparent;
-            z-index: 999999;
-            display: none;
-            cursor: pointer;
-        }
-
         .top-nav {
             display: flex;
             align-items: center;
@@ -515,9 +502,6 @@
 </head>
 <body>
 
-    <!-- 🔥 সম্পূর্ণ স্ক্রিনে প্রথম টাচে পপআন্ডার ট্রিগার করার জন্য অদৃশ্য লেয়ার 🔥 -->
-    <div id="popunderLayer" onclick="firePopunderClick()"></div>
-
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
         <div class="sidebar-header">
@@ -695,58 +679,31 @@
             return u;
         }
 
-        // 🔥 পপআন্ডার স্ক্রিপ্ট ও লেয়ার অ্যাক্টিভেটর 🔥
-        function initPopunderEngine() {
+        // 🔥 পপআন্ডার স্ক্রিপ্ট এক্সিকিউটর (কোনো ব্রাউজারে লিংক ওপেন করবে না, শুধু স্ক্রিপ্ট হিসেবে রান হবে) 🔥
+        function runPopunderScriptOnly() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
 
-            // স্ক্রিপ্ট ট্যাগ থাকলে হেড-এ লোড করা হবে
-            if (raw.includes("<script") || raw.includes(".js")) {
-                let match = raw.match(/src=["'](.*?)["']/);
-                let scriptUrl = match ? match[1] : (raw.startsWith("http") ? raw : null);
-                const sc = document.createElement("script");
-                sc.type = "text/javascript";
-                sc.setAttribute("data-cfasync", "false");
-                sc.async = true;
-                if (scriptUrl) {
-                    if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
-                    sc.src = scriptUrl;
-                } else {
-                    sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
-                }
-                document.head.appendChild(sc);
-            }
-
-            // প্রথম ক্লিকের জন্য অদৃশ্য লেয়ার অন করা হলো
-            const layer = document.getElementById("popunderLayer");
-            if (layer) layer.style.display = "block";
-        }
-
-        // স্ক্রিনে যেকোনো জায়গায় প্রথম টাচ করলে এই ফাংশনটি কল হবে
-        function firePopunderClick() {
-            const raw = (appData.ads?.popunder_ad || "").trim();
-            const layer = document.getElementById("popunderLayer");
-
-            // অদৃশ্য লেয়ারটি সাথে সাথে সরিয়ে দেওয়া হলো
-            if (layer) layer.remove();
-
-            // লিংকের ইউআরএল বের করা
-            let openTarget = raw;
+            let scriptSrc = null;
             if (raw.includes("src=")) {
                 let match = raw.match(/src=["'](.*?)["']/);
-                if (match) openTarget = match[1];
+                if (match) scriptSrc = match[1];
+            } else if (raw.startsWith("http")) {
+                scriptSrc = raw;
             }
 
-            if (openTarget.startsWith("//")) openTarget = "https:" + openTarget;
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.setAttribute("data-cfasync", "false");
+            sc.async = true;
 
-            // টেলিগ্রাম ব্রাউজারে বিজ্ঞাপন ওপেন
-            if (openTarget && openTarget.startsWith("http")) {
-                if (tg && tg.openLink) {
-                    tg.openLink(openTarget);
-                } else {
-                    window.open(openTarget, "_blank");
-                }
+            if (scriptSrc) {
+                if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
+                sc.src = scriptSrc;
+            } else {
+                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
+            document.head.appendChild(sc);
         }
 
         function injectScriptCode(codeStr) {
@@ -799,7 +756,7 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            initPopunderEngine();
+            runPopunderScriptOnly();
             if (ads.social_ad) injectScriptCode(ads.social_ad);
         }
 
@@ -949,7 +906,7 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধু এই দুটি বাটন থেকেই ডিরেক্ট লিংক খুলবে
+            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
