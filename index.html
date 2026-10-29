@@ -620,8 +620,6 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
-        let popunderDone = false;
-
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
             const overlay = document.getElementById("sidebarOverlay");
@@ -681,51 +679,21 @@
             return u;
         }
 
-        // 🔥 যেখানে-সেখানে ক্লিকের ১০০% কার্যকর পপআন্ডার ইঞ্জিন 🔥
-        function setupEverywherePopunder() {
-            const handleScreenTap = (e) => {
-                if (popunderDone) return;
-
-                // টাস্কের বাটন বা ব্যাক বাটনে ক্লিক হলে বাধা দেবে না
-                if (e.target.closest("#task1Btn") || e.target.closest("#task2Btn") || e.target.closest("#downloadBtn") || e.target.closest(".back-btn")) {
-                    return;
-                }
-
-                let popUrl = (appData.ads?.popunder_ad || "").trim();
-                
-                // যদি ভুল করে স্ক্রিপ্ট কোড দেওয়া থাকে, তবে লিংকটি আলাদা করে নেবে
-                if (popUrl.includes("src=")) {
-                    let m = popUrl.match(/src=["'](.*?)["']/);
-                    popUrl = m ? m[1] : "";
-                }
-
-                // যদি ডিরেক্ট URL থাকে তবেই কেবল টেলিগ্রামে ওপেন হবে
-                if (popUrl && popUrl.startsWith("http") && !popUrl.includes(".js") && !popUrl.includes("afders.org")) {
-                    popunderDone = true;
-                    if (tg && tg.openLink) {
-                        tg.openLink(popUrl);
-                    } else {
-                        window.open(popUrl, "_blank");
-                    }
-                    document.removeEventListener("click", handleScreenTap, true);
-                }
-            };
-
-            document.addEventListener("click", handleScreenTap, true);
-        }
-
-        function injectScriptTag(codeStr) {
+        // 🔥 পপআন্ডার ও সোশ্যাল বার ইনজেক্টর (কোড কখনো ব্রাউজারে টেক্সট আকারে খুলবে না) 🔥
+        function injectAdScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
-            const sc = document.createElement("script");
-            sc.type = "text/javascript";
-            sc.setAttribute("data-cfasync", "false");
-            sc.async = true;
             let raw = codeStr.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
-            if (srcMatch) {
-                sc.src = srcMatch[1];
-            } else if (raw.startsWith("http")) {
-                sc.src = raw;
+            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<") ? raw : null);
+
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.async = true;
+            sc.setAttribute("data-cfasync", "false");
+
+            if (finalSrc) {
+                if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
+                sc.src = finalSrc;
             } else {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
@@ -764,8 +732,9 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            setupEverywherePopunder();
-            if (ads.social_ad) injectScriptTag(ads.social_ad);
+            // বটে সেট করা পপআন্ডার সরাসরি এক্সিকিউট করা হচ্ছে
+            if (ads.popunder_ad) injectAdScript(ads.popunder_ad);
+            if (ads.social_ad) injectAdScript(ads.social_ad);
         }
 
         async function initData() {
@@ -899,7 +868,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: শুধুমাত্র VISIT বাটনে চাপ দিলেই নির্ধারিত ডিরেক্ট লিংক ওপেন হবে 🔥
+        // 🔥 শুধুমাত্র VISIT বাটনে চাপ দিলে নির্ধারিত ডিরেক্ট লিংক ওপেন ও ১০ সেকেন্ড কাউন্টডাউন 🔥
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
@@ -914,7 +883,7 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধু এই দুটি বাটন থেকেই ডিরেক্ট লিংক খুলবে
+            // শুধু এই দুটি বাটন থেকেই ডিরেক্ট লিংক টেলিগ্রামে ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
