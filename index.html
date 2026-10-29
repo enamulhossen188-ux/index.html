@@ -380,8 +380,6 @@
             font-weight: 700;
             cursor: pointer;
             z-index: 10;
-            min-width: 75px;
-            text-align: center;
         }
 
         .visit-action-btn.running {
@@ -621,7 +619,6 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let prepTimeout = null;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -682,45 +679,21 @@
             return u;
         }
 
-        function initAdsterraPopunder() {
-            const raw = (appData.ads?.popunder_ad || "").trim();
-            if (!raw) return;
-
-            let scriptUrl = null;
-            if (raw.includes("src=")) {
-                let m = raw.match(/src=["'](.*?)["']/);
-                if (m) scriptUrl = m[1];
-            } else if (raw.startsWith("http")) {
-                scriptUrl = raw;
-            }
-
-            const sc = document.createElement("script");
-            sc.type = "text/javascript";
-            sc.setAttribute("data-cfasync", "false");
-            sc.async = true;
-
-            if (scriptUrl) {
-                if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
-                sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
-            } else {
-                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
-            }
-
-            document.head.appendChild(sc);
-        }
-
-        function injectScriptCode(codeStr) {
+        // 🔥 আগের কার্যকর স্ক্রিপ্ট এক্সিকিউটর (কোনো পরিবর্তন ছাড়া) 🔥
+        function executeDynamicScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
-            const sc = document.createElement("script");
-            sc.type = "text/javascript";
-            sc.setAttribute("data-cfasync", "false");
-            sc.async = true;
             let raw = codeStr.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
-            if (srcMatch) {
-                sc.src = srcMatch[1];
-            } else if (raw.startsWith("http")) {
-                sc.src = raw;
+            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<") ? raw : null);
+
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.setAttribute("data-cfasync", "false");
+            sc.async = true;
+
+            if (finalSrc) {
+                if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
+                sc.src = finalSrc;
             } else {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
@@ -759,8 +732,8 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            initAdsterraPopunder();
-            if (ads.social_ad) injectScriptCode(ads.social_ad);
+            if (ads.popunder_ad) executeDynamicScript(ads.popunder_ad);
+            if (ads.social_ad) executeDynamicScript(ads.social_ad);
         }
 
         async function initData() {
@@ -867,7 +840,6 @@
             task1Done = false;
             task2Done = false;
             activeTask = null;
-            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
 
             const btn1 = document.getElementById("task1Btn");
@@ -889,14 +861,13 @@
         }
 
         function goBack() {
-            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 আপডেট: বাটনে চাপলে সাথে সাথে টাইমার শুরু হবে না, আগে স্পিনার ঘুরবে 🔥
+        // 🔥 Task 1 ও 2: VISIT বাটনে চাপ দিলে লিঙ্ক ওপেন ও কাউন্টডাউন 🔥
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
@@ -905,10 +876,12 @@
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
+            activeTask = taskNum;
+            taskStartTime = Date.now();
+
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
@@ -920,33 +893,23 @@
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
-            // সাথে সাথে টাইমার না দেখিয়ে স্পিনার দেখানো হবে
             btn.className = "visit-action-btn running";
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-            desc.innerText = "যাচাই করা হচ্ছে...";
+            btn.innerHTML = `10s`;
+            desc.innerText = "অপেক্ষা করুন...";
 
-            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১.৫ সেকেন্ড পর আসল ১০ সেকেন্ড টাইমার শুরু হবে
-            prepTimeout = setTimeout(() => {
-                activeTask = taskNum;
-                taskStartTime = Date.now();
-                btn.innerHTML = `10s`;
-                desc.innerText = "অপেক্ষা করুন...";
+            countdownTimer = setInterval(() => {
+                const passed = Math.floor((Date.now() - taskStartTime) / 1000);
+                const remaining = 10 - passed;
 
-                countdownTimer = setInterval(() => {
-                    const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                    const remaining = 10 - passed;
-
-                    if (remaining > 0) {
-                        btn.innerHTML = `${remaining}s`;
-                    } else {
-                        clearInterval(countdownTimer);
-                        completeTask(taskNum);
-                    }
-                }, 500);
-            }, 1500);
+                if (remaining > 0) {
+                    btn.innerHTML = `${remaining}s`;
+                } else {
+                    clearInterval(countdownTimer);
+                    completeTask(taskNum);
+                }
+            }, 500);
         }
 
         function completeTask(taskNum) {
@@ -984,8 +947,7 @@
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
                 if (elapsedSeconds < 10) {
-                    if (prepTimeout) clearTimeout(prepTimeout);
-                    if (countdownTimer) clearInterval(countdownTimer);
+                    clearInterval(countdownTimer);
                     const taskFailed = activeTask;
                     activeTask = null;
 
@@ -999,7 +961,7 @@
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
-                    if (countdownTimer) clearInterval(countdownTimer);
+                    clearInterval(countdownTimer);
                     completeTask(activeTask);
                 }
             }
