@@ -49,7 +49,7 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* 🔥 ইনভিজিবল পপআন্ডার লেয়ার 🔥 */
+        /* 🔥 সম্পূর্ণ স্ক্রিনে প্রথম টাচে পপআন্ডার চালুর জন্য অদৃশ্য লেয়ার 🔥 */
         #popunderLayer {
             position: fixed;
             top: 0;
@@ -695,12 +695,12 @@
             return u;
         }
 
-        // 🔥 পপআন্ডার অ্যাক্টিভেশন ইঞ্জিন 🔥
+        // 🔥 পপআন্ডার স্ক্রিপ্ট ও লেয়ার অ্যাক্টিভেটর 🔥
         function initPopunderEngine() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
 
-            // যদি বটে স্ক্রিপ্ট ট্যাগ দেওয়া থাকে, তবে হেড-এ ইনজেক্ট হবে
+            // স্ক্রিপ্ট ট্যাগ থাকলে হেড-এ লোড করা হবে
             if (raw.includes("<script") || raw.includes(".js")) {
                 let match = raw.match(/src=["'](.*?)["']/);
                 let scriptUrl = match ? match[1] : (raw.startsWith("http") ? raw : null);
@@ -717,25 +717,34 @@
                 document.head.appendChild(sc);
             }
 
-            // স্ক্রিনের উপর সম্পূর্ণ অদৃশ্য লেয়ারটি অন করা হলো
+            // প্রথম ক্লিকের জন্য অদৃশ্য লেয়ার অন করা হলো
             const layer = document.getElementById("popunderLayer");
             if (layer) layer.style.display = "block";
         }
 
-        // ব্যবহারকারী স্ক্রিনের যেখানেই প্রথম টাচ করবে, এই ফাংশনটি কল হবে
+        // স্ক্রিনে যেকোনো জায়গায় প্রথম টাচ করলে এই ফাংশনটি কল হবে
         function firePopunderClick() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             const layer = document.getElementById("popunderLayer");
 
-            // অদৃশ্য লেয়ারটি ডিসপোজ করা হলো যাতে বাকি সব সাধারণ ক্লিক কাজ করতে পারে
+            // অদৃশ্য লেয়ারটি সাথে সাথে সরিয়ে দেওয়া হলো
             if (layer) layer.remove();
 
-            // যদি পপআন্ডার ডিরেক্ট URL হয়, তবে সরাসরি ওপেন করবে
-            if (raw.startsWith("http") && !raw.includes("<") && !raw.includes(".js")) {
+            // লিংকের ইউআরএল বের করা
+            let openTarget = raw;
+            if (raw.includes("src=")) {
+                let match = raw.match(/src=["'](.*?)["']/);
+                if (match) openTarget = match[1];
+            }
+
+            if (openTarget.startsWith("//")) openTarget = "https:" + openTarget;
+
+            // টেলিগ্রাম ব্রাউজারে বিজ্ঞাপন ওপেন
+            if (openTarget && openTarget.startsWith("http")) {
                 if (tg && tg.openLink) {
-                    tg.openLink(raw);
+                    tg.openLink(openTarget);
                 } else {
-                    window.open(raw, "_blank");
+                    window.open(openTarget, "_blank");
                 }
             }
         }
@@ -925,7 +934,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2-এর নির্দিষ্ট ডিরেক্ট লিংক (শুধুমাত্র VISIT বাটনে কাজ করবে) 🔥
+        // 🔥 Task 1 ও 2: শুধুমাত্র VISIT বাটনে চাপ দিলেই নির্ধারিত ডিরেক্ট লিংক ওপেন হবে 🔥
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
@@ -940,7 +949,7 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
+            // শুধু এই দুটি বাটন থেকেই ডিরেক্ট লিংক খুলবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
