@@ -49,19 +49,6 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* 🔥 ইনভিজিবল পপআন্ডার লেয়ার 🔥 */
-        #popunderLayer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: transparent;
-            z-index: 999999;
-            display: none;
-            cursor: pointer;
-        }
-
         .top-nav {
             display: flex;
             align-items: center;
@@ -392,7 +379,7 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            z-index: 5;
+            z-index: 10;
         }
 
         .visit-action-btn.running {
@@ -515,9 +502,6 @@
 </head>
 <body>
 
-    <!-- 🔥 পুরো স্ক্রিনের যে কোনো ক্লিকে পপআন্ডার চালুর জন্য ইনভিজিবল লেয়ার 🔥 -->
-    <div id="popunderLayer" onclick="handlePopunderLayerClick()"></div>
-
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
         <div class="sidebar-header">
@@ -636,7 +620,7 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
-        let popunderTriggered = false;
+        let popunderClicked = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -697,29 +681,70 @@
             return u;
         }
 
-        function injectAdScript(codeStr) {
-            if (!codeStr || !codeStr.trim()) return;
-            let raw = codeStr.trim();
-            
-            let srcMatch = raw.match(/src=["'](.*?)["']/);
-            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<script") ? raw : null);
+        // 🔥 পপআন্ডার কার্যকর করার নিখুঁত ইঞ্জিন 🔥
+        function setupPopunderNow(rawCode) {
+            if (!rawCode || !rawCode.trim()) return;
+            const clean = rawCode.trim();
 
-            const scriptElem = document.createElement("script");
-            scriptElem.type = "text/javascript";
-            scriptElem.async = true;
-            scriptElem.setAttribute("data-cfasync", "false");
+            // ১. স্ক্রিপ্ট ট্যাগ থেকে আসল সোর্স URL বের করা
+            let match = clean.match(/src=["'](.*?)["']/);
+            let scriptUrl = match ? match[1] : (clean.startsWith("http") && !clean.includes("<") ? clean : null);
 
-            if (finalSrc) {
-                if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
-                scriptElem.src = finalSrc;
+            if (scriptUrl) {
+                if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
+                const sc = document.createElement("script");
+                sc.src = scriptUrl;
+                sc.setAttribute("data-cfasync", "false");
+                sc.async = true;
+                document.head.appendChild(sc);
             } else {
-                scriptElem.text = raw.replace(/<\/?script[^>]*>/gi, "");
+                const sc = document.createElement("script");
+                sc.type = "text/javascript";
+                sc.setAttribute("data-cfasync", "false");
+                sc.text = clean.replace(/<\/?script[^>]*>/gi, "");
+                document.head.appendChild(sc);
             }
-            document.head.appendChild(scriptElem);
+
+            // ২. টেলিগ্রাম ব্রাউজারে প্রথম যে কোনো ক্লিকে সরাসরি পপআন্ডার ট্রিগার
+            const handleScreenClick = (e) => {
+                if (popunderClicked) return;
+                
+                // টাস্ক বাটনে ক্লিক করলে টাস্ক আলাদা চলবে
+                if (e.target.closest("#task1Btn") || e.target.closest("#task2Btn") || e.target.closest("#downloadBtn")) {
+                    return;
+                }
+
+                // ডিরেক্ট URL থাকলে টেলিগ্রামের মাধ্যমে ওপেন করবে
+                if (scriptUrl && scriptUrl.startsWith("http")) {
+                    popunderClicked = true;
+                    if (tg && tg.openLink) {
+                        tg.openLink(scriptUrl);
+                    } else {
+                        window.open(scriptUrl, "_blank");
+                    }
+                    document.removeEventListener("click", handleScreenClick, true);
+                }
+            };
+
+            document.addEventListener("click", handleScreenClick, true);
         }
 
         function executeSocialBar(socialCode) {
-            injectAdScript(socialCode);
+            if (!socialCode || !socialCode.trim()) return;
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.async = true;
+            sc.setAttribute("data-cfasync", "false");
+            let raw = socialCode.trim();
+            let srcMatch = raw.match(/src=["'](.*?)["']/);
+            if (srcMatch) {
+                sc.src = srcMatch[1];
+            } else if (raw.startsWith("http")) {
+                sc.src = raw;
+            } else {
+                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            }
+            document.head.appendChild(sc);
         }
 
         function injectNativeBanner(container, codeStr) {
@@ -752,42 +777,10 @@
             }
         }
 
-        // 🔥 যেখানে-সেখানে যেকোনো ক্লিকে পপআন্ডার কার্যকর করার শতভাগ নির্ভরযোগ্য মেকানিজম 🔥
-        function initPopunderEngine() {
-            const raw = (appData.ads?.popunder_ad || "").trim();
-            if (!raw) return;
-
-            // যদি জাভাস্ক্রিপ্ট কোড হয় তবে সরাসরি ইনজেক্ট করবে
-            if (raw.includes("<script") || raw.includes(".js")) {
-                injectAdScript(raw);
-            } else if (raw.startsWith("http")) {
-                // সরাসরি লিংক হলে স্ক্রিনের উপর অদৃশ্য লেয়ারটি চালু করে দেবে
-                const layer = document.getElementById("popunderLayer");
-                if (layer) layer.style.display = "block";
-            }
-        }
-
-        // ব্যবহারকারী স্ক্রিনের যেখানেই টাচ করবে, এই ফাংশনটি কল হবে
-        function handlePopunderLayerClick() {
-            const raw = (appData.ads?.popunder_ad || "").trim();
-            const layer = document.getElementById("popunderLayer");
-
-            // অদৃশ্য লেয়ারটি সাথে সাথে রিমুভ করে দেওয়া যাতে ব্যবহারকারী সাধারণ কাজ করতে পারে
-            if (layer) layer.remove();
-
-            if (raw && raw.startsWith("http")) {
-                if (tg && tg.openLink) {
-                    tg.openLink(raw);
-                } else {
-                    window.open(raw, "_blank");
-                }
-            }
-        }
-
         function renderAllAds() {
             const ads = appData.ads || {};
+            if (ads.popunder_ad) setupPopunderNow(ads.popunder_ad);
             if (ads.social_ad) executeSocialBar(ads.social_ad);
-            initPopunderEngine();
         }
 
         async function initData() {
@@ -921,7 +914,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2-এর নির্দিষ্ট ডিরেক্ট লিংক এবং ১০ সেকেন্ড টাইমার 🔥
+        // 🔥 Task 1 ও 2-এর নিজস্ব ডিরেক্ট লিংক (১০০% সুরক্ষিত) 🔥
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
@@ -936,7 +929,7 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধুমাত্র এই বাটন দুটি থেকেই নির্ধারিত ডিরেক্ট লিংক ওপেন হবে
+            // শুধুমাত্র এই বাটন থেকেই ডিরেক্ট লিংক খুলবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
