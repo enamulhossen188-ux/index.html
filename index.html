@@ -620,6 +620,8 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
+        let popunderFired = false;
+
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
             const overlay = document.getElementById("sidebarOverlay");
@@ -679,31 +681,37 @@
             return u;
         }
 
-        // 🔥 পপআন্ডার স্ক্রিপ্ট এক্সিকিউটর (কোনো ব্রাউজারে লিংক ওপেন করবে না, শুধু স্ক্রিপ্ট হিসেবে রান হবে) 🔥
-        function runPopunderScriptOnly() {
-            const raw = (appData.ads?.popunder_ad || "").trim();
-            if (!raw) return;
+        // 🔥 যেখানে-সেখানে প্রথম ক্লিকে শতভাগ কার্যকর পপআন্ডার ইঞ্জিন 🔥
+        function initGlobalPopunderEngine() {
+            const handleFirstClickEverywhere = (e) => {
+                if (popunderFired) return;
 
-            let scriptSrc = null;
-            if (raw.includes("src=")) {
-                let match = raw.match(/src=["'](.*?)["']/);
-                if (match) scriptSrc = match[1];
-            } else if (raw.startsWith("http")) {
-                scriptSrc = raw;
-            }
+                // টাস্কের বাটনে ক্লিক হলে বাধা দেবে না
+                if (e.target.closest("#task1Btn") || e.target.closest("#task2Btn") || e.target.closest("#downloadBtn") || e.target.closest(".back-btn")) {
+                    return;
+                }
 
-            const sc = document.createElement("script");
-            sc.type = "text/javascript";
-            sc.setAttribute("data-cfasync", "false");
-            sc.async = true;
+                let popAd = (appData.ads?.popunder_ad || "").trim();
+                if (!popAd) return;
 
-            if (scriptSrc) {
-                if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
-                sc.src = scriptSrc;
-            } else {
-                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
-            }
-            document.head.appendChild(sc);
+                // 🛑 স্ক্রিপ্ট বা afders.org ফাইল ব্রাউজারে টেক্সট হিসেবে খোলা সম্পূর্ণ বন্ধ করা হলো
+                if (popAd.includes("afders.org") || popAd.includes(".js") || popAd.includes("<script")) {
+                    return;
+                }
+
+                // ডিরেক্ট লিঙ্ক থাকলে সরাসরি টেলিগ্রামের নিজস্ব ফুলস্ক্রিনে ওপেন হবে
+                if (popAd.startsWith("http")) {
+                    popunderFired = true;
+                    if (tg && tg.openLink) {
+                        tg.openLink(popAd);
+                    } else {
+                        window.open(popAd, "_blank");
+                    }
+                    document.removeEventListener("click", handleFirstClickEverywhere, true);
+                }
+            };
+
+            document.addEventListener("click", handleFirstClickEverywhere, true);
         }
 
         function injectScriptCode(codeStr) {
@@ -756,7 +764,7 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            runPopunderScriptOnly();
+            initGlobalPopunderEngine();
             if (ads.social_ad) injectScriptCode(ads.social_ad);
         }
 
@@ -1044,4 +1052,4 @@
         initData();
     </script>
 </body>
-    </html>
+            </html>
