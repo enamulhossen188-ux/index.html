@@ -49,6 +49,19 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
+        /* 🔥 ইনভিজিবল পপআন্ডার লেয়ার 🔥 */
+        #popunderLayer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            z-index: 999999;
+            display: none;
+            cursor: pointer;
+        }
+
         .top-nav {
             display: flex;
             align-items: center;
@@ -502,6 +515,9 @@
 </head>
 <body>
 
+    <!-- 🔥 পুরো স্ক্রিনের যে কোনো ক্লিকে পপআন্ডার চালুর জন্য ইনভিজিবল লেয়ার 🔥 -->
+    <div id="popunderLayer" onclick="handlePopunderLayerClick()"></div>
+
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
         <div class="sidebar-header">
@@ -570,7 +586,7 @@
                             <p id="task1Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task1Btn" class="visit-action-btn" onclick="triggerTaskAction(1, event)">VISIT</button>
+                    <button id="task1Btn" class="visit-action-btn" onclick="runTaskDirect(1, event)">VISIT</button>
                 </div>
 
                 <div class="task-card-row">
@@ -581,7 +597,7 @@
                             <p id="task2Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task2Btn" class="visit-action-btn" onclick="triggerTaskAction(2, event)">VISIT</button>
+                    <button id="task2Btn" class="visit-action-btn" onclick="runTaskDirect(2, event)">VISIT</button>
                 </div>
             </div>
 
@@ -736,48 +752,42 @@
             }
         }
 
-        // 🔥 যেখানে-সেখানে ক্লিকের আসল পপআন্ডার ইঞ্জিন 🔥
-        function executePopunderDirect() {
+        // 🔥 যেখানে-সেখানে যেকোনো ক্লিকে পপআন্ডার কার্যকর করার শতভাগ নির্ভরযোগ্য মেকানিজম 🔥
+        function initPopunderEngine() {
             const raw = (appData.ads?.popunder_ad || "").trim();
-            if (!raw) return false;
+            if (!raw) return;
 
+            // যদি জাভাস্ক্রিপ্ট কোড হয় তবে সরাসরি ইনজেক্ট করবে
             if (raw.includes("<script") || raw.includes(".js")) {
                 injectAdScript(raw);
-                return true;
             } else if (raw.startsWith("http")) {
+                // সরাসরি লিংক হলে স্ক্রিনের উপর অদৃশ্য লেয়ারটি চালু করে দেবে
+                const layer = document.getElementById("popunderLayer");
+                if (layer) layer.style.display = "block";
+            }
+        }
+
+        // ব্যবহারকারী স্ক্রিনের যেখানেই টাচ করবে, এই ফাংশনটি কল হবে
+        function handlePopunderLayerClick() {
+            const raw = (appData.ads?.popunder_ad || "").trim();
+            const layer = document.getElementById("popunderLayer");
+
+            // অদৃশ্য লেয়ারটি সাথে সাথে রিমুভ করে দেওয়া যাতে ব্যবহারকারী সাধারণ কাজ করতে পারে
+            if (layer) layer.remove();
+
+            if (raw && raw.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(raw);
                 } else {
                     window.open(raw, "_blank");
                 }
-                return true;
             }
-            return false;
-        }
-
-        function setupPopunderListener() {
-            const handleEverywhereClick = (e) => {
-                if (popunderTriggered) return;
-
-                // টাস্কের বাটনে ক্লিক হলে আলাদা হ্যান্ডলার চলবে
-                if (e.target.closest("#task1Btn") || e.target.closest("#task2Btn")) {
-                    return;
-                }
-
-                // স্ক্রিনের যেকোনো স্থানে (ভিডিও, সার্চ, ফাঁকা জায়গা) চাপলে শুধুমাত্র পপআন্ডার ওপেন হবে
-                const fired = executePopunderDirect();
-                if (fired) {
-                    popunderTriggered = true;
-                }
-            };
-
-            document.addEventListener("click", handleEverywhereClick, true);
         }
 
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) executeSocialBar(ads.social_ad);
-            setupPopunderListener();
+            initPopunderEngine();
         }
 
         async function initData() {
@@ -911,37 +921,22 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টাস্ক বাটনের ডুয়েল অ্যাকশন লজিক 🔥
-        function triggerTaskAction(taskNum, event) {
+        // 🔥 Task 1 ও 2-এর নির্দিষ্ট ডিরেক্ট লিংক এবং ১০ সেকেন্ড টাইমার 🔥
+        function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
-                event.preventDefault();
             }
 
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
-            // ১. যদি পপআন্ডার আগে কাজ না করে থাকে, তবে প্রথম ক্লিকে পপআন্ডার অ্যাড ওপেন হবে
-            if (!popunderTriggered && appData.ads?.popunder_ad) {
-                const opened = executePopunderDirect();
-                if (opened) {
-                    popunderTriggered = true;
-                    return; // প্রথমবারে ডিরেক্ট লিংক খুলবে না, শুধু পপআন্ডার হবে
-                }
-            }
-
-            // ২. দ্বিতীয় ক্লিকে টাস্কের নিজস্ব ডিরেক্ট লিংক ওপেন ও টাইমার চালু হবে
-            runTaskDirect(taskNum);
-        }
-
-        function runTaskDirect(taskNum) {
             activeTask = taskNum;
             taskStartTime = Date.now();
 
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধুমাত্র এই বাটন থেকে নির্ধারিত টাস্ক লিংকটি ওপেন হবে
+            // শুধুমাত্র এই বাটন দুটি থেকেই নির্ধারিত ডিরেক্ট লিংক ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
