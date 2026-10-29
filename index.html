@@ -380,6 +380,8 @@
             font-weight: 700;
             cursor: pointer;
             z-index: 10;
+            min-width: 75px;
+            text-align: center;
         }
 
         .visit-action-btn.running {
@@ -619,6 +621,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let prepTimeout = null;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -679,12 +682,10 @@
             return u;
         }
 
-        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (ক্যাপিং রিসেট ও ব্যাকগ্রাউন্ড এক্সিকিউশন) 🔥
         function initAdsterraPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
 
-            // সোর্স লিঙ্ক বের করা
             let scriptUrl = null;
             if (raw.includes("src=")) {
                 let m = raw.match(/src=["'](.*?)["']/);
@@ -700,7 +701,6 @@
 
             if (scriptUrl) {
                 if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
-                // টাইমস্ট্যাম্প যোগ করে ক্যাশ ও লিমিট বাইপাস
                 sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
             } else {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
@@ -867,6 +867,7 @@
             task1Done = false;
             task2Done = false;
             activeTask = null;
+            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
 
             const btn1 = document.getElementById("task1Btn");
@@ -888,13 +889,14 @@
         }
 
         function goBack() {
+            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: শুধুমাত্র VISIT বাটনে চাপ দিলেই নির্ধারিত ডিরেক্ট লিংক ওপেন হবে 🔥
+        // 🔥 আপডেট: বাটনে চাপলে সাথে সাথে টাইমার শুরু হবে না, আগে স্পিনার ঘুরবে 🔥
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
@@ -902,9 +904,6 @@
 
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
-
-            activeTask = taskNum;
-            taskStartTime = Date.now();
 
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
@@ -921,24 +920,33 @@
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
+            // সাথে সাথে টাইমার না দেখিয়ে স্পিনার দেখানো হবে
             btn.className = "visit-action-btn running";
-            btn.innerHTML = `10s`;
-            desc.innerText = "অপেক্ষা করুন...";
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+            desc.innerText = "যাচাই করা হচ্ছে...";
 
+            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১০ সেকেন্ড কাউন্টডাউন
-            countdownTimer = setInterval(() => {
-                const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                const remaining = 10 - passed;
+            // ১.৫ সেকেন্ড পর আসল ১০ সেকেন্ড টাইমার শুরু হবে
+            prepTimeout = setTimeout(() => {
+                activeTask = taskNum;
+                taskStartTime = Date.now();
+                btn.innerHTML = `10s`;
+                desc.innerText = "অপেক্ষা করুন...";
 
-                if (remaining > 0) {
-                    btn.innerHTML = `${remaining}s`;
-                } else {
-                    clearInterval(countdownTimer);
-                    completeTask(taskNum);
-                }
-            }, 500);
+                countdownTimer = setInterval(() => {
+                    const passed = Math.floor((Date.now() - taskStartTime) / 1000);
+                    const remaining = 10 - passed;
+
+                    if (remaining > 0) {
+                        btn.innerHTML = `${remaining}s`;
+                    } else {
+                        clearInterval(countdownTimer);
+                        completeTask(taskNum);
+                    }
+                }, 500);
+            }, 1500);
         }
 
         function completeTask(taskNum) {
@@ -976,7 +984,8 @@
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
                 if (elapsedSeconds < 10) {
-                    clearInterval(countdownTimer);
+                    if (prepTimeout) clearTimeout(prepTimeout);
+                    if (countdownTimer) clearInterval(countdownTimer);
                     const taskFailed = activeTask;
                     activeTask = null;
 
@@ -990,7 +999,7 @@
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
-                    clearInterval(countdownTimer);
+                    if (countdownTimer) clearInterval(countdownTimer);
                     completeTask(activeTask);
                 }
             }
@@ -999,7 +1008,6 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // ইনবক্সে ভিডিও সেন্ড
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
@@ -1047,4 +1055,4 @@
         initData();
     </script>
 </body>
-                                                                                                     </html>
+    </html>
