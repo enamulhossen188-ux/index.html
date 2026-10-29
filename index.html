@@ -679,12 +679,17 @@
             return u;
         }
 
-        // 🔥 বট থেকে আসা যে কোনো স্ক্রিপ্ট লোড করার নিরাপদ ফাংশন 🔥
+        // 🔥 Adsterra পপআন্ডার ফ্রেশ লোডার (ক্যাপিং বাইপাস ও সঠিক এক্সিকিউশন) 🔥
         function executeDynamicScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
             let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<") ? raw : null);
+
+            // ফ্রেশ সেশন তৈরির জন্য অ্যাডস্টেরা কুকি/স্টোরেজ ব্লক ক্লিয়ার
+            try {
+                sessionStorage.clear();
+            } catch(e) {}
 
             const sc = document.createElement("script");
             sc.type = "text/javascript";
@@ -693,7 +698,8 @@
 
             if (finalSrc) {
                 if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
-                sc.src = finalSrc;
+                // ক্যাশ এড়াতে টাইমস্ট্যাম্প সহ লোড
+                sc.src = finalSrc + (finalSrc.includes("?") ? "&" : "?") + "_cb=" + Date.now();
             } else {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
@@ -732,7 +738,6 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            // পপআন্ডার ও সোশ্যাল বার ডায়নামিকভাবে লোড হবে
             if (ads.popunder_ad) executeDynamicScript(ads.popunder_ad);
             if (ads.social_ad) executeDynamicScript(ads.social_ad);
         }
@@ -883,7 +888,6 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
@@ -901,7 +905,6 @@
 
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১০ সেকেন্ড কাউন্টডাউন
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
                 const remaining = 10 - passed;
@@ -973,7 +976,6 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // ইনবক্সে ভিডিও সেন্ড
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
@@ -1021,4 +1023,4 @@
         initData();
     </script>
 </body>
-            </html>
+    </html>
