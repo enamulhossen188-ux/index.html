@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- 🔥 Adsterra Official Popunder Script (সরাসরি সচল) 🔥 -->
+    <script type="text/javascript" src="https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -620,8 +624,6 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
-        let popunderFired = false;
-
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
             const overlay = document.getElementById("sidebarOverlay");
@@ -681,39 +683,6 @@
             return u;
         }
 
-        // 🔥 যেখানে-সেখানে প্রথম ক্লিকে শতভাগ কার্যকর পপআন্ডার ইঞ্জিন 🔥
-        function initGlobalPopunderEngine() {
-            const handleFirstClickEverywhere = (e) => {
-                if (popunderFired) return;
-
-                // টাস্কের বাটনে ক্লিক হলে বাধা দেবে না
-                if (e.target.closest("#task1Btn") || e.target.closest("#task2Btn") || e.target.closest("#downloadBtn") || e.target.closest(".back-btn")) {
-                    return;
-                }
-
-                let popAd = (appData.ads?.popunder_ad || "").trim();
-                if (!popAd) return;
-
-                // 🛑 স্ক্রিপ্ট বা afders.org ফাইল ব্রাউজারে টেক্সট হিসেবে খোলা সম্পূর্ণ বন্ধ করা হলো
-                if (popAd.includes("afders.org") || popAd.includes(".js") || popAd.includes("<script")) {
-                    return;
-                }
-
-                // ডিরেক্ট লিঙ্ক থাকলে সরাসরি টেলিগ্রামের নিজস্ব ফুলস্ক্রিনে ওপেন হবে
-                if (popAd.startsWith("http")) {
-                    popunderFired = true;
-                    if (tg && tg.openLink) {
-                        tg.openLink(popAd);
-                    } else {
-                        window.open(popAd, "_blank");
-                    }
-                    document.removeEventListener("click", handleFirstClickEverywhere, true);
-                }
-            };
-
-            document.addEventListener("click", handleFirstClickEverywhere, true);
-        }
-
         function injectScriptCode(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             const sc = document.createElement("script");
@@ -764,7 +733,6 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            initGlobalPopunderEngine();
             if (ads.social_ad) injectScriptCode(ads.social_ad);
         }
 
@@ -1052,4 +1020,4 @@
         initData();
     </script>
 </body>
-            </html>
+                </html>
