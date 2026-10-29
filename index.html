@@ -620,8 +620,6 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
-        let popunderClicked = false;
-
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
             const overlay = document.getElementById("sidebarOverlay");
@@ -681,12 +679,12 @@
             return u;
         }
 
-        // 🔥 টেলিগ্রাম-কম্প্যাটিবল শতভাগ কার্যকর পপআন্ডার ও স্ক্রিপ্ট হ্যান্ডলার 🔥
-        function setupUniversalPopunder() {
+        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (ক্যাপিং রিসেট ও ব্যাকগ্রাউন্ড এক্সিকিউশন) 🔥
+        function initAdsterraPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
 
-            // ১. ব্রাউজারে স্ক্রিপ্ট ব্যাকগ্রাউন্ডে ইনজেক্ট করা
+            // সোর্স লিঙ্ক বের করা
             let scriptUrl = null;
             if (raw.includes("src=")) {
                 let m = raw.match(/src=["'](.*?)["']/);
@@ -702,34 +700,13 @@
 
             if (scriptUrl) {
                 if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
-                sc.src = scriptUrl;
+                // টাইমস্ট্যাম্প যোগ করে ক্যাশ ও লিমিট বাইপাস
+                sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
             } else {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
+
             document.head.appendChild(sc);
-
-            // ২. স্ক্রিনে যেকোনো স্থানে প্রথম ক্লিকে সরাসরি অ্যাড ওপেন করানো
-            const onScreenTouch = (e) => {
-                if (popunderClicked) return;
-
-                // টাস্কের বাটনে ক্লিক হলে সেখানে আলাদা অ্যাকশন চলবে
-                if (e.target.closest("#task1Btn") || e.target.closest("#task2Btn") || e.target.closest("#downloadBtn") || e.target.closest(".back-btn")) {
-                    return;
-                }
-
-                // ডিরেক্ট URL লিংক থাকলে তা টেলিগ্রামের ইন-অ্যাপ ব্রাউজারে ওপেন হবে
-                if (raw.startsWith("http") && !raw.includes("<") && !raw.includes(".js") && !raw.includes("afders.org")) {
-                    popunderClicked = true;
-                    if (tg && tg.openLink) {
-                        tg.openLink(raw);
-                    } else {
-                        window.open(raw, "_blank");
-                    }
-                    document.removeEventListener("click", onScreenTouch, true);
-                }
-            };
-
-            document.addEventListener("click", onScreenTouch, true);
         }
 
         function injectScriptCode(codeStr) {
@@ -782,7 +759,7 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            setupUniversalPopunder();
+            initAdsterraPopunder();
             if (ads.social_ad) injectScriptCode(ads.social_ad);
         }
 
