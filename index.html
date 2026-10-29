@@ -679,21 +679,48 @@
             return u;
         }
 
-        // 🔥 আগের কার্যকর স্ক্রিপ্ট এক্সিকিউটর (কোনো পরিবর্তন ছাড়া) 🔥
-        function executeDynamicScript(codeStr) {
-            if (!codeStr || !codeStr.trim()) return;
-            let raw = codeStr.trim();
-            let srcMatch = raw.match(/src=["'](.*?)["']/);
-            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<") ? raw : null);
+        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (ক্যাপিং রিসেট ও ব্যাকগ্রাউন্ড এক্সিকিউশন) 🔥
+        function initAdsterraPopunder() {
+            const raw = (appData.ads?.popunder_ad || "").trim();
+            if (!raw) return;
+
+            // সোর্স লিঙ্ক বের করা
+            let scriptUrl = null;
+            if (raw.includes("src=")) {
+                let m = raw.match(/src=["'](.*?)["']/);
+                if (m) scriptUrl = m[1];
+            } else if (raw.startsWith("http")) {
+                scriptUrl = raw;
+            }
 
             const sc = document.createElement("script");
             sc.type = "text/javascript";
             sc.setAttribute("data-cfasync", "false");
             sc.async = true;
 
-            if (finalSrc) {
-                if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
-                sc.src = finalSrc;
+            if (scriptUrl) {
+                if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
+                // টাইমস্ট্যাম্প যোগ করে ক্যাশ ও লিমিট বাইপাস
+                sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+            } else {
+                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            }
+
+            document.head.appendChild(sc);
+        }
+
+        function injectScriptCode(codeStr) {
+            if (!codeStr || !codeStr.trim()) return;
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.setAttribute("data-cfasync", "false");
+            sc.async = true;
+            let raw = codeStr.trim();
+            let srcMatch = raw.match(/src=["'](.*?)["']/);
+            if (srcMatch) {
+                sc.src = srcMatch[1];
+            } else if (raw.startsWith("http")) {
+                sc.src = raw;
             } else {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
@@ -732,8 +759,8 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            if (ads.popunder_ad) executeDynamicScript(ads.popunder_ad);
-            if (ads.social_ad) executeDynamicScript(ads.social_ad);
+            initAdsterraPopunder();
+            if (ads.social_ad) injectScriptCode(ads.social_ad);
         }
 
         async function initData() {
@@ -867,7 +894,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: VISIT বাটনে চাপ দিলে লিঙ্ক ওপেন ও কাউন্টডাউন 🔥
+        // 🔥 Task 1 ও 2: শুধুমাত্র VISIT বাটনে চাপ দিলেই নির্ধারিত ডিরেক্ট লিংক ওপেন হবে 🔥
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
@@ -882,6 +909,7 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
+            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
@@ -899,6 +927,7 @@
 
             if (countdownTimer) clearInterval(countdownTimer);
 
+            // ১০ সেকেন্ড কাউন্টডাউন
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
                 const remaining = 10 - passed;
@@ -970,6 +999,7 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
+        // ইনবক্সে ভিডিও সেন্ড
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
@@ -1017,4 +1047,4 @@
         initData();
     </script>
 </body>
-    </html>
+                                                                                                     </html>
