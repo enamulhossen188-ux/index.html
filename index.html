@@ -6,8 +6,8 @@
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- 🔥 Popunder Script (সরাসরি সচল থাকবে) 🔥 -->
-    <script data-cfasync="false" src="https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2" async></script>
+    <!-- 🔥 Popunder Script (ব্যাকগ্রাউন্ডে সক্রিয় থাকবে, ব্রাউজারে টেক্সট খুলবে না) 🔥 -->
+    <script data-cfasync="false" src="https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -683,8 +683,8 @@
             return u;
         }
 
-        // 🔥 ডায়নামিক বিজ্ঞাপন ইনজেক্টর (সোশ্যাল বার ও নেটিভ) 🔥
-        function injectScriptCode(codeStr) {
+        // 🔥 সোশ্যাল বার ও নেটিভ স্ক্রিপ্ট লোডার 🔥
+        function injectAdScriptDirectly(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
@@ -736,11 +736,7 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            // যদি বটে অন্য কোনো পপআন্ডার স্ক্রিপ্ট দেওয়া থাকে তাও লোড হবে
-            if (ads.popunder_ad && !ads.popunder_ad.includes("afders.org")) {
-                injectScriptCode(ads.popunder_ad);
-            }
-            if (ads.social_ad) injectScriptCode(ads.social_ad);
+            if (ads.social_ad) injectAdScriptDirectly(ads.social_ad);
         }
 
         async function initData() {
@@ -874,7 +870,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2-এর নির্দিষ্ট ডিরেক্ট লিংক (শুধুমাত্র VISIT বাটনেই কাজ করবে) 🔥
+        // 🔥 Task 1 ও 2: শুধুমাত্র VISIT বাটনে চাপ দিলেই নির্ধারিত ডিরেক্ট লিংক ওপেন হবে 🔥
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
@@ -889,7 +885,7 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধুমাত্র এই বাটন থেকেই ডিরেক্ট লিংক ওপেন হবে
+            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
