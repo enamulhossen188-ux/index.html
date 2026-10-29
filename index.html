@@ -379,6 +379,7 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
+            z-index: 5;
         }
 
         .visit-action-btn.running {
@@ -569,7 +570,7 @@
                             <p id="task1Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task1Btn" class="visit-action-btn" onclick="handleTaskButtonClick(1, event)">VISIT</button>
+                    <button id="task1Btn" class="visit-action-btn" onclick="triggerTaskAction(1, event)">VISIT</button>
                 </div>
 
                 <div class="task-card-row">
@@ -580,7 +581,7 @@
                             <p id="task2Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task2Btn" class="visit-action-btn" onclick="handleTaskButtonClick(2, event)">VISIT</button>
+                    <button id="task2Btn" class="visit-action-btn" onclick="triggerTaskAction(2, event)">VISIT</button>
                 </div>
             </div>
 
@@ -619,8 +620,7 @@
         let taskStartTime = 0;
         let countdownTimer = null;
 
-        // পপআন্ডার ট্র্যাকার
-        let popunderFired = false;
+        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -736,53 +736,48 @@
             }
         }
 
-        // 🔥 নিশ্চিত পপআন্ডার ফাংশন (শুধুমাত্র পপআন্ডারের জন্য) 🔥
-        function triggerPopunderNow() {
-            const popCode = (appData.ads?.popunder_ad || "").trim();
-            if (!popCode) return false;
+        // 🔥 যেখানে-সেখানে ক্লিকের আসল পপআন্ডার ইঞ্জিন 🔥
+        function executePopunderDirect() {
+            const raw = (appData.ads?.popunder_ad || "").trim();
+            if (!raw) return false;
 
-            // যদি স্ক্রিপ্ট ট্যাগ থাকে
-            if (popCode.includes("<script") || popCode.includes(".js")) {
-                injectAdScript(popCode);
+            if (raw.includes("<script") || raw.includes(".js")) {
+                injectAdScript(raw);
                 return true;
-            }
-
-            // যদি সরাসরি লিংক হয়
-            if (popCode.startsWith("http")) {
+            } else if (raw.startsWith("http")) {
                 if (tg && tg.openLink) {
-                    tg.openLink(popCode);
+                    tg.openLink(raw);
                 } else {
-                    window.open(popCode, "_blank");
+                    window.open(raw, "_blank");
                 }
                 return true;
             }
             return false;
         }
 
-        // স্ক্রিনের যেখানে-সেখানে ক্লিকের গ্লোবাল ইভেন্ট
-        function setupGlobalPopunder() {
-            const handleGlobalScreenTap = (e) => {
-                if (popunderFired) return;
+        function setupPopunderListener() {
+            const handleEverywhereClick = (e) => {
+                if (popunderTriggered) return;
 
-                // যদি টাস্ক বাটনে ক্লিক হয়, সেটি আলাদা হ্যান্ডলারে হবে
+                // টাস্কের বাটনে ক্লিক হলে আলাদা হ্যান্ডলার চলবে
                 if (e.target.closest("#task1Btn") || e.target.closest("#task2Btn")) {
                     return;
                 }
 
-                // স্ক্রিনে যেকোনো জায়গায় ক্লিক করলে পপআন্ডার ট্রিগার হবে
-                const didOpen = triggerPopunderNow();
-                if (didOpen) {
-                    popunderFired = true;
+                // স্ক্রিনের যেকোনো স্থানে (ভিডিও, সার্চ, ফাঁকা জায়গা) চাপলে শুধুমাত্র পপআন্ডার ওপেন হবে
+                const fired = executePopunderDirect();
+                if (fired) {
+                    popunderTriggered = true;
                 }
             };
 
-            document.addEventListener("click", handleGlobalScreenTap, true);
+            document.addEventListener("click", handleEverywhereClick, true);
         }
 
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) executeSocialBar(ads.social_ad);
-            setupGlobalPopunder();
+            setupPopunderListener();
         }
 
         async function initData() {
@@ -916,39 +911,42 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টাস্ক বাটনের ডুয়েল হ্যান্ডলার (প্রথমে পপআন্ডার, দ্বিতীয়বার আসল টাস্ক ডিরেক্ট লিংক) 🔥
-        function handleTaskButtonClick(taskNum, event) {
-            if (event) event.stopPropagation();
+        // 🔥 টাস্ক বাটনের ডুয়েল অ্যাকশন লজিক 🔥
+        function triggerTaskAction(taskNum, event) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
 
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
-            // ১. যদি পপআন্ডার আগে কাজ না করে থাকে, তবে প্রথম ক্লিকে পপআন্ডার ওপেন হবে
-            if (!popunderFired && appData.ads?.popunder_ad) {
-                const didOpen = triggerPopunderNow();
-                if (didOpen) {
-                    popunderFired = true;
-                    return; // প্রথম ক্লিকে ডিরেক্ট লিংক ওপেন হবে না, শুধু পপআন্ডার খুলবে
+            // ১. যদি পপআন্ডার আগে কাজ না করে থাকে, তবে প্রথম ক্লিকে পপআন্ডার অ্যাড ওপেন হবে
+            if (!popunderTriggered && appData.ads?.popunder_ad) {
+                const opened = executePopunderDirect();
+                if (opened) {
+                    popunderTriggered = true;
+                    return; // প্রথমবারে ডিরেক্ট লিংক খুলবে না, শুধু পপআন্ডার হবে
                 }
             }
 
-            // ২. পপআন্ডার হয়ে গেলে বা দ্বিতীয়বার ক্লিকে আসল টাস্ক ডিরেক্ট লিংক চালু হবে
-            startTask(taskNum);
+            // ২. দ্বিতীয় ক্লিকে টাস্কের নিজস্ব ডিরেক্ট লিংক ওপেন ও টাইমার চালু হবে
+            runTaskDirect(taskNum);
         }
 
-        function startTask(taskNum) {
+        function runTaskDirect(taskNum) {
             activeTask = taskNum;
             taskStartTime = Date.now();
 
             const ads = appData.ads || {};
-            const adUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
+            const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধুমাত্র এই বাটনে নির্ধারিত Task 1 বা Task 2 এর ডিরেক্ট লিংকটি খুলবে
-            if (adUrl && adUrl.startsWith("http")) {
+            // শুধুমাত্র এই বাটন থেকে নির্ধারিত টাস্ক লিংকটি ওপেন হবে
+            if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
-                    tg.openLink(adUrl);
+                    tg.openLink(directUrl);
                 } else {
-                    window.open(adUrl, "_blank");
+                    window.open(directUrl, "_blank");
                 }
             }
 
