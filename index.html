@@ -680,7 +680,7 @@
             return u;
         }
 
-        // 🔥 পপআন্ডার স্ক্রিপ্ট ইনজেক্টর (কোড টেক্সট আকারে ওপেন হওয়া বন্ধ করবে) 🔥
+        // 🔥 পপআন্ডার কার্যকর ইঞ্জিন: টেক্সট কোড ওপেন হওয়া সম্পূর্ণ বন্ধ করা 🔥
         function initUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
@@ -706,17 +706,17 @@
             }
             document.head.appendChild(sc);
 
-            // যদি ডিরেক্ট লিংক থাকে, স্ক্রিনের যে কোনো জায়গায় চাপলে ওপেন হবে
-            let directUrl = (raw.startsWith("http") && !raw.includes(".js") && !raw.includes("afders.org")) ? raw : null;
-            if (directUrl) {
+            // শুধু যদি আসল ডিরেক্ট ওয়েব লিঙ্ক দেওয়া থাকে (স্ক্রিপ্ট ফাইল ছাড়া), তবেই প্রথম ক্লিকে ট্রিগার হবে
+            const isDirectWebUrl = raw.startsWith("http") && !raw.includes("<") && !raw.includes(".js") && !raw.includes("afders.org");
+            if (isDirectWebUrl) {
                 let fired = false;
                 document.addEventListener("click", function() {
                     if (!fired) {
                         fired = true;
                         if (tg && tg.openLink) {
-                            tg.openLink(directUrl);
+                            tg.openLink(raw);
                         } else {
-                            window.open(directUrl, "_blank");
+                            window.open(raw, "_blank");
                         }
                     }
                 }, true);
@@ -908,7 +908,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টাস্ক ড্রাইভার: চাপ দিলে আগে কাউন্টডাউন শুরু হবে না, পেজে যাওয়ার পর হিসাব হবে 🔥
+        // 🔥 টাস্ক ড্রাইভার: চাপলে আগে টাইম কাটবে না, পেজে যাওয়ার পর হিসাব হবে 🔥
         function runTaskDirect(taskNum, event) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
