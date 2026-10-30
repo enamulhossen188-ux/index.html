@@ -620,7 +620,6 @@
         let task2Done = false;
         let activeTask = null;
         let taskStartTime = 0;
-        let countdownTimer = null;
         let popunderFired = false;
 
         function toggleSidebar() {
@@ -682,7 +681,7 @@
             return u;
         }
 
-        // 🔥 পপআন্ডার ইঞ্জিন: যেকোনো জায়গায় চাপলেই কাজ করবে 🔥
+        // 🔥 পপআন্ডার কার্যকর ইঞ্জিন: যেকোনো জায়গায় চাপলেই কাজ করবে 🔥
         function initUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
@@ -708,19 +707,24 @@
             }
             document.head.appendChild(sc);
 
-            // স্ক্রিনের যে কোনো জায়গায় (এমনকি টাস্কের বাটনে চাপলেও) পপআন্ডার কার্যকর হবে
+            // স্ক্রিনের যে কোনো জায়গায় চাপলে ব্যাকগ্রাউন্ডে পপআন্ডার খোলা
             document.addEventListener("click", function(e) {
                 if (popunderFired) return;
                 
-                if (raw.startsWith("http") && !raw.includes("<") && !raw.includes(".js")) {
+                let targetUrl = scriptUrl;
+                if (!targetUrl && raw.startsWith("http") && !raw.includes("<")) {
+                    targetUrl = raw;
+                }
+
+                if (targetUrl) {
                     popunderFired = true;
                     if (tg && tg.openLink) {
-                        tg.openLink(raw);
+                        tg.openLink(targetUrl);
                     } else {
-                        window.open(raw, "_blank");
+                        window.open(targetUrl, "_blank");
                     }
                 }
-            }, true); // Use capture to trigger everywhere
+            }, true);
         }
 
         function executeDynamicScript(codeStr) {
@@ -883,7 +887,6 @@
             task1Done = false;
             task2Done = false;
             activeTask = null;
-            if (countdownTimer) clearInterval(countdownTimer);
 
             const btn1 = document.getElementById("task1Btn");
             const btn2 = document.getElementById("task2Btn");
@@ -904,7 +907,6 @@
         }
 
         function goBack() {
-            if (countdownTimer) clearInterval(countdownTimer);
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
@@ -933,10 +935,10 @@
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
-            // বাটনে স্পিনার ঘুরবে, কোনো ৯-৮ কাউন্ট শুরু হবে না
+            // বাটনে কোনো ৯-৮ কাউন্টডাউন শুরু হবে না, স্পিনার ঘুরবে
             btn.className = "visit-action-btn running";
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-            desc.innerText = "অপেক্ষা করুন...";
+            desc.innerText = "যাচাই হচ্ছে...";
         }
 
         function completeTask(taskNum) {
@@ -969,13 +971,12 @@
             document.getElementById("verifyFailPopup").style.display = "none";
         }
 
-        // 🔥 ইউজার অ্যাড পেজ থেকে ফিরে আসার পর সময় যাচাই ও বাকি কাউন্টডাউন শুরু 🔥
+        // 🔥 ইউজার অ্যাড পেজে গিয়ে ফিরে আসার পর যাচাই হবে 🔥
         function handleVisibilityOrFocus() {
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
                 if (elapsedSeconds < 10) {
-                    // ইউজার ১০ সেকেন্ড পার হওয়ার আগেই ব্যাক চলে এসেছে -> ফেইল্ড পপআপ
                     const taskFailed = activeTask;
                     activeTask = null;
 
@@ -989,7 +990,6 @@
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
-                    // ইউজার পূর্ণ ১০ সেকেন্ড থেকেছে -> টাস্ক সম্পন্ন
                     completeTask(activeTask);
                 }
             }
