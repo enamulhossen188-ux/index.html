@@ -379,7 +379,7 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            z-index: 100;
+            z-index: 10;
             min-width: 75px;
             text-align: center;
         }
@@ -621,8 +621,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-
-        let popunderDone = false;
+        let popunderFired = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -683,12 +682,11 @@
             return u;
         }
 
-        // 🔥 পপআন্ডার কার্যকর ইঞ্জিন (স্ক্রিপ্ট ইনজেকশন + অটো ক্লিক ফলব্যাক) 🔥
-        function initAdsterraPopunder() {
+        // 🔥 পপআন্ডার ইঞ্জিন: যেকোনো জায়গায় চাপলেই কাজ করবে 🔥
+        function initUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
 
-            // ১. ব্যাকগ্রাউন্ডে Adsterra স্ক্রিপ্ট লোড করা
             let scriptUrl = null;
             if (raw.includes("src=")) {
                 let m = raw.match(/src=["'](.*?)["']/);
@@ -704,35 +702,25 @@
 
             if (scriptUrl) {
                 if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
-                // ক্যাশ বাইপাস করতে টাইমস্ট্যাম্প যোগ
                 sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
             } else {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
             document.head.appendChild(sc);
 
-            // ২. স্ক্রিনের যেকোনো জায়গায় প্রথম স্পর্শে ট্রিগার হওয়ার ইভেন্ট
-            const handleFirstTouch = function(e) {
-                if (popunderDone) return;
-
-                // টাস্ক বাটন ও ব্যাক বাটনে ক্লিক হলে পপআন্ডার ইন্টারফেয়ার করবে না
-                if (e.target.closest("#task1Btn") || e.target.closest("#task2Btn") || e.target.closest("#downloadBtn") || e.target.closest(".back-btn")) {
-                    return;
-                }
-
-                // ডিরেক্ট লিংক সেট থাকলে টেলিগ্রাম ব্রাউজারে পপআন্ডার হিসেবে ওপেন হবে
+            // স্ক্রিনের যে কোনো জায়গায় (এমনকি টাস্কের বাটনে চাপলেও) পপআন্ডার কার্যকর হবে
+            document.addEventListener("click", function(e) {
+                if (popunderFired) return;
+                
                 if (raw.startsWith("http") && !raw.includes("<") && !raw.includes(".js")) {
-                    popunderDone = true;
+                    popunderFired = true;
                     if (tg && tg.openLink) {
                         tg.openLink(raw);
                     } else {
                         window.open(raw, "_blank");
                     }
-                    document.removeEventListener("click", handleFirstTouch, true);
                 }
-            };
-
-            document.addEventListener("click", handleFirstTouch, true);
+            }, true); // Use capture to trigger everywhere
         }
 
         function executeDynamicScript(codeStr) {
@@ -787,7 +775,7 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            initAdsterraPopunder();
+            initUniversalPopunder();
             if (ads.social_ad) executeDynamicScript(ads.social_ad);
         }
 
@@ -922,12 +910,8 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2 বাটনে চাপ দিলে নির্ধারিত লিঙ্ক ওপেন ও কাউন্টডাউন 🔥
+        // 🔥 টাস্ক ড্রাইভার: চাপ দিলে আগে কাউন্টডাউন শুরু হবে না, পেজ ওপেন হবে 🔥
         function runTaskDirect(taskNum, event) {
-            if (event) {
-                event.stopPropagation();
-            }
-
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
@@ -937,7 +921,7 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
+            // শুধু নির্ধারিত টাস্কের লিংকটি ব্রাউজারে ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
@@ -949,24 +933,10 @@
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
+            // বাটনে স্পিনার ঘুরবে, কোনো ৯-৮ কাউন্ট শুরু হবে না
             btn.className = "visit-action-btn running";
-            btn.innerHTML = `10s`;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
             desc.innerText = "অপেক্ষা করুন...";
-
-            if (countdownTimer) clearInterval(countdownTimer);
-
-            // ১০ সেকেন্ড কাউন্টডাউন
-            countdownTimer = setInterval(() => {
-                const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                const remaining = 10 - passed;
-
-                if (remaining > 0) {
-                    btn.innerHTML = `${remaining}s`;
-                } else {
-                    clearInterval(countdownTimer);
-                    completeTask(taskNum);
-                }
-            }, 500);
         }
 
         function completeTask(taskNum) {
@@ -999,12 +969,13 @@
             document.getElementById("verifyFailPopup").style.display = "none";
         }
 
+        // 🔥 ইউজার অ্যাড পেজ থেকে ফিরে আসার পর সময় যাচাই ও বাকি কাউন্টডাউন শুরু 🔥
         function handleVisibilityOrFocus() {
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
                 if (elapsedSeconds < 10) {
-                    clearInterval(countdownTimer);
+                    // ইউজার ১০ সেকেন্ড পার হওয়ার আগেই ব্যাক চলে এসেছে -> ফেইল্ড পপআপ
                     const taskFailed = activeTask;
                     activeTask = null;
 
@@ -1018,7 +989,7 @@
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
-                    clearInterval(countdownTimer);
+                    // ইউজার পূর্ণ ১০ সেকেন্ড থেকেছে -> টাস্ক সম্পন্ন
                     completeTask(activeTask);
                 }
             }
@@ -1074,4 +1045,4 @@
         initData();
     </script>
 </body>
-            </html>
+    </html>
