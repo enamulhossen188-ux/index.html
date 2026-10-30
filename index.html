@@ -379,7 +379,7 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            z-index: 10;
+            z-index: 100;
             min-width: 75px;
             text-align: center;
         }
@@ -621,9 +621,6 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let prepTimeout = null;
-
-        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -684,57 +681,7 @@
             return u;
         }
 
-        // 🔥 ইউনিভার্সাল পপআন্ডার ইঞ্জিন (টেলিগ্রাম কম্প্যাটিবল) 🔥
-        function initTelegramPopunder() {
-            const raw = (appData.ads?.popunder_ad || "").trim();
-            if (!raw) return;
-
-            // স্ক্রিপ্ট ব্যাকগ্রাউন্ডে ইনজেক্ট করা
-            let scriptUrl = null;
-            if (raw.includes("src=")) {
-                let m = raw.match(/src=["'](.*?)["']/);
-                if (m) scriptUrl = m[1];
-            } else if (raw.startsWith("http")) {
-                scriptUrl = raw;
-            }
-
-            const sc = document.createElement("script");
-            sc.type = "text/javascript";
-            sc.setAttribute("data-cfasync", "false");
-            sc.async = true;
-
-            if (scriptUrl) {
-                if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
-                sc.src = scriptUrl;
-            } else {
-                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
-            }
-            document.head.appendChild(sc);
-
-            // স্ক্রিনের যেকোনো স্থানে চাপলে সরাসরি ট্রিগার হওয়ার লিসেনার
-            const triggerClick = (e) => {
-                if (popunderTriggered) return;
-
-                // টাস্ক বা ব্যাক বাটনে চাপ দিলে পপআন্ডার ডিস্টার্ব করবে না
-                if (e.target.closest("#task1Btn") || e.target.closest("#task2Btn") || e.target.closest("#downloadBtn") || e.target.closest(".back-btn")) {
-                    return;
-                }
-
-                // ডিরেক্ট URL লিংক থাকলে তা টেলিগ্রামে পপআন্ডার হিসেবে ওপেন হবে
-                if (raw.startsWith("http") && !raw.includes("<") && !raw.includes(".js")) {
-                    popunderTriggered = true;
-                    if (tg && tg.openLink) {
-                        tg.openLink(raw);
-                    } else {
-                        window.open(raw, "_blank");
-                    }
-                    document.removeEventListener("click", triggerClick, true);
-                }
-            };
-
-            document.addEventListener("click", triggerClick, true);
-        }
-
+        // 🔥 পপআন্ডার স্ক্রিপ্ট সরাসরি কার্যকর করা 🔥
         function executeDynamicScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
@@ -787,7 +734,7 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            initTelegramPopunder();
+            if (ads.popunder_ad) executeDynamicScript(ads.popunder_ad);
             if (ads.social_ad) executeDynamicScript(ads.social_ad);
         }
 
@@ -895,7 +842,6 @@
             task1Done = false;
             task2Done = false;
             activeTask = null;
-            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
 
             const btn1 = document.getElementById("task1Btn");
@@ -917,24 +863,29 @@
         }
 
         function goBack() {
-            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
         }
 
+        // 🔥 ১০০% নিশ্চিত টাস্ক ড্রাইভার (কোনো প্রকার জ্যাম ছাড়া) 🔥
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
+                event.preventDefault();
             }
 
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
+            activeTask = taskNum;
+            taskStartTime = Date.now();
+
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
+            // ১. সরাসরি লিঙ্ক ওপেন করা
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
@@ -943,34 +894,28 @@
                 }
             }
 
+            // ২. বাটনের অবস্থা আপডেট করা
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
             btn.className = "visit-action-btn running";
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-            desc.innerText = "যাচাই করা হচ্ছে...";
+            btn.innerHTML = `10s`;
+            desc.innerText = "অপেক্ষা করুন...";
 
-            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
 
-            prepTimeout = setTimeout(() => {
-                activeTask = taskNum;
-                taskStartTime = Date.now();
-                btn.innerHTML = `10s`;
-                desc.innerText = "অপেক্ষা করুন...";
+            // ৩. মসৃণ কাউন্টডাউন টাইমার
+            countdownTimer = setInterval(() => {
+                const passed = Math.floor((Date.now() - taskStartTime) / 1000);
+                const remaining = 10 - passed;
 
-                countdownTimer = setInterval(() => {
-                    const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                    const remaining = 10 - passed;
-
-                    if (remaining > 0) {
-                        btn.innerHTML = `${remaining}s`;
-                    } else {
-                        clearInterval(countdownTimer);
-                        completeTask(taskNum);
-                    }
-                }, 500);
-            }, 1500);
+                if (remaining > 0) {
+                    btn.innerHTML = `${remaining}s`;
+                } else {
+                    clearInterval(countdownTimer);
+                    completeTask(taskNum);
+                }
+            }, 500);
         }
 
         function completeTask(taskNum) {
@@ -1008,8 +953,7 @@
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
                 if (elapsedSeconds < 10) {
-                    if (prepTimeout) clearTimeout(prepTimeout);
-                    if (countdownTimer) clearInterval(countdownTimer);
+                    clearInterval(countdownTimer);
                     const taskFailed = activeTask;
                     activeTask = null;
 
@@ -1023,7 +967,7 @@
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
-                    if (countdownTimer) clearInterval(countdownTimer);
+                    clearInterval(countdownTimer);
                     completeTask(activeTask);
                 }
             }
