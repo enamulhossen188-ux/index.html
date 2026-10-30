@@ -620,7 +620,6 @@
         let task2Done = false;
         let activeTask = null;
         let taskStartTime = 0;
-        let popunderFired = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -681,7 +680,7 @@
             return u;
         }
 
-        // 🔥 পপআন্ডার কার্যকর ইঞ্জিন: যেকোনো জায়গায় চাপলেই কাজ করবে 🔥
+        // 🔥 পপআন্ডার স্ক্রিপ্ট ইনজেক্টর (কোড টেক্সট আকারে ওপেন হওয়া বন্ধ করবে) 🔥
         function initUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
@@ -690,7 +689,7 @@
             if (raw.includes("src=")) {
                 let m = raw.match(/src=["'](.*?)["']/);
                 if (m) scriptUrl = m[1];
-            } else if (raw.startsWith("http")) {
+            } else if (raw.startsWith("http") && (raw.includes(".js") || raw.includes("afders.org"))) {
                 scriptUrl = raw;
             }
 
@@ -702,29 +701,26 @@
             if (scriptUrl) {
                 if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
                 sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
-            } else {
+            } else if (!raw.startsWith("http")) {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
             document.head.appendChild(sc);
 
-            // স্ক্রিনের যে কোনো জায়গায় চাপলে ব্যাকগ্রাউন্ডে পপআন্ডার খোলা
-            document.addEventListener("click", function(e) {
-                if (popunderFired) return;
-                
-                let targetUrl = scriptUrl;
-                if (!targetUrl && raw.startsWith("http") && !raw.includes("<")) {
-                    targetUrl = raw;
-                }
-
-                if (targetUrl) {
-                    popunderFired = true;
-                    if (tg && tg.openLink) {
-                        tg.openLink(targetUrl);
-                    } else {
-                        window.open(targetUrl, "_blank");
+            // যদি ডিরেক্ট লিংক থাকে, স্ক্রিনের যে কোনো জায়গায় চাপলে ওপেন হবে
+            let directUrl = (raw.startsWith("http") && !raw.includes(".js") && !raw.includes("afders.org")) ? raw : null;
+            if (directUrl) {
+                let fired = false;
+                document.addEventListener("click", function() {
+                    if (!fired) {
+                        fired = true;
+                        if (tg && tg.openLink) {
+                            tg.openLink(directUrl);
+                        } else {
+                            window.open(directUrl, "_blank");
+                        }
                     }
-                }
-            }, true);
+                }, true);
+            }
         }
 
         function executeDynamicScript(codeStr) {
@@ -912,7 +908,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টাস্ক ড্রাইভার: চাপ দিলে আগে কাউন্টডাউন শুরু হবে না, পেজ ওপেন হবে 🔥
+        // 🔥 টাস্ক ড্রাইভার: চাপ দিলে আগে কাউন্টডাউন শুরু হবে না, পেজে যাওয়ার পর হিসাব হবে 🔥
         function runTaskDirect(taskNum, event) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -935,7 +931,7 @@
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
-            // বাটনে কোনো ৯-৮ কাউন্টডাউন শুরু হবে না, স্পিনার ঘুরবে
+            // বাটনে কোনো কাউন্টডাউন শুরু হবে না, স্পিনার ঘুরবে
             btn.className = "visit-action-btn running";
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
             desc.innerText = "যাচাই হচ্ছে...";
@@ -971,7 +967,7 @@
             document.getElementById("verifyFailPopup").style.display = "none";
         }
 
-        // 🔥 ইউজার অ্যাড পেজে গিয়ে ফিরে আসার পর যাচাই হবে 🔥
+        // 🔥 ইউজার বাইরে অ্যাড দেখে মিনি অ্যাপে ফিরে আসার পর সময় কাউন্ট হবে 🔥
         function handleVisibilityOrFocus() {
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
