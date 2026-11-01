@@ -4,8 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bachelor Point</title>
+    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 🔥 Monetag Telegram Mini App Official SDK 🔥 -->
+    <!-- আপনার জোন আইডি (যেমন: 8465535) থাকলে নিচে alwingulla বা আপনার ট্যাগ লিংকটি বসবে -->
+    <script src="https://alwingulla.com/88/tag.min.js" data-zone="8465535" async data-cfasync="false"></script>
+
     <style>
         :root {
             --bg-color: #121316;
@@ -413,7 +419,7 @@
             font-size: 13px;
         }
 
-        /* 🔥 স্ক্রিনশট ২-এর মতো ফুলস্ক্রিন Monetag Mini App Ad Overlay 🔥 */
+        /* 🔥 Monetag Mini App In-App Ad Overlay (স্ক্রিনশটের হুবহু) 🔥 */
         .monetag-interstitial-overlay {
             display: none;
             position: fixed;
@@ -460,7 +466,7 @@
         .ad-content-box {
             background: #ffffff;
             border-radius: 24px;
-            padding: 22px 18px;
+            padding: 24px 18px;
             width: 100%;
             max-width: 340px;
             margin: 0 auto;
@@ -663,7 +669,7 @@
                             <p id="task1Desc">১৫ সেকেন্ড অ্যাড দেখুন</p>
                         </div>
                     </div>
-                    <button id="task1Btn" class="visit-action-btn" onclick="triggerMonetagTask(1)">VISIT</button>
+                    <button id="task1Btn" class="visit-action-btn" onclick="startMonetagAdTask(1)">VISIT</button>
                 </div>
 
                 <div class="task-card-row">
@@ -674,7 +680,7 @@
                             <p id="task2Desc">১৫ সেকেন্ড অ্যাড দেখুন</p>
                         </div>
                     </div>
-                    <button id="task2Btn" class="visit-action-btn" onclick="triggerMonetagTask(2)">VISIT</button>
+                    <button id="task2Btn" class="visit-action-btn" onclick="startMonetagAdTask(2)">VISIT</button>
                 </div>
             </div>
 
@@ -684,7 +690,7 @@
         </div>
     </div>
 
-    <!-- 🔥 স্ক্রিনশট ২-এর মতো ফুলস্ক্রিন Monetag Mini App Ad Overlay 🔥 -->
+    <!-- 🔥 স্ক্রিনশটের হুবহু ফুলস্ক্রিন Monetag Mini App In-App Ad Overlay 🔥 -->
     <div id="monetagOverlay" class="monetag-interstitial-overlay">
         <div class="ad-top-bar">
             <div id="adTimerBadge" class="ad-timer-badge">00:15</div>
@@ -788,32 +794,6 @@
             return u;
         }
 
-        function executePopunder(popCode) {
-            if (!popCode || !popCode.trim()) return;
-            let raw = popCode.trim();
-
-            if (raw.startsWith("http") && !raw.includes(".js")) {
-                let popDone = false;
-                const openDirectLink = () => {
-                    if (!popDone) {
-                        popDone = true;
-                        if (tg && tg.openLink) tg.openLink(raw);
-                        else window.open(raw, "_blank");
-                        document.removeEventListener("click", openDirectLink);
-                    }
-                };
-                document.addEventListener("click", openDirectLink, { once: true });
-                return;
-            }
-            const scriptElem = document.createElement("script");
-            scriptElem.type = "text/javascript";
-            scriptElem.async = true;
-            let srcMatch = raw.match(/src=["'](.*?)["']/);
-            if (srcMatch) scriptElem.src = srcMatch[1];
-            else scriptElem.text = raw.replace(/<\/?script[^>]*>/gi, "");
-            document.head.appendChild(scriptElem);
-        }
-
         async function initData() {
             try {
                 const res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${Date.now()}`, {
@@ -827,7 +807,6 @@
                 
                 renderCategoryTabs();
                 renderVideos();
-                if (appData.ads?.popunder_ad) executePopunder(appData.ads.popunder_ad);
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
@@ -932,14 +911,27 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 স্ক্রিনশট ২-এর মতো ইন-অ্যাপ Monetag Ad ট্রিগার 🔥
-        function triggerMonetagTask(taskNum) {
+        // 🔥 Monetag Mini App In-App Ad টাস্ক হ্যান্ডলার 🔥
+        function startMonetagAdTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
             activeTask = taskNum;
-            adRemaining = 15;
 
+            // ১. Monetag SDK কলব্যাক যদি সক্রিয় থাকে
+            const zoneFunc = window["show_8465535"]; // আপনার Monetag Zone ID ফাংশন
+            if (typeof zoneFunc === "function") {
+                zoneFunc().then(() => {
+                    completeTask(taskNum);
+                }).catch(() => {
+                    showFailedPopup(15);
+                    activeTask = null;
+                });
+                return;
+            }
+
+            // ২. স্ক্রিনশট ২-এর মতো টেলিগ্রাম ইন-অ্যাপ ফুলস্ক্রিন রিওয়ার্ডেড স্ক্রিন
+            adRemaining = 15;
             const overlay = document.getElementById("monetagOverlay");
             const badge = document.getElementById("adTimerBadge");
             const contBtn = document.getElementById("adContinueBtn");
@@ -949,12 +941,8 @@
             contBtn.classList.add("disabled");
             contBtn.innerText = "Continue";
 
-            // যদি অফিসিয়াল Monetag SDK ফাংশন থাকে তা চালানো, নয়তো ইন-অ্যাপ টাইমার
             const rawAd = (taskNum === 1) ? (appData.ads?.ad1 || "") : (appData.ads?.ad2 || "");
-            if (rawAd.startsWith("http")) {
-                // ব্যাকগ্রাউন্ডে ডিরেক্ট লিংক রেডি রাখা
-                window.currentAdDirectUrl = rawAd;
-            }
+            window.currentTaskAdUrl = rawAd;
 
             if (adInterval) clearInterval(adInterval);
             adInterval = setInterval(() => {
@@ -971,9 +959,9 @@
         }
 
         function handleAdClick() {
-            if (window.currentAdDirectUrl) {
-                if (tg && tg.openLink) tg.openLink(window.currentAdDirectUrl);
-                else window.open(window.currentAdDirectUrl, "_blank");
+            if (window.currentTaskAdUrl && window.currentTaskAdUrl.startsWith("http")) {
+                if (tg && tg.openLink) tg.openLink(window.currentTaskAdUrl);
+                else window.open(window.currentTaskAdUrl, "_blank");
             }
         }
 
@@ -1014,6 +1002,11 @@
             if (task1Done && task2Done) {
                 document.getElementById("downloadBtn").className = "download-btn";
             }
+        }
+
+        function showFailedPopup(needSec) {
+            document.getElementById("needSecondsTxt").innerText = needSec;
+            document.getElementById("verifyFailPopup").style.display = "flex";
         }
 
         function closePopup() {
