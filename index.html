@@ -750,6 +750,7 @@
         let task1Done = false;
         let task2Done = false;
         let activeTask = null;
+        let taskStartTime = 0;
         let adSecondsLeft = 15;
         let adInterval = null;
 
@@ -963,6 +964,7 @@
             task1Done = false;
             task2Done = false;
             activeTask = null;
+            taskStartTime = 0;
             if (adInterval) clearInterval(adInterval);
 
             const btn1 = document.getElementById("task1Btn");
@@ -990,17 +992,23 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 মনিট্যাগ ইন-অ্যাপ Rewarded কার্ড টাস্ক এক্সিকিউশন (কোনো ব্রাউজার খুলবে না) 🔥
+        // 🔥 অ্যান্টি-চিট ট্র্যাকিং সহ ইন-অ্যাপ Rewarded কার্ড টাস্ক এক্সিকিউশন 🔥
         function triggerInAppCardAd(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
             activeTask = taskNum;
+            taskStartTime = Date.now(); // ক্লিক করার সঠিক সময় সংরক্ষণ
 
             // ১. Monetag SDK যদি প্রস্তুত থাকে তবে অফিসিয়াল ইন-অ্যাপ SDK রেন্ডার
             if (typeof window.show_8561658 === "function") {
                 window.show_8561658().then(() => {
-                    completeTask(taskNum);
+                    const elapsed = Math.floor((Date.now() - taskStartTime) / 1000);
+                    if (elapsed >= 15) {
+                        completeTask(taskNum);
+                    } else {
+                        handleEarlyExit(15 - elapsed);
+                    }
                 }).catch(() => {
                     handleEarlyExit(15);
                 });
@@ -1020,57 +1028,91 @@
 
             if (adInterval) clearInterval(adInterval);
             adInterval = setInterval(() => {
-                adSecondsLeft--;
-                const secFormatted = adSecondsLeft < 10 ? `0${adSecondsLeft}` : `${adSecondsLeft}`;
+                const elapsed = Math.floor((Date.now() - taskStartTime) / 1000);
+                const remaining = Math.max(0, 15 - elapsed);
+                adSecondsLeft = remaining;
+
+                const secFormatted = remaining < 10 ? `0${remaining}` : `${remaining}`;
                 badge.innerText = `00:${secFormatted}`;
 
-                if (adSecondsLeft <= 0) {
+                if (remaining <= 0) {
                     clearInterval(adInterval);
                     contBtn.classList.remove("disabled");
                     contBtn.innerText = "Continue ✅";
                 }
-            }, 1000);
+            }, 500);
         }
 
         function onAdCardClicked() {
-            // কার্ডের ভেতরে ক্লিক করলে ডিরেক্ট লিংক ওপেন হতে পারে, তবে কাউন্টডাউন ভেতরেই চলবে
             const rawAd = (activeTask === 1) ? (appData.ads?.ad1 || "") : (appData.ads?.ad2 || "");
-            if (rawAd.startsWith("http")) {
+            if (rawAd && rawAd.startsWith("http")) {
                 if (tg && tg.openLink) tg.openLink(rawAd);
+                else window.open(rawAd, "_blank");
             }
         }
 
+        // ক্লোজ (X) বাটনে চাপ দিলে নিখুঁত যাচাই
         function closeInAppAd() {
-            if (adSecondsLeft > 0) {
-                clearInterval(adInterval);
-                document.getElementById("monetagCardOverlay").style.display = "none";
-                handleEarlyExit(adSecondsLeft);
+            const elapsed = taskStartTime > 0 ? Math.floor((Date.now() - taskStartTime) / 1000) : 0;
+            if (adInterval) clearInterval(adInterval);
+            document.getElementById("monetagCardOverlay").style.display = "none";
+
+            if (elapsed < 15) {
+                handleEarlyExit(15 - elapsed);
             } else {
-                document.getElementById("monetagCardOverlay").style.display = "none";
                 completeTask(activeTask);
             }
         }
 
+        // Continue বাটনে চাপ দিলে যাচাই
         function continueInAppAd() {
-            if (adSecondsLeft <= 0) {
+            const elapsed = taskStartTime > 0 ? Math.floor((Date.now() - taskStartTime) / 1000) : 0;
+            if (elapsed >= 15) {
+                if (adInterval) clearInterval(adInterval);
                 document.getElementById("monetagCardOverlay").style.display = "none";
                 completeTask(activeTask);
+            } else {
+                handleEarlyExit(15 - elapsed);
             }
         }
+
+        // ইউজার ব্রাউজারে রিডাইরেক্ট হয়ে আবার মিনি অ্যাপে ফিরলে অ্যান্টি-চিট চেকার
+        function handleVisibilityOrFocus() {
+            if (document.visibilityState === "visible" && activeTask !== null) {
+                const overlay = document.getElementById("monetagCardOverlay");
+                if (overlay && overlay.style.display === "flex") {
+                    const elapsed = taskStartTime > 0 ? Math.floor((Date.now() - taskStartTime) / 1000) : 0;
+                    if (elapsed >= 15) {
+                        const contBtn = document.getElementById("adContinueBtn");
+                        if (contBtn) {
+                            contBtn.classList.remove("disabled");
+                            contBtn.innerText = "Continue ✅";
+                        }
+                    }
+                }
+            }
+        }
+
+        document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+        window.addEventListener("focus", handleVisibilityOrFocus);
 
         function handleEarlyExit(needSec) {
+            if (adInterval) clearInterval(adInterval);
             const taskFailed = activeTask;
             activeTask = null;
+            taskStartTime = 0;
 
             if (taskFailed) {
                 const btn = document.getElementById(taskFailed === 1 ? "task1Btn" : "task2Btn");
                 const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
-                btn.className = "visit-action-btn";
-                btn.innerHTML = `VISIT`;
-                desc.innerText = "১৫ সেকেন্ড অ্যাড দেখুন";
+                if (btn) {
+                    btn.className = "visit-action-btn";
+                    btn.innerHTML = `VISIT`;
+                }
+                if (desc) desc.innerText = "১৫ সেকেন্ড অ্যাড দেখুন";
             }
 
-            document.getElementById("needSecondsTxt").innerText = needSec;
+            document.getElementById("needSecondsTxt").innerText = Math.max(1, needSec);
             document.getElementById("verifyFailPopup").style.display = "flex";
         }
 
@@ -1079,15 +1121,19 @@
             const icon = document.getElementById(taskNum === 1 ? "task1Icon" : "task2Icon");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
-            btn.className = "visit-action-btn done";
-            btn.innerHTML = `COMPLETED`;
-            icon.classList.add("completed");
-            desc.innerText = "টাস্ক সম্পন্ন হয়েছে ✅";
+            if (btn) {
+                btn.className = "visit-action-btn done";
+                btn.innerHTML = `COMPLETED`;
+            }
+            if (icon) icon.classList.add("completed");
+            if (desc) desc.innerText = "টাস্ক সম্পন্ন হয়েছে ✅";
 
             if (taskNum === 1) task1Done = true;
             if (taskNum === 2) task2Done = true;
 
             activeTask = null;
+            taskStartTime = 0;
+
             if (task1Done && task2Done) {
                 document.getElementById("downloadBtn").className = "download-btn";
             }
