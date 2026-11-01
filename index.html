@@ -370,6 +370,7 @@
             color: var(--text-muted);
         }
 
+        /* ভিডিওর হুবহু বাটন স্টাইল */
         .visit-action-btn {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: #fff;
@@ -380,17 +381,25 @@
             font-weight: 700;
             cursor: pointer;
             z-index: 10;
-            min-width: 75px;
+            min-width: 95px;
             text-align: center;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+            transition: transform 0.1s ease;
+        }
+
+        .visit-action-btn:active {
+            transform: scale(0.96);
         }
 
         .visit-action-btn.running {
-            background: #0088cc;
+            background: #0088cc !important;
+            box-shadow: 0 2px 8px rgba(0, 136, 204, 0.4) !important;
             pointer-events: none;
         }
 
         .visit-action-btn.done {
             background: #10b981 !important;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4) !important;
             pointer-events: none;
         }
 
@@ -437,7 +446,7 @@
             font-size: 13px;
         }
 
-        /* স্ক্রিনশটের হুবহু কাস্টম ফেইল্ড পপ-আপ */
+        /* স্ক্রিনশটের হুবহু ফেইল্ড পপ-আপ */
         .custom-popup-overlay {
             display: none;
             position: fixed;
@@ -568,7 +577,7 @@
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন (মোট ২০ সেকেন্ড)।</span>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক সম্পন্ন করুন।</span>
             </div>
 
             <div class="task-list">
@@ -577,7 +586,7 @@
                         <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 1</h4>
-                            <p id="task1Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task1Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task1Btn" class="visit-action-btn" onclick="startTask(1)">VISIT</button>
@@ -588,7 +597,7 @@
                         <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 2</h4>
-                            <p id="task2Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task2Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task2Btn" class="visit-action-btn" onclick="startTask(2)">VISIT</button>
@@ -886,12 +895,12 @@
             btn1.className = "visit-action-btn";
             btn1.innerHTML = "VISIT";
             document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task1Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task1Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
             btn2.className = "visit-action-btn";
             btn2.innerHTML = "VISIT";
             document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task2Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+            document.getElementById("task2Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
             dlBtn.className = "download-btn disabled";
             dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
@@ -905,16 +914,17 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 চাপার সাথে সাথে অ্যাড ওপেন ও ইনস্ট্যান্ট কাউন্টডাউন শুরু 🔥
+        // 🔥 ভিডিওর মতো তাৎক্ষণিক ওপেন ও নিখুঁত কাউন্টিং 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
             activeTask = taskNum;
-            taskStartTime = Date.now();
+            taskStartTime = Date.now(); // ক্লিক করার সাথে সাথে সময় গণনা শুরু
 
             const adUrl = (taskNum === 1) ? (appData.ads?.ad1 || "https://google.com") : (appData.ads?.ad2 || "https://google.com");
 
+            // কোনো দেরি ছাড়া সাথে সাথে ব্রাউজারে লিঙ্ক ওপেন
             if (tg && tg.openLink) {
                 tg.openLink(adUrl);
             } else {
@@ -924,21 +934,24 @@
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
+            // ভিডিওর মতো বাটন ইনস্ট্যান্ট রানিং হবে
             btn.className = "visit-action-btn running";
             btn.innerHTML = `10s`;
             desc.innerText = "অপেক্ষা করুন...";
 
             if (countdownTimer) clearInterval(countdownTimer);
 
+            // ৫ সেকেন্ড পেজ লোড ডিলে সহ টাইমার ক্যালকুলেশন
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                const remaining = 10 - passed;
+                // প্রথম ৫ সেকেন্ড পেজ লোড হতে সময় পাবে, এরপর বাকি ১০ সেকেন্ড নামবে
+                const activeRemaining = Math.max(0, 15 - passed);
+                const displaySec = Math.min(10, activeRemaining);
 
-                if (remaining > 0) {
-                    btn.innerHTML = `${remaining}s`;
+                if (displaySec > 0) {
+                    btn.innerHTML = `${displaySec}s`;
                 } else {
                     clearInterval(countdownTimer);
-                    completeTask(taskNum);
                 }
             }, 500);
         }
@@ -948,6 +961,7 @@
             const icon = document.getElementById(taskNum === 1 ? "task1Icon" : "task2Icon");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
+            // ভিডিওর মতো সবুজ COMPLETED স্টাইল
             btn.className = "visit-action-btn done";
             btn.innerHTML = `COMPLETED`;
             icon.classList.add("completed");
@@ -973,12 +987,13 @@
             document.getElementById("verifyFailPopup").style.display = "none";
         }
 
-        // 🔥 ব্যাক চলে এলে ১০ সেকেন্ডের কম থাকলে ফেইল্ড পপআপ 🔥
+        // 🔥 ব্যাক চলে এলে ১৫ সেকেন্ডের ব্যাকগ্রাউন্ড হিসাব ও পপ-আপ 🔥
         function handleVisibilityOrFocus() {
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = taskStartTime > 0 ? Math.floor((Date.now() - taskStartTime) / 1000) : 0;
+                const TOTAL_REQUIRED = 15; // ৫ সেকেন্ড পেজ লোড + ১০ সেকেন্ড অবস্থান
 
-                if (elapsedSeconds < 10) {
+                if (elapsedSeconds < TOTAL_REQUIRED) {
                     if (countdownTimer) clearInterval(countdownTimer);
                     
                     const taskFailed = activeTask;
@@ -990,9 +1005,10 @@
 
                     btn.className = "visit-action-btn";
                     btn.innerHTML = `VISIT`;
-                    desc.innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+                    desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
-                    const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
+                    // ইউজারকে ১০ সেকেন্ডের মাপে বাকি সময় প্রদর্শন
+                    const remainingNeed = Math.min(10, Math.max(1, TOTAL_REQUIRED - elapsedSeconds));
                     showFailedPopup(remainingNeed);
                 } else {
                     if (countdownTimer) clearInterval(countdownTimer);
