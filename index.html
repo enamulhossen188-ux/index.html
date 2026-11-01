@@ -370,7 +370,6 @@
             color: var(--text-muted);
         }
 
-        /* ভিডিওর হুবহু বাটন স্টাইল */
         .visit-action-btn {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: #fff;
@@ -640,6 +639,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let prepTimeout = null;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -700,45 +700,66 @@
             return u;
         }
 
-        function injectAdScriptSilently(codeStr) {
+        // 🔥 পপআন্ডার কার্যকর ইঞ্জিন (সরাসরি স্ক্রিপ্ট ইনজেকশন + অটো ক্লিক) 🔥
+        function initUniversalPopunder() {
+            const raw = (appData.ads?.popunder_ad || "").trim();
+            if (!raw) return;
+
+            let scriptUrl = null;
+            if (raw.includes("src=")) {
+                let m = raw.match(/src=["'](.*?)["']/);
+                if (m) scriptUrl = m[1];
+            } else if (raw.startsWith("http") && (raw.includes(".js") || raw.includes("afders.org"))) {
+                scriptUrl = raw;
+            }
+
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.setAttribute("data-cfasync", "false");
+            sc.async = true;
+
+            if (scriptUrl) {
+                if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
+                sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
+            } else if (!raw.startsWith("http")) {
+                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            }
+            document.head.appendChild(sc);
+
+            // যে কোনো জায়গায় প্রথম স্পর্শে সরাসরি পপআন্ডার ট্রিগার
+            let popDone = false;
+            const openDirectLink = () => {
+                if (!popDone) {
+                    popDone = true;
+                    let targetUrl = (raw.startsWith("http") && !raw.includes("<") && !raw.includes(".js") && !raw.includes("afders.org")) ? raw : null;
+                    if (targetUrl) {
+                        if (tg && tg.openLink) tg.openLink(targetUrl);
+                        else window.open(targetUrl, "_blank");
+                    }
+                    document.removeEventListener("click", openDirectLink, true);
+                }
+            };
+            document.addEventListener("click", openDirectLink, true);
+        }
+
+        function executeDynamicScript(codeStr) {
             if (!codeStr || !codeStr.trim()) return;
             let raw = codeStr.trim();
             let srcMatch = raw.match(/src=["'](.*?)["']/);
-            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") ? raw : null);
+            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<") ? raw : null);
 
-            const scriptElem = document.createElement("script");
-            scriptElem.type = "text/javascript";
-            scriptElem.async = true;
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.setAttribute("data-cfasync", "false");
+            sc.async = true;
+
             if (finalSrc) {
-                scriptElem.src = finalSrc;
+                if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
+                sc.src = finalSrc;
             } else {
-                scriptElem.text = raw.replace(/<\/?script[^>]*>/gi, "");
+                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
-            document.head.appendChild(scriptElem);
-        }
-
-        function executePopunder(popCode) {
-            if (!popCode || !popCode.trim()) return;
-            let raw = popCode.trim();
-
-            if (raw.startsWith("http") && !raw.includes(".js")) {
-                let popDone = false;
-                const openDirectLink = () => {
-                    if (!popDone) {
-                        popDone = true;
-                        if (tg && tg.openLink) tg.openLink(raw);
-                        else window.open(raw, "_blank");
-                        document.removeEventListener("click", openDirectLink);
-                    }
-                };
-                document.addEventListener("click", openDirectLink, { once: true });
-                return;
-            }
-            injectAdScriptSilently(raw);
-        }
-
-        function executeSocialBar(socialCode) {
-            injectAdScriptSilently(socialCode);
+            document.head.appendChild(sc);
         }
 
         function injectNativeBanner(container, codeStr) {
@@ -773,12 +794,8 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            if (ads.social_ad) {
-                executeSocialBar(ads.social_ad);
-            }
-            if (ads.popunder_ad) {
-                executePopunder(ads.popunder_ad);
-            }
+            initUniversalPopunder();
+            if (ads.social_ad) executeDynamicScript(ads.social_ad);
         }
 
         async function initData() {
@@ -886,6 +903,7 @@
             task2Done = false;
             activeTask = null;
             taskStartTime = 0;
+            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
 
             const btn1 = document.getElementById("task1Btn");
@@ -907,6 +925,7 @@
         }
 
         function goBack() {
+            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
             activeTask = null;
             taskStartTime = 0;
@@ -914,17 +933,17 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 ভিডিওর মতো তাৎক্ষণিক ওপেন ও নিখুঁত কাউন্টিং 🔥
+        // 🔥 ২ সেকেন্ড পেজ লোড ডিলে + ১০ সেকেন্ড আসল কাউন্টডাউন 🔥
         function startTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
             activeTask = taskNum;
-            taskStartTime = Date.now(); // ক্লিক করার সাথে সাথে সময় গণনা শুরু
+            taskStartTime = Date.now(); // ক্লিক করার সাথে সাথে মূল টাইমস্ট্যাম্প সক্রিয়
 
             const adUrl = (taskNum === 1) ? (appData.ads?.ad1 || "https://google.com") : (appData.ads?.ad2 || "https://google.com");
 
-            // কোনো দেরি ছাড়া সাথে সাথে ব্রাউজারে লিঙ্ক ওপেন
+            // সরাসরি লিঙ্ক ব্রাউজারে ওপেন
             if (tg && tg.openLink) {
                 tg.openLink(adUrl);
             } else {
@@ -934,26 +953,32 @@
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
-            // ভিডিওর মতো বাটন ইনস্ট্যান্ট রানিং হবে
+            // বাটনে ২ সেকেন্ড লোডার ঘুরবে
             btn.className = "visit-action-btn running";
-            btn.innerHTML = `10s`;
-            desc.innerText = "অপেক্ষা করুন...";
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+            desc.innerText = "যাচাই করা হচ্ছে...";
 
+            if (prepTimeout) clearTimeout(prepTimeout);
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ৫ সেকেন্ড পেজ লোড ডিলে সহ টাইমার ক্যালকুলেশন
-            countdownTimer = setInterval(() => {
-                const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                // প্রথম ৫ সেকেন্ড পেজ লোড হতে সময় পাবে, এরপর বাকি ১০ সেকেন্ড নামবে
-                const activeRemaining = Math.max(0, 15 - passed);
-                const displaySec = Math.min(10, activeRemaining);
+            // ঠিক ২ সেকেন্ড পর থেকে ১০ সেকেন্ডের আসল কাউন্টডাউন শুরু
+            prepTimeout = setTimeout(() => {
+                btn.innerHTML = `10s`;
+                desc.innerText = "অপেক্ষা করুন...";
 
-                if (displaySec > 0) {
-                    btn.innerHTML = `${displaySec}s`;
-                } else {
-                    clearInterval(countdownTimer);
-                }
-            }, 500);
+                countdownTimer = setInterval(() => {
+                    const passed = Math.floor((Date.now() - taskStartTime) / 1000);
+                    // প্রথম ২ সেকেন্ড লোডিং, বাকি ১০ সেকেন্ড কাউন্ট হবে (মোট ১২ সেকেন্ড)
+                    const activeRemaining = Math.max(0, 12 - passed);
+                    const displaySec = Math.min(10, activeRemaining);
+
+                    if (displaySec > 0) {
+                        btn.innerHTML = `${displaySec}s`;
+                    } else {
+                        clearInterval(countdownTimer);
+                    }
+                }, 500);
+            }, 2000);
         }
 
         function completeTask(taskNum) {
@@ -961,7 +986,6 @@
             const icon = document.getElementById(taskNum === 1 ? "task1Icon" : "task2Icon");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
-            // ভিডিওর মতো সবুজ COMPLETED স্টাইল
             btn.className = "visit-action-btn done";
             btn.innerHTML = `COMPLETED`;
             icon.classList.add("completed");
@@ -987,13 +1011,14 @@
             document.getElementById("verifyFailPopup").style.display = "none";
         }
 
-        // 🔥 ব্যাক চলে এলে ১৫ সেকেন্ডের ব্যাকগ্রাউন্ড হিসাব ও পপ-আপ 🔥
+        // 🔥 ব্যাক চলে এলে ১২ সেকেন্ডের ব্যাকগ্রাউন্ড হিসাব ও পপ-আপ 🔥
         function handleVisibilityOrFocus() {
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = taskStartTime > 0 ? Math.floor((Date.now() - taskStartTime) / 1000) : 0;
-                const TOTAL_REQUIRED = 15; // ৫ সেকেন্ড পেজ লোড + ১০ সেকেন্ড অবস্থান
+                const TOTAL_REQUIRED = 12; // ২ সেকেন্ড পেজ লোড + ১০ সেকেন্ড অবস্থান
 
                 if (elapsedSeconds < TOTAL_REQUIRED) {
+                    if (prepTimeout) clearTimeout(prepTimeout);
                     if (countdownTimer) clearInterval(countdownTimer);
                     
                     const taskFailed = activeTask;
