@@ -8,8 +8,8 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- 🔥 আপনার আসল Monetag Telegram Mini App SDK (Zone: 8561658) 🔥 -->
-    <script src="https://alwingulla.com/88/tag.min.js" data-zone="8561658" async data-cfasync="false"></script>
+    <!-- 🔥 Monetag Official Telegram Mini App SDK (libtl.com) 🔥 -->
+    <script src="https://libtl.com/sdk.js" data-zone="8561658" data-sdk="show_8561658" async data-cfasync="false"></script>
 
     <style>
         :root {
@@ -660,6 +660,20 @@
             return u;
         }
 
+        // 🔥 ডাইনামিক স্ক্রিপ্ট লোডার (Monetag libtl.com ইনজেকশন) 🔥
+        function loadMonetagScript(srcUrl, zoneId, sdkFunc) {
+            let existing = document.querySelector(`script[data-zone="${zoneId}"]`);
+            if (!existing) {
+                const sc = document.createElement("script");
+                sc.src = srcUrl.startsWith("//") ? "https:" + srcUrl : srcUrl;
+                sc.setAttribute("data-zone", zoneId);
+                sc.setAttribute("data-sdk", sdkFunc);
+                sc.async = true;
+                sc.setAttribute("data-cfasync", "false");
+                document.head.appendChild(sc);
+            }
+        }
+
         async function initData() {
             try {
                 const res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${Date.now()}`, {
@@ -673,6 +687,17 @@
                 
                 renderCategoryTabs();
                 renderVideos();
+
+                // বটে দেওয়া স্ক্রিপ্ট থাকলে অটো লোড
+                const rawAd = (appData.ads?.ad1 || "");
+                if (rawAd.includes("libtl.com") || rawAd.includes("data-zone")) {
+                    const srcM = rawAd.match(/src=['"](.*?)['"]/);
+                    const zoneM = rawAd.match(/data-zone=['"](.*?)['"]/);
+                    const sdkM = rawAd.match(/data-sdk=['"](.*?)['"]/);
+                    if (srcM && zoneM) {
+                        loadMonetagScript(srcM[1], zoneM[1], sdkM ? sdkM[1] : `show_${zoneM[1]}`);
+                    }
+                }
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
@@ -774,7 +799,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 আসল Monetag Telegram Mini App SDK কল 🔥
+        // 🔥 আসল Monetag libtl SDK এক্সিকিউশন 🔥
         function startMonetagAdTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -784,14 +809,11 @@
             btn.className = "visit-action-btn running";
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
 
-            // বটে পাঠানো Zone ID বা ডিফল্ট জোন (8561658) কল করা
-            const rawZone = (taskNum === 1) ? (appData.ads?.ad1 || "8561658") : (appData.ads?.ad2 || "8561658");
-            const zoneClean = rawZone.replace(/\D/g, "") || "8561658";
-            const showFunction = window[`show_${zoneClean}`] || window.show_8561658;
+            // ১. ফাংশন নাম চিহ্নিত করা
+            const fnToCall = window["show_8561658"] || (window.monetag && window.monetag.show) || null;
 
-            if (typeof showFunction === "function") {
-                showFunction().then(() => {
-                    // ইউজার সম্পূর্ণ অ্যাড দেখলে টাস্ক সফল
+            if (typeof fnToCall === "function") {
+                fnToCall().then(() => {
                     completeTask(taskNum);
                 }).catch((err) => {
                     console.log("Ad Skipped or Closed Early:", err);
@@ -801,10 +823,13 @@
                     activeTask = null;
                 });
             } else {
-                // যদি ব্রাউজার ক্যাশে SDK লোড হতে ২ সেকেন্ড সময় নেয়
-                setTimeout(() => {
-                    const retryFunc = window[`show_${zoneClean}`] || window.show_8561658;
+                // ফাংশন লোড হতে দেরি হলে ২ সেকেন্ড অপেক্ষা করে ট্রাই করা
+                let checkCount = 0;
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    const retryFunc = window["show_8561658"] || (window.monetag && window.monetag.show);
                     if (typeof retryFunc === "function") {
+                        clearInterval(checkInterval);
                         retryFunc().then(() => {
                             completeTask(taskNum);
                         }).catch(() => {
@@ -813,19 +838,13 @@
                             document.getElementById("verifyFailPopup").style.display = "flex";
                             activeTask = null;
                         });
-                    } else {
-                        // যদি লিংক আকারে ডিরেক্ট লিংক থাকে
-                        if (rawZone.startsWith("http")) {
-                            if (tg && tg.openLink) tg.openLink(rawZone);
-                            else window.open(rawZone, "_blank");
-                            setTimeout(() => completeTask(taskNum), 10000);
-                        } else {
-                            alert("Monetag অ্যাড লোড হচ্ছে, অনুগ্রহ করে ২ সেকেন্ড পর আবার চাপুন।");
-                            btn.className = "visit-action-btn";
-                            btn.innerHTML = "VISIT";
-                        }
+                    } else if (checkCount >= 4) {
+                        clearInterval(checkInterval);
+                        btn.className = "visit-action-btn";
+                        btn.innerHTML = "VISIT";
+                        alert("বিজ্ঞাপন লোড হতে পারছে না। অনুগ্রহ করে নেট চেক করে আবার চাপুন।");
                     }
-                }, 1000);
+                }, 500);
             }
         }
 
