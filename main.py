@@ -42,7 +42,13 @@ def get_default_data():
         "users": [],
         "categories": ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"],
         "sub_categories": {},
-        "ads": {"ad1": "", "ad2": "", "social_ad": "", "native_ad": "", "popunder_ad": ""},
+        "ads": {
+            "ad1": "https://omg10.com/4/8465535",
+            "ad2": "https://omg10.com/4/8465535",
+            "social_ad": "",
+            "native_ad": "",
+            "popunder_ad": ""
+        },
         "welcome_video": "",
         "update_notice": "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!",
         "videos": []
@@ -179,21 +185,30 @@ def get_admin_keyboard():
     )
     return markup
 
+# 🔥 পূর্ণাঙ্গ বিজ্ঞাপন নিয়ন্ত্রণ কিবোর্ড 🔥
 def get_ads_keyboard():
     data = load_data()
     ads = data.get("ads", {})
-    t1_status = "✅ আছে" if ads.get("ad1") else "❌ নেই"
-    t2_status = "✅ আছে" if ads.get("ad2") else "❌ নেই"
-    p_status = "✅ আছে" if ads.get("popunder_ad") else "❌ নেই"
+    t1_s = "✅" if ads.get("ad1") else "❌"
+    t2_s = "✅" if ads.get("ad2") else "❌"
+    soc_s = "✅" if ads.get("social_ad") else "❌"
+    nat_s = "✅" if ads.get("native_ad") else "❌"
+    pop_s = "✅" if ads.get("popunder_ad") else "❌"
 
-    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(
-        types.InlineKeyboardButton(f"📺 ১. Task 1 Monetag Ad সেট ({t1_status})", callback_data="set_ad_t1"),
-        types.InlineKeyboardButton(f"📺 ২. Task 2 Monetag Ad সেট ({t2_status})", callback_data="set_ad_t2"),
-        types.InlineKeyboardButton(f"💥 ৩. পপআন্ডার সেট করুন ({p_status})", callback_data="set_ad_popunder"),
-        types.InlineKeyboardButton("🗑️ পপআন্ডার বন্ধ করুন", callback_data="del_ad_popunder"),
-        types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu")
+        types.InlineKeyboardButton(f"🔗 Task 1 সেট ({t1_s})", callback_data="set_ad_t1"),
+        types.InlineKeyboardButton("🗑️ Task 1 মুছুন", callback_data="del_ad_t1"),
+        types.InlineKeyboardButton(f"🔗 Task 2 সেট ({t2_s})", callback_data="set_ad_t2"),
+        types.InlineKeyboardButton("🗑️ Task 2 মুছুন", callback_data="del_ad_t2"),
+        types.InlineKeyboardButton(f"🚀 সোশ্যাল বার ({soc_s})", callback_data="set_ad_social"),
+        types.InlineKeyboardButton("🗑️ সোশ্যাল বার মুছুন", callback_data="del_ad_social"),
+        types.InlineKeyboardButton(f"📱 নেটিভ ব্যানার ({nat_s})", callback_data="set_ad_native"),
+        types.InlineKeyboardButton("🗑️ নেটিভ মুছুন", callback_data="del_ad_native"),
+        types.InlineKeyboardButton(f"💥 পপআন্ডার ({pop_s})", callback_data="set_ad_popunder"),
+        types.InlineKeyboardButton("🗑️ পপআন্ডার মুছুন", callback_data="del_ad_popunder"),
     )
+    markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return markup
 
 def format_button_label(video):
@@ -283,28 +298,6 @@ def send_welcome(message):
     except Exception as e:
         print("Welcome error:", e)
 
-def run_broadcast_worker(admin_chat_id, media_type, file_id, caption_text, with_btn, user_list):
-    notice_markup = None
-    if with_btn:
-        fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
-        notice_markup = types.InlineKeyboardMarkup()
-        notice_markup.add(types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)))
-    
-    sent = 0
-    for uid in user_list:
-        try:
-            if media_type == 'video':
-                bot.send_video(uid, file_id, caption=caption_text, reply_markup=notice_markup)
-            elif media_type == 'photo':
-                bot.send_photo(uid, file_id, caption=caption_text, reply_markup=notice_markup)
-            else:
-                bot.send_message(uid, caption_text, reply_markup=notice_markup)
-            sent += 1
-            time.sleep(0.04)
-        except Exception:
-            pass
-    bot.send_message(admin_chat_id, f"✅ ব্যাকগ্রাউন্ডে মোট **{sent}** জনের কাছে নোটিশ পাঠানো সম্পন্ন!")
-
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
     chat_id = call.message.chat.id
@@ -320,42 +313,64 @@ def handle_callbacks(call):
 
     if str(chat_id) != str(ADMIN_ID): return
 
-    if call.data in ["bc_with_btn", "bc_without_btn"]:
-        if chat_id in admin_state and admin_state[chat_id].get('step') == 'confirm_broadcast':
-            with_btn = (call.data == "bc_with_btn")
-            st = admin_state[chat_id]
-            media_type = st.get('media_type')
-            file_id = st.get('file_id')
-            caption_text = st.get('caption')
-            del admin_state[chat_id]
-            
-            data = load_data()
-            user_list = data.get("users", [])
-            bot.delete_message(chat_id, call.message.message_id)
-            btn_txt = "বাটন সহ" if with_btn else "বাটন ছাড়া"
-            bot.send_message(chat_id, f"⏳ **{btn_txt} {len(user_list)} জন ইউজারের কাছে নোটিশ পাঠানো হচ্ছে... বট সম্পূর্ণ সচল থাকবে।**", reply_markup=get_admin_keyboard())
-            
-            threading.Thread(
-                target=run_broadcast_worker,
-                args=(chat_id, media_type, file_id, caption_text, with_btn, user_list),
-                daemon=True
-            ).start()
-        return
-
     if call.data == "close_admin_menu":
         bot.delete_message(chat_id, call.message.message_id)
         bot.answer_callback_query(call.id)
         return
-    elif call.data == "set_ad_t1":
+
+    # অ্যাড হ্যান্ডলিং কলব্যাকস
+    if call.data == "set_ad_t1":
         admin_state[chat_id] = {'step': 'ad_1'}
-        bot.send_message(chat_id, "📺 **Task 1 এর জন্য Monetag Mini App Ad Script / Zone ID / Tag পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "📺 **Task 1 এর জন্য Direct Link / Monetag Script পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
+    elif call.data == "del_ad_t1":
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["ad1"] = ""
+        save_data(data)
+        bot.answer_callback_query(call.id, "🗑️ Task 1 মুছে ফেলা হয়েছে!", show_alert=True)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
+        return
+
     elif call.data == "set_ad_t2":
         admin_state[chat_id] = {'step': 'ad_2'}
-        bot.send_message(chat_id, "📺 **Task 2 এর জন্য Monetag Mini App Ad Script / Zone ID / Tag পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "📺 **Task 2 এর জন্য Direct Link / Monetag Script পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
+    elif call.data == "del_ad_t2":
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["ad2"] = ""
+        save_data(data)
+        bot.answer_callback_query(call.id, "🗑️ Task 2 মুছে ফেলা হয়েছে!", show_alert=True)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
+        return
+
+    elif call.data == "set_ad_social":
+        admin_state[chat_id] = {'step': 'set_social_ad'}
+        bot.send_message(chat_id, "🚀 **সোশ্যাল বার স্ক্রিপ্ট বা ডিরেক্ট লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.answer_callback_query(call.id)
+        return
+    elif call.data == "del_ad_social":
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["social_ad"] = ""
+        save_data(data)
+        bot.answer_callback_query(call.id, "🗑️ সোশ্যাল বার মুছে ফেলা হয়েছে!", show_alert=True)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
+        return
+
+    elif call.data == "set_ad_native":
+        admin_state[chat_id] = {'step': 'set_native_ad'}
+        bot.send_message(chat_id, "📱 **নেটিভ ব্যানার কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.answer_callback_query(call.id)
+        return
+    elif call.data == "del_ad_native":
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["native_ad"] = ""
+        save_data(data)
+        bot.answer_callback_query(call.id, "🗑️ নেটিভ ব্যানার মুছে ফেলা হয়েছে!", show_alert=True)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
+        return
+
     elif call.data == "set_ad_popunder":
         admin_state[chat_id] = {'step': 'set_popunder_ad'}
         bot.send_message(chat_id, "💥 **পপআন্ডার কোড বা লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
@@ -437,7 +452,7 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "📁 **ক্যাটাগরি ম্যানেজমেন্ট:**", reply_markup=get_category_keyboard())
         return
     elif message.text == "🎯 Set Ads Link":
-        bot.send_message(chat_id, "🎯 **বিজ্ঞাপন সেটিংস ও নিয়ন্ত্রণ:**", reply_markup=get_ads_keyboard())
+        bot.send_message(chat_id, "🎯 **বিজ্ঞাপন সেটিংস ও পূর্ণ নিয়ন্ত্রণ:**", reply_markup=get_ads_keyboard())
         return
     elif message.text == "🎥 Set Welcome Video":
         admin_state[chat_id] = {'step': 'welcome_video'}
@@ -456,51 +471,33 @@ def handle_admin_inputs(message):
     if chat_id not in admin_state: return
     step = admin_state[chat_id].get('step')
 
-    if step == 'notice_input':
-        m_type = 'text'
-        f_id = None
-        cap = ""
-
-        if message.video:
-            m_type = 'video'
-            f_id = message.video.file_id
-            cap = message.caption or ""
-        elif message.photo:
-            m_type = 'photo'
-            f_id = message.photo[-1].file_id
-            cap = message.caption or ""
-        elif message.text:
-            m_type = 'text'
-            cap = message.text
-
-        admin_state[chat_id] = {
-            'step': 'confirm_broadcast',
-            'media_type': m_type,
-            'file_id': f_id,
-            'caption': cap
-        }
-
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        markup.add(
-            types.InlineKeyboardButton("✅ 'WATCH NOW' বাটন সহ পাঠান", callback_data="bc_with_btn"),
-            types.InlineKeyboardButton("🚫 কোনো বাটন ছাড়া সরাসরি পাঠান", callback_data="bc_without_btn")
-        )
-        bot.send_message(chat_id, "🎯 **নোটিশটি কীভাবে পাঠাতে চান বেছে নিন:**", reply_markup=markup)
-        return
-
     if step == 'ad_1' and message.text:
         data = load_data(force_refresh=True)
         data.setdefault("ads", {})["ad1"] = message.text.strip()
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **Task 1 Monetag Ad সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **Task 1 সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'ad_2' and message.text:
         data = load_data(force_refresh=True)
         data.setdefault("ads", {})["ad2"] = message.text.strip()
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **Task 2 Monetag Ad সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **Task 2 সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
+        return
+    elif step == 'set_social_ad' and message.text:
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["social_ad"] = message.text.strip()
+        save_data(data)
+        del admin_state[chat_id]
+        bot.send_message(chat_id, "✅ **সোশ্যাল বার সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
+        return
+    elif step == 'set_native_ad' and message.text:
+        data = load_data(force_refresh=True)
+        data.setdefault("ads", {})["native_ad"] = message.text.strip()
+        save_data(data)
+        del admin_state[chat_id]
+        bot.send_message(chat_id, "✅ **নেটিভ ব্যানার সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_popunder_ad' and message.text:
         data = load_data(force_refresh=True)
