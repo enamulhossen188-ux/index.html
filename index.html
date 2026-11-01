@@ -7,9 +7,6 @@
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- 🔥 Monetag Official Telegram Mini App SDK (libtl.com) 🔥 -->
-    <script src="https://libtl.com/sdk.js" data-zone="8561658" data-sdk="show_8561658" async data-cfasync="false"></script>
 
     <style>
         :root {
@@ -411,6 +408,19 @@
             pointer-events: none;
         }
 
+        .native-ad-container {
+            width: 100%;
+            min-height: 80px;
+            margin-top: 14px;
+            padding: 8px 4px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            text-align: center;
+            overflow: visible;
+            display: none;
+        }
+
         .empty-msg {
             text-align: center;
             color: var(--text-muted);
@@ -418,7 +428,7 @@
             font-size: 13px;
         }
 
-        /* ফেইল্ড পপ-আপ */
+        /* স্ক্রিনশটের হুবহু ফেইল্ড পপ-আপ */
         .custom-popup-overlay {
             display: none;
             position: fixed;
@@ -545,7 +555,7 @@
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি স্পন্সর অ্যাড সম্পন্ন করুন।</span>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক সম্পন্ন করুন।</span>
             </div>
 
             <div class="task-list">
@@ -554,10 +564,10 @@
                         <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 1</h4>
-                            <p id="task1Desc">অ্যাড দেখুন</p>
+                            <p id="task1Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task1Btn" class="visit-action-btn" onclick="startMonetagAdTask(1)">VISIT</button>
+                    <button id="task1Btn" class="visit-action-btn" onclick="startUniversalTask(1)">VISIT</button>
                 </div>
 
                 <div class="task-card-row">
@@ -565,16 +575,18 @@
                         <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 2</h4>
-                            <p id="task2Desc">অ্যাড দেখুন</p>
+                            <p id="task2Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task2Btn" class="visit-action-btn" onclick="startMonetagAdTask(2)">VISIT</button>
+                    <button id="task2Btn" class="visit-action-btn" onclick="startUniversalTask(2)">VISIT</button>
                 </div>
             </div>
 
             <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
                 <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
             </button>
+
+            <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
 
@@ -583,10 +595,10 @@
         <div class="custom-popup-card">
             <div class="popup-sad-icon"><i class="fa-regular fa-face-frown"></i></div>
             <div class="popup-title">
-                দুঃখিত আপনি সম্পূর্ণ অ্যাড না দেখে চলে এসেছেন।
+                দুঃখিত আপনি সম্পূর্ণ সময় অপেক্ষা না করে চলে এসেছেন।
             </div>
             <div class="popup-desc">
-                ভিডিও আনলক করতে সম্পূর্ণ অ্যাডটি দেখা প্রয়োজন ছিল।
+                আরো <span id="needSecondsTxt" class="popup-highlight">10</span> সেকেন্ড দেখার প্রয়োজন ছিল।
             </div>
             <button class="popup-action-btn" onclick="closePopup()">OK</button>
         </div>
@@ -604,6 +616,8 @@
         let task1Done = false;
         let task2Done = false;
         let activeTask = null;
+        let taskStartTime = 0;
+        let countdownTimer = null;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -660,18 +674,65 @@
             return u;
         }
 
-        // 🔥 ডাইনামিক স্ক্রিপ্ট লোডার (Monetag libtl.com ইনজেকশন) 🔥
-        function loadMonetagScript(srcUrl, zoneId, sdkFunc) {
-            let existing = document.querySelector(`script[data-zone="${zoneId}"]`);
-            if (!existing) {
-                const sc = document.createElement("script");
-                sc.src = srcUrl.startsWith("//") ? "https:" + srcUrl : srcUrl;
-                sc.setAttribute("data-zone", zoneId);
-                sc.setAttribute("data-sdk", sdkFunc);
-                sc.async = true;
-                sc.setAttribute("data-cfasync", "false");
-                document.head.appendChild(sc);
+        // 🔥 সোশ্যাল বার ও পপআন্ডার স্ক্রিপ্ট লোডার 🔥
+        function injectAdScript(codeStr) {
+            if (!codeStr || !codeStr.trim()) return;
+            let raw = codeStr.trim();
+            let srcMatch = raw.match(/src=['"](.*?)['"]/);
+            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<") ? raw : null);
+
+            const s = document.createElement("script");
+            s.type = "text/javascript";
+            s.async = true;
+            s.setAttribute("data-cfasync", "false");
+            if (finalSrc) {
+                if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
+                s.src = finalSrc;
+            } else {
+                s.text = raw.replace(/<\/?script[^>]*>/gi, "");
             }
+            document.head.appendChild(s);
+        }
+
+        function injectNativeBanner(container, codeStr) {
+            if (!codeStr || !codeStr.trim() || !container) {
+                if (container) container.style.display = "none";
+                return;
+            }
+            container.style.display = "block";
+            container.innerHTML = "";
+            let raw = codeStr.trim();
+            const doc = new DOMParser().parseFromString(raw, "text/html");
+            const divs = doc.querySelectorAll("div");
+            divs.forEach(d => container.appendChild(d.cloneNode(true)));
+            const scripts = doc.querySelectorAll("script");
+            scripts.forEach(sc => {
+                const s = document.createElement("script");
+                if (sc.src) s.src = sc.src;
+                s.text = sc.innerHTML;
+                s.setAttribute("data-cfasync", "false");
+                container.appendChild(s);
+            });
+        }
+
+        function renderAllAds() {
+            const ads = appData.ads || {};
+            if (ads.popunder_ad) {
+                let rawPop = ads.popunder_ad.trim();
+                if (rawPop.startsWith("http") && !rawPop.includes(".js") && !rawPop.includes("<")) {
+                    let done = false;
+                    document.addEventListener("click", () => {
+                        if (!done) {
+                            done = true;
+                            if (tg && tg.openLink) tg.openLink(rawPop);
+                            else window.open(rawPop, "_blank");
+                        }
+                    }, { once: true });
+                } else {
+                    injectAdScript(rawPop);
+                }
+            }
+            if (ads.social_ad) injectAdScript(ads.social_ad);
         }
 
         async function initData() {
@@ -687,17 +748,7 @@
                 
                 renderCategoryTabs();
                 renderVideos();
-
-                // বটে দেওয়া স্ক্রিপ্ট থাকলে অটো লোড
-                const rawAd = (appData.ads?.ad1 || "");
-                if (rawAd.includes("libtl.com") || rawAd.includes("data-zone")) {
-                    const srcM = rawAd.match(/src=['"](.*?)['"]/);
-                    const zoneM = rawAd.match(/data-zone=['"](.*?)['"]/);
-                    const sdkM = rawAd.match(/data-sdk=['"](.*?)['"]/);
-                    if (srcM && zoneM) {
-                        loadMonetagScript(srcM[1], zoneM[1], sdkM ? sdkM[1] : `show_${zoneM[1]}`);
-                    }
-                }
+                renderAllAds();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
@@ -768,6 +819,10 @@
             detailImg.setAttribute("data-title", video.title || "");
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
+
+            if (appData.ads?.native_ad) {
+                injectNativeBanner(document.getElementById("nativeAdBox"), appData.ads.native_ad);
+            }
             resetTasks();
         }
 
@@ -775,6 +830,8 @@
             task1Done = false;
             task2Done = false;
             activeTask = null;
+            taskStartTime = 0;
+            if (countdownTimer) clearInterval(countdownTimer);
 
             const btn1 = document.getElementById("task1Btn");
             const btn2 = document.getElementById("task2Btn");
@@ -783,69 +840,100 @@
             btn1.className = "visit-action-btn";
             btn1.innerHTML = "VISIT";
             document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task1Desc").innerText = "অ্যাড দেখুন";
+            document.getElementById("task1Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
             btn2.className = "visit-action-btn";
             btn2.innerHTML = "VISIT";
             document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task2Desc").innerText = "অ্যাড দেখুন";
+            document.getElementById("task2Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
             dlBtn.className = "download-btn disabled";
             dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
         }
 
         function goBack() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            activeTask = null;
+            taskStartTime = 0;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 আসল Monetag libtl SDK এক্সিকিউশন 🔥
-        function startMonetagAdTask(taskNum) {
+        // 🔥 সর্বজনীন টাস্ক রানার (ডিরেক্ট লিংক + মনিট্যাগ স্মার্টলিংক ইনস্ট্যান্ট ওপেন) 🔥
+        function startUniversalTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
             activeTask = taskNum;
-            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
-            btn.className = "visit-action-btn running";
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+            taskStartTime = Date.now();
 
-            // ১. ফাংশন নাম চিহ্নিত করা
-            const fnToCall = window["show_8561658"] || (window.monetag && window.monetag.show) || null;
+            const rawAd = (taskNum === 1) ? (appData.ads?.ad1 || "") : (appData.ads?.ad2 || "");
 
-            if (typeof fnToCall === "function") {
-                fnToCall().then(() => {
+            // যদি Monetag SDK ফাংশন উপস্থিত থাকে
+            const zoneM = rawAd.match(/data-zone=['"](.*?)['"]/);
+            const zoneId = zoneM ? zoneM[1] : (rawAd.match(/\d{6,8}/) ? rawAd.match(/\d{6,8}/)[0] : "8561658");
+            const sdkFunc = window[`show_${zoneId}`];
+
+            if (typeof sdkFunc === "function") {
+                sdkFunc().then(() => {
                     completeTask(taskNum);
-                }).catch((err) => {
-                    console.log("Ad Skipped or Closed Early:", err);
-                    btn.className = "visit-action-btn";
-                    btn.innerHTML = "VISIT";
-                    document.getElementById("verifyFailPopup").style.display = "flex";
-                    activeTask = null;
+                }).catch(() => {
+                    handleTaskFailure();
                 });
-            } else {
-                // ফাংশন লোড হতে দেরি হলে ২ সেকেন্ড অপেক্ষা করে ট্রাই করা
-                let checkCount = 0;
-                const checkInterval = setInterval(() => {
-                    checkCount++;
-                    const retryFunc = window["show_8561658"] || (window.monetag && window.monetag.show);
-                    if (typeof retryFunc === "function") {
-                        clearInterval(checkInterval);
-                        retryFunc().then(() => {
-                            completeTask(taskNum);
-                        }).catch(() => {
-                            btn.className = "visit-action-btn";
-                            btn.innerHTML = "VISIT";
-                            document.getElementById("verifyFailPopup").style.display = "flex";
-                            activeTask = null;
-                        });
-                    } else if (checkCount >= 4) {
-                        clearInterval(checkInterval);
-                        btn.className = "visit-action-btn";
-                        btn.innerHTML = "VISIT";
-                        alert("বিজ্ঞাপন লোড হতে পারছে না। অনুগ্রহ করে নেট চেক করে আবার চাপুন।");
-                    }
-                }, 500);
+                return;
             }
+
+            // ডিরেক্ট লিংক অথবা স্মার্টলিংক ওপেন করা
+            let openUrl = rawAd;
+            if (rawAd.includes("<") || rawAd.includes("script")) {
+                let srcM = rawAd.match(/src=['"](.*?)['"]/);
+                if (srcM) openUrl = srcM[1].startsWith("//") ? "https:" + srcM[1] : srcM[1];
+                else openUrl = "https://omg10.com/4/8465535";
+            }
+            if (!openUrl || !openUrl.startsWith("http")) {
+                openUrl = "https://omg10.com/4/8465535";
+            }
+
+            if (tg && tg.openLink) tg.openLink(openUrl);
+            else window.open(openUrl, "_blank");
+
+            // বাটনে লাইভ কাউন্টডাউন
+            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
+            const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
+            btn.className = "visit-action-btn running";
+            btn.innerHTML = `10s`;
+            desc.innerText = "অপেক্ষা করুন...";
+
+            if (countdownTimer) clearInterval(countdownTimer);
+            countdownTimer = setInterval(() => {
+                const passed = Math.floor((Date.now() - taskStartTime) / 1000);
+                const remaining = Math.max(0, 12 - passed);
+                const displaySec = Math.min(10, remaining);
+
+                if (displaySec > 0) {
+                    btn.innerHTML = `${displaySec}s`;
+                } else {
+                    clearInterval(countdownTimer);
+                }
+            }, 500);
+        }
+
+        function handleTaskFailure() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            const taskFailed = activeTask;
+            activeTask = null;
+            taskStartTime = 0;
+
+            if (taskFailed) {
+                const btn = document.getElementById(taskFailed === 1 ? "task1Btn" : "task2Btn");
+                const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
+                btn.className = "visit-action-btn";
+                btn.innerHTML = `VISIT`;
+                desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
+            }
+
+            document.getElementById("needSecondsTxt").innerText = "১০";
+            document.getElementById("verifyFailPopup").style.display = "flex";
         }
 
         function completeTask(taskNum) {
@@ -862,6 +950,7 @@
             if (taskNum === 2) task2Done = true;
 
             activeTask = null;
+            taskStartTime = 0;
             if (task1Done && task2Done) {
                 document.getElementById("downloadBtn").className = "download-btn";
             }
@@ -870,6 +959,26 @@
         function closePopup() {
             document.getElementById("verifyFailPopup").style.display = "none";
         }
+
+        // ইউজার ব্যাক এলে সময় যাচাই
+        function handleVisibilityOrFocus() {
+            if (document.visibilityState === "visible" && activeTask !== null) {
+                const elapsedSeconds = taskStartTime > 0 ? Math.floor((Date.now() - taskStartTime) / 1000) : 0;
+                const REQUIRED = 12; // ২ সেকেন্ড লোড + ১০ সেকেন্ড ভিউ
+
+                if (elapsedSeconds < REQUIRED) {
+                    const remainingNeed = Math.min(10, Math.max(1, REQUIRED - elapsedSeconds));
+                    document.getElementById("needSecondsTxt").innerText = remainingNeed;
+                    handleTaskFailure();
+                } else {
+                    if (countdownTimer) clearInterval(countdownTimer);
+                    completeTask(activeTask);
+                }
+            }
+        }
+
+        document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+        window.addEventListener("focus", handleVisibilityOrFocus);
 
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
