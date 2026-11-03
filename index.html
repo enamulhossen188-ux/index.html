@@ -619,7 +619,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderTriggered = false;
+        let popunderDone = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -676,25 +676,6 @@
             return u;
         }
 
-        function injectAdScript(codeStr) {
-            if (!codeStr || !codeStr.trim()) return;
-            let raw = codeStr.trim();
-            let srcMatch = raw.match(/src=['"](.*?)['"]/);
-            let finalSrc = srcMatch ? srcMatch[1] : (raw.startsWith("http") && !raw.includes("<") ? raw : null);
-
-            const s = document.createElement("script");
-            s.type = "text/javascript";
-            s.async = true;
-            s.setAttribute("data-cfasync", "false");
-            if (finalSrc) {
-                if (finalSrc.startsWith("//")) finalSrc = "https:" + finalSrc;
-                s.src = finalSrc;
-            } else {
-                s.text = raw.replace(/<\/?script[^>]*>/gi, "");
-            }
-            document.head.appendChild(s);
-        }
-
         function renderBannerOrNative(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -722,36 +703,42 @@
             });
         }
 
-        // 🔥 পপআন্ডার মেকানিজম (শুধু বৈধ লিঙ্ক থাকলে ইউজার ক্লিকে ওপেন হবে) 🔥
-        function checkAndTriggerPopunder() {
-            if (popunderTriggered) return;
-            const ads = appData.ads || {};
-            const rawPop = (ads.popunder_ad || "").trim();
+        // 🔥 পপআন্ডার মেকানিজম (শুধু ব্যাকগ্রাউন্ডে একবার টাচ লাগলে ওপেন হবে) 🔥
+        function initCleanPopunder() {
+            const rawPop = (appData.ads?.popunder_ad || "").trim();
+            if (!rawPop.startsWith("http")) return;
 
-            if (rawPop.startsWith("http")) {
-                popunderTriggered = true;
+            const handleFirstTouch = (e) => {
+                if (popunderDone) return;
+                // যদি বাটনে টাচ করে তবে পপআন্ডার চালু হবে না
+                if (e.target.closest(".visit-action-btn") || e.target.closest(".download-btn") || e.target.closest(".back-btn") || e.target.closest(".search-input")) {
+                    return;
+                }
+
+                popunderDone = true;
                 if (tg && tg.openLink) {
                     tg.openLink(rawPop);
                 } else {
                     window.open(rawPop, "_blank");
                 }
-            }
+                document.removeEventListener("click", handleFirstTouch, true);
+            };
+
+            document.addEventListener("click", handleFirstTouch, true);
         }
 
         function renderAllAds() {
             const ads = appData.ads || {};
 
-            // ১. ব্যানার
+            // ১. ব্যানার অ্যাড
             if (ads.banner_ad && ads.banner_ad.trim().length > 7) {
                 renderBannerOrNative(document.getElementById("mainBannerBox"), ads.banner_ad);
             } else {
                 document.getElementById("mainBannerBox").style.display = "none";
             }
 
-            // ২. সোশ্যাল বার
-            if (ads.social_ad && ads.social_ad.trim().length > 7) {
-                injectAdScript(ads.social_ad);
-            }
+            // ২. পপআন্ডার ইনিশিয়ালাইজ
+            initCleanPopunder();
         }
 
         async function initData() {
@@ -807,11 +794,8 @@
                 list.forEach(item => {
                     const card = document.createElement("div");
                     card.className = "video-card";
-                    card.onclick = () => {
-                        // কার্ডে ক্লিক করলে বৈধ পপআন্ডার থাকলে ওপেন হবে
-                        checkAndTriggerPopunder();
-                        openDetail(item);
-                    };
+                    // কোনো অযাচিত রিডাইরেক্ট ছাড়া শুধু ডিটেইলস খুলবে
+                    card.onclick = () => openDetail(item);
                     
                     const thumbUrl = resolveThumb(item.thumb, item.title);
                     card.innerHTML = `
@@ -886,7 +870,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টাচ করার সাথে সাথেই কোনো লোডিং বা দেরি ছাড়াই ডিরেক্ট লিংকে নিয়ে যাবে 🔥
+        // 🔥 টাস্ক বাটনে চাপার সাথে সাথেই ১ মিলি-সেকেন্ডে ডিরেক্ট লিংকে নিয়ে যাবে 🔥
         function startDirectTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -898,7 +882,7 @@
                 return;
             }
 
-            // কোনো অপেক্ষমাণ কোড ছাড়া সরাসরি ইনস্ট্যান্ট ওপেন
+            // কোনো অপেক্ষা ছাড়া তাৎক্ষণিক লিংক ওপেন
             if (tg && tg.openLink) {
                 tg.openLink(targetUrl);
             } else {
@@ -1031,4 +1015,4 @@
         initData();
     </script>
 </body>
-    </html>
+                    </html>
