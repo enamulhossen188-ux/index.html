@@ -560,7 +560,6 @@
                 <span id="unlockInfoText">ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন।</span>
             </div>
 
-            <!-- 🔥 টাস্ক বাটন দুটি সবসময় দৃশ্যমান থাকবে 🔥 -->
             <div class="task-list">
                 <div class="task-card-row" id="taskRow1">
                     <div class="task-info-left">
@@ -593,7 +592,6 @@
         </div>
     </div>
 
-    <!-- ফেইল্ড পপ-আপ -->
     <div id="verifyFailPopup" class="custom-popup-overlay">
         <div class="custom-popup-card">
             <div class="popup-sad-icon"><i class="fa-regular fa-face-frown"></i></div>
@@ -723,32 +721,34 @@
             });
         }
 
-        // 🔥 বিজ্ঞাপন রেন্ডারার - শুধুমাত্র বটে সেট করা থাকলে কাজ করবে 🔥
+        // 🔥 বিজ্ঞাপন রেন্ডারার - শুধুমাত্র ভ্যালিড লিংক থাকলে কাজ করবে (404 প্রতিরোধ) 🔥
         function renderAllAds() {
             const ads = appData.ads || {};
 
-            // ১. ব্যানার অ্যাড
-            if (ads.banner_ad && ads.banner_ad.trim() !== "") {
+            // ১. ব্যানার
+            if (ads.banner_ad && ads.banner_ad.trim().length > 5) {
                 renderBannerOrNative(document.getElementById("mainBannerBox"), ads.banner_ad);
             } else {
                 document.getElementById("mainBannerBox").style.display = "none";
             }
 
-            // ২. পপআন্ডার (বটে সেট করা থাকলেই শুধু কাজ করবে)
-            if (ads.popunder_ad && ads.popunder_ad.trim() !== "") {
+            // ২. পপআন্ডার (শুধুমাত্র যদি বৈধ লিংক বা স্ক্রিপ্ট থাকে)
+            if (ads.popunder_ad && ads.popunder_ad.trim().length > 5) {
                 let rawPop = ads.popunder_ad.trim();
                 let popDone = false;
                 document.addEventListener("click", () => {
                     if (!popDone) {
                         popDone = true;
-                        if (tg && tg.openLink) tg.openLink(rawPop);
-                        else window.open(rawPop, "_blank");
+                        if (rawPop.startsWith("http")) {
+                            if (tg && tg.openLink) tg.openLink(rawPop);
+                            else window.open(rawPop, "_blank");
+                        }
                     }
                 }, { once: true });
             }
 
-            // ৩. সোশ্যাল বার (বটে সেট করা থাকলেই শুধু আসবে)
-            if (ads.social_ad && ads.social_ad.trim() !== "") {
+            // ৩. সোশ্যাল বার
+            if (ads.social_ad && ads.social_ad.trim().length > 5) {
                 injectAdScript(ads.social_ad);
             }
         }
@@ -838,7 +838,7 @@
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
-            if (appData.ads?.native_ad && appData.ads.native_ad.trim() !== "") {
+            if (appData.ads?.native_ad && appData.ads.native_ad.trim().length > 5) {
                 renderBannerOrNative(document.getElementById("nativeAdBox"), appData.ads.native_ad);
             } else {
                 document.getElementById("nativeAdBox").style.display = "none";
@@ -846,7 +846,6 @@
             resetTasks();
         }
 
-        // টাস্ক রিসেট
         function resetTasks() {
             task1Done = false;
             task2Done = false;
@@ -882,23 +881,27 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 ডিরেক্ট লিঙ্ক ওপেন ও ১০ সেকেন্ড টাইমার ট্র্যাকিং 🔥
+        // 🔥 ডিরেক্ট লিঙ্ক ওপেন ও ১০ সেকেন্ড কাউন্টডাউন (404 এবং খালি লিঙ্ক প্রতিরোধ) 🔥
         function startDirectTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
-            const targetUrl = (taskNum === 1) ? appData.ads?.ad1 : appData.ads?.ad2;
+            const targetUrl = (taskNum === 1) ? (appData.ads?.ad1 || "").trim() : (appData.ads?.ad2 || "").trim();
+
+            // যদি বটে লিঙ্ক না থাকে, তবে ইউজারকে জানানো হবে এবং কোনো পেজ খুলবে না
+            if (!targetUrl || !targetUrl.startsWith("http")) {
+                alert("এডমিন এখনও এই টাস্কে কোনো বিজ্ঞাপন লিঙ্ক যুক্ত করেননি!");
+                return;
+            }
 
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // যদি আপনি বটে লিঙ্ক সেট করে থাকেন, তবেই লিঙ্ক ওপেন হবে
-            if (targetUrl && targetUrl.trim() !== "") {
-                if (tg && tg.openLink) {
-                    tg.openLink(targetUrl);
-                } else {
-                    window.open(targetUrl, "_blank");
-                }
+            // শুধুমাত্র বৈধ http/https লিঙ্ক থাকলে টেলিগ্রাম ইন-অ্যাপ ব্রাউজারে খুলবে
+            if (tg && tg.openLink) {
+                tg.openLink(targetUrl);
+            } else {
+                window.open(targetUrl, "_blank");
             }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
