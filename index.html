@@ -557,11 +557,12 @@
 
             <div class="unlock-info-box" id="unlockInfoBox">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span id="unlockInfoText">ভিডিওটি আনলক করার জন্য নিচের টাস্ক সম্পন্ন করুন।</span>
+                <span id="unlockInfoText">ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন।</span>
             </div>
 
+            <!-- 🔥 টাস্ক বাটন দুটি সবসময় দৃশ্যমান থাকবে 🔥 -->
             <div class="task-list">
-                <div class="task-card-row" id="taskRow1" style="display: none;">
+                <div class="task-card-row" id="taskRow1">
                     <div class="task-info-left">
                         <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
@@ -572,7 +573,7 @@
                     <button id="task1Btn" class="visit-action-btn" onclick="startDirectTask(1)">VISIT</button>
                 </div>
 
-                <div class="task-card-row" id="taskRow2" style="display: none;">
+                <div class="task-card-row" id="taskRow2">
                     <div class="task-info-left">
                         <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
@@ -726,14 +727,14 @@
         function renderAllAds() {
             const ads = appData.ads || {};
 
-            // ১. ব্যানার
+            // ১. ব্যানার অ্যাড
             if (ads.banner_ad && ads.banner_ad.trim() !== "") {
                 renderBannerOrNative(document.getElementById("mainBannerBox"), ads.banner_ad);
             } else {
                 document.getElementById("mainBannerBox").style.display = "none";
             }
 
-            // ২. পপআন্ডার (বটে সেট করা থাকলেই শুধু ওপেন হবে)
+            // ২. পপআন্ডার (বটে সেট করা থাকলেই শুধু কাজ করবে)
             if (ads.popunder_ad && ads.popunder_ad.trim() !== "") {
                 let rawPop = ads.popunder_ad.trim();
                 let popDone = false;
@@ -746,7 +747,7 @@
                 }, { once: true });
             }
 
-            // ৩. সোশ্যাল বার
+            // ৩. সোশ্যাল বার (বটে সেট করা থাকলেই শুধু আসবে)
             if (ads.social_ad && ads.social_ad.trim() !== "") {
                 injectAdScript(ads.social_ad);
             }
@@ -845,7 +846,7 @@
             resetTasks();
         }
 
-        // 🔥 টাস্ক রিসেট: যদি বটে লিঙ্ক না থাকে তবে কোনো টাস্কই লাগবে না 🔥
+        // টাস্ক রিসেট
         function resetTasks() {
             task1Done = false;
             task2Done = false;
@@ -853,44 +854,23 @@
             taskStartTime = 0;
             if (countdownTimer) clearInterval(countdownTimer);
 
-            const ads = appData.ads || {};
-            const hasT1 = Boolean(ads.ad1 && ads.ad1.trim() !== "");
-            const hasT2 = Boolean(ads.ad2 && ads.ad2.trim() !== "");
-
-            document.getElementById("taskRow1").style.display = hasT1 ? "flex" : "none";
-            document.getElementById("taskRow2").style.display = hasT2 ? "flex" : "none";
-
             const btn1 = document.getElementById("task1Btn");
             const btn2 = document.getElementById("task2Btn");
             const dlBtn = document.getElementById("downloadBtn");
             const infoBox = document.getElementById("unlockInfoBox");
 
-            if (hasT1) {
-                btn1.className = "visit-action-btn";
-                btn1.innerHTML = "VISIT";
-                document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
-                document.getElementById("task1Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
-            } else {
-                task1Done = true;
-            }
+            btn1.className = "visit-action-btn";
+            btn1.innerHTML = "VISIT";
+            document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
+            document.getElementById("task1Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
-            if (hasT2) {
-                btn2.className = "visit-action-btn";
-                btn2.innerHTML = "VISIT";
-                document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
-                document.getElementById("task2Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
-            } else {
-                task2Done = true;
-            }
+            btn2.className = "visit-action-btn";
+            btn2.innerHTML = "VISIT";
+            document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
+            document.getElementById("task2Desc").innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
-            // কোনো লিঙ্ক না থাকলে ডাউনলোড বাটন সরাসরি সচল
-            if (task1Done && task2Done) {
-                infoBox.style.display = "none";
-                dlBtn.className = "download-btn";
-            } else {
-                infoBox.style.display = "flex";
-                dlBtn.className = "download-btn disabled";
-            }
+            infoBox.style.display = "flex";
+            dlBtn.className = "download-btn disabled";
             dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
         }
 
@@ -902,24 +882,23 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 ডিরেক্ট লিঙ্ক ওপেন (শুধুমাত্র বটে লিঙ্ক দিলে ওপেন হবে) 🔥
+        // 🔥 ডিরেক্ট লিঙ্ক ওপেন ও ১০ সেকেন্ড টাইমার ট্র্যাকিং 🔥
         function startDirectTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
             const targetUrl = (taskNum === 1) ? appData.ads?.ad1 : appData.ads?.ad2;
-            if (!targetUrl || targetUrl.trim() === "") {
-                completeTask(taskNum);
-                return;
-            }
 
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            if (tg && tg.openLink) {
-                tg.openLink(targetUrl);
-            } else {
-                window.open(targetUrl, "_blank");
+            // যদি আপনি বটে লিঙ্ক সেট করে থাকেন, তবেই লিঙ্ক ওপেন হবে
+            if (targetUrl && targetUrl.trim() !== "") {
+                if (tg && tg.openLink) {
+                    tg.openLink(targetUrl);
+                } else {
+                    window.open(targetUrl, "_blank");
+                }
             }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
@@ -1045,4 +1024,4 @@
         initData();
     </script>
 </body>
-                </html>
+    </html>
