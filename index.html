@@ -64,7 +64,7 @@
             font-size: 14px;
         }
 
-        /* ক্যাটাগরি গ্রিড (স্ক্রিনশটের মতো ২ কলাম) */
+        /* ক্যাটাগরি গ্রিড */
         .category-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -92,34 +92,35 @@
             color: #ffffff !important;
         }
 
-        /* ভিডিও কার্ড গ্রিড */
+        /* 🔥 ফুল স্ক্রিনজুড়ে বড় ভিডিও কার্ড (১টি কলাম) 🔥 */
         .video-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
         .video-card {
             background: var(--surface-color);
             border: 1.5px solid var(--neon-blue);
-            border-radius: 14px;
+            border-radius: 16px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             cursor: pointer;
             position: relative;
+            width: 100%;
         }
 
         .pin-badge {
             position: absolute;
-            top: 8px;
-            right: 8px;
+            top: 10px;
+            right: 10px;
             background: #e50914;
             color: #fff;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 800;
-            padding: 3px 8px;
-            border-radius: 12px;
+            padding: 4px 10px;
+            border-radius: 14px;
             z-index: 5;
         }
 
@@ -129,12 +130,11 @@
             background: #000;
         }
 
-        /* 9:16 ভার্টিক্যাল থাম্বনেইল */
+        /* থাম্বনেইল রেশিও */
         .thumb-wrapper.portrait {
-            padding-top: 140%;
+            padding-top: 125%;
         }
 
-        /* 16:9 হরাইজন্টাল থাম্বনেইল */
         .thumb-wrapper.landscape {
             padding-top: 56.25%;
         }
@@ -146,26 +146,24 @@
         }
 
         .card-details {
-            padding: 8px 10px;
+            padding: 12px 14px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
 
         .video-title {
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 700;
             color: var(--text-color);
-            line-height: 1.3;
-            height: 32px;
-            overflow: hidden;
+            line-height: 1.4;
         }
 
         .video-meta-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 10px;
+            font-size: 11px;
             color: var(--text-muted);
             margin-top: 4px;
         }
@@ -175,7 +173,7 @@
             font-weight: 700;
         }
 
-        /* ডিটেইল ভিউ (টাস্ক স্ক্রিন) */
+        /* ডিটেইলস ও টাস্ক ভিউ */
         .detail-view {
             display: none;
         }
@@ -195,7 +193,6 @@
 
         .detail-thumb-container {
             width: 100%;
-            max-width: 340px;
             margin: 0 auto 14px auto;
             border: 2px solid #ff007f;
             border-radius: 16px;
@@ -205,7 +202,7 @@
         }
 
         .detail-thumb-container.portrait {
-            aspect-ratio: 9 / 14;
+            aspect-ratio: 9 / 12;
         }
 
         .detail-thumb-container.landscape {
@@ -234,11 +231,11 @@
         .detail-title-box {
             border: 1.5px solid #ff007f;
             border-radius: 10px;
-            padding: 10px;
+            padding: 12px;
             text-align: center;
             font-size: 14px;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             background: rgba(255, 0, 127, 0.05);
         }
 
@@ -287,10 +284,11 @@
             pointer-events: none;
         }
 
-        .play-online-btn {
+        /* 🔥 আগের মতো ডাউনলোড ভিডিও বাটন 🔥 */
+        .download-btn {
             display: none;
             width: 100%;
-            background: linear-gradient(135deg, #0088cc 0%, #00d2ff 100%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: #ffffff;
             border: none;
             padding: 14px;
@@ -298,69 +296,16 @@
             font-size: 15px;
             font-weight: 800;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
             margin-top: 10px;
-        }
-
-        /* 🔥 স্ক্রিনশট অনুযায়ী ইন-অ্যাপ ভিডিও প্লেয়ার স্ক্রিন 🔥 */
-        .video-player-screen {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #121316;
-            z-index: 999999;
-            flex-direction: column;
-            padding: 14px;
-            box-sizing: border-box;
-        }
-
-        .player-top-header {
             text-align: center;
-            font-size: 20px;
-            font-weight: 900;
-            color: #e50914;
-            margin-bottom: 16px;
         }
 
-        .player-notice-card {
-            border: 1.5px solid #ff007f;
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-            font-size: 12px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            background: rgba(255, 0, 127, 0.05);
-        }
-
-        .video-frame-wrapper {
-            width: 100%;
-            border: 1.5px solid var(--neon-blue);
-            border-radius: 16px;
-            overflow: hidden;
-            background: #000;
-            position: relative;
-        }
-
-        .video-frame-wrapper video {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        .fullscreen-trigger-btn {
-            background: #e50914;
-            color: #ffffff;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            margin: 16px auto 0 auto;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .download-btn.disabled {
+            background: #1e293b;
+            color: #64748b;
+            pointer-events: none;
+            box-shadow: none;
         }
     </style>
 </head>
@@ -390,7 +335,7 @@
 
         <div class="task-notice-box" id="taskNoticeBox">
             <i class="fa-solid fa-lock" id="taskNoticeIcon"></i>
-            <span id="taskNoticeTxt">অনলাইনে প্লে করার জন্য নিচের এড দেখে নিন ১০ সেকেন্ড করে।</span>
+            <span id="taskNoticeTxt">ভিডিওটি ডাউনলোড করার জন্য নিচের দুটি এড ১০ সেকেন্ড করে দেখুন।</span>
         </div>
 
         <div class="task-list" id="taskListContainer">
@@ -411,25 +356,9 @@
             </div>
         </div>
 
-        <button id="playOnlineBtn" class="play-online-btn" onclick="launchVideoPlayer()">
-            <i class="fa-solid fa-play"></i> অনলাইনে প্লে করুন
-        </button>
-    </div>
-
-    <!-- ৩. ভিডিও প্লেয়ার স্ক্রিন (পপআন্ডার মুক্ত) -->
-    <div class="video-player-screen" id="videoPlayerScreen">
-        <div class="player-top-header">Hamster BD</div>
-
-        <div class="player-notice-card">
-            বটে ফিরে যেতে উপরে বাম পাশে <span style="color: #ef4444;">ক্রস (X)</span> আইকনে ক্লিক করুন
-        </div>
-
-        <div class="video-frame-wrapper" id="playerFrameWrapper">
-            <video id="mainVideoPlayer" controls playsinline></video>
-        </div>
-
-        <button class="fullscreen-trigger-btn" onclick="toggleFullScreenPlayer()">
-            <i class="fa-solid fa-expand"></i> ফুল স্ক্রিন করুন
+        <!-- ডাউনলোড ভিডিও বাটন -->
+        <button id="downloadBtn" class="download-btn" onclick="sendToInbox()">
+            <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
         </button>
     </div>
 
@@ -446,11 +375,10 @@
         let activeTaskNum = null;
         let taskStartStamp = 0;
         let popunderExecuted = false;
-        let isPlayerActive = false; // প্লেয়ারে থাকলে পপআন্ডার বন্ধ রাখার ফ্ল্যাগ
 
-        // গ্লোবাল পপআন্ডার মেকানিজম (প্লেয়ার স্ক্রিন ছাড়া অন্য জায়গায় কার্যকর)
+        // গ্লোবাল নিরাপদ পপআন্ডার
         function triggerSafePopunder() {
-            if (popunderExecuted || isPlayerActive) return;
+            if (popunderExecuted) return;
             const popUrl = (appData.ads?.popunder_ad || "").trim();
             if (popUrl.startsWith("http")) {
                 popunderExecuted = true;
@@ -557,10 +485,10 @@
 
             document.getElementById("taskNoticeBox").className = "task-notice-box";
             document.getElementById("taskNoticeIcon").className = "fa-solid fa-lock";
-            document.getElementById("taskNoticeTxt").innerText = "অনলাইনে প্লে করার জন্য নিচের এড দেখে নিন ১০ সেকেন্ড করে।";
+            document.getElementById("taskNoticeTxt").innerText = "ভিডিওটি ডাউনলোড করার জন্য নিচের দুটি এড ১০ সেকেন্ড করে দেখুন।";
 
             document.getElementById("taskListContainer").style.display = "block";
-            document.getElementById("playOnlineBtn").style.display = "none";
+            document.getElementById("downloadBtn").style.display = "none";
         }
 
         function backToHome() {
@@ -568,7 +496,7 @@
             document.getElementById("homeScreen").style.display = "block";
         }
 
-        // 🔥 টাস্ক এক্সিকিউশন: চাপার সাথে সাথে লিংকে নিয়ে যাবে 🔥
+        // 🔥 টাস্ক এক্সিকিউশন (জিরো-ডিলে) 🔥
         function executeTask(taskNum) {
             const directUrl = (taskNum === 1) ? (appData.ads?.ad1 || "").trim() : (appData.ads?.ad2 || "").trim();
 
@@ -580,7 +508,6 @@
             activeTaskNum = taskNum;
             taskStartStamp = Date.now();
 
-            // কোনো অপেক্ষা ছাড়াই তাৎক্ষণিক লিংক ওপেন
             if (tg && tg.openLink) tg.openLink(directUrl);
             else window.open(directUrl, "_blank");
 
@@ -590,7 +517,7 @@
             txt.innerText = "অপেক্ষা করুন...";
         }
 
-        // ব্যবহারকারী মিনি অ্যাপে ফিরে আসলে ১০ সেকেন্ড যাচাই
+        // ব্যবহারকারী মিনি অ্যাপে ফিরে আসলে ভেরিফিকেশন
         function handleUserReturn() {
             if (document.visibilityState === "visible" && activeTaskNum !== null) {
                 const elapsed = Math.floor((Date.now() - taskStartStamp) / 1000);
@@ -604,7 +531,7 @@
                     const txt = document.getElementById(taskNum === 1 ? "t1Txt" : "t2Txt");
                     btn.innerText = "VISIT";
                     txt.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
-                    alert(`দুঃখিত! আপনি ১০ সেকেন্ডের পূর্বে চলে এসেছেন। আরও ${10 - elapsed} সেকেন্ড অপেক্ষা প্রয়োজন ছিল।`);
+                    alert(`দুঃখিত! আপনি ১০ সেকেন্ড অপেক্ষা করেন নাই। আরও ${10 - elapsed} সেকেন্ড দেখা প্রয়োজন ছিল।`);
                 }
             }
         }
@@ -627,43 +554,56 @@
                 document.getElementById("taskListContainer").style.display = "none";
                 document.getElementById("taskNoticeBox").className = "task-notice-box success";
                 document.getElementById("taskNoticeIcon").className = "fa-solid fa-circle-check";
-                document.getElementById("taskNoticeTxt").innerText = "আপনি এড দেখা সম্পূর্ণ করেছেন। এখন সরাসরি প্লে করুন।";
-                document.getElementById("playOnlineBtn").style.display = "block";
+                document.getElementById("taskNoticeTxt").innerText = "আপনি এড দেখা সম্পূর্ণ করেছেন। এখন সরাসরি ডাউনলোড করুন।";
+                document.getElementById("downloadBtn").style.display = "block";
             }
         }
 
-        // 🔥 স্ক্রিনশটের মতো ফুলস্ক্রিন ইন-অ্যাপ ভিডিও প্লেয়ার চালু করা 🔥
-        function launchVideoPlayer() {
-            if (!currentVideo) return;
-            isPlayerActive = true; // প্লেয়ার চালু থাকলে পপআন্ডার বন্ধ থাকবে
+        // 🔥 টেলিগ্রাম ইনবক্সে ভিডিও পাঠানো 🔥
+        async function sendToInbox() {
+            if (!task1Done || !task2Done || !currentVideo) return;
 
-            document.getElementById("detailScreen").style.display = "none";
-            const screen = document.getElementById("videoPlayerScreen");
-            screen.style.display = "flex";
+            const dlBtn = document.getElementById("downloadBtn");
+            dlBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ইনবক্সে পাঠানো হচ্ছে...`;
+            dlBtn.classList.add("disabled");
 
-            const player = document.getElementById("mainVideoPlayer");
-            const wrapper = document.getElementById("playerFrameWrapper");
-
-            if (currentVideo.ratio === "9:16") {
-                wrapper.style.aspectRatio = "9 / 14";
-            } else {
-                wrapper.style.aspectRatio = "16 / 9";
+            const userId = tg?.initDataUnsafe?.user?.id;
+            if (!userId) {
+                alert("ইউজার আইডি পাওয়া যায়নি! টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
+                return;
             }
 
-            player.src = `${CURRENT_RENDER_URL}/stream/${currentVideo.file_id}`;
-            player.play();
-        }
+            try {
+                const res = await fetch(`${CURRENT_RENDER_URL}/api/send_video`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        video_id: currentVideo.id
+                    })
+                });
 
-        function toggleFullScreenPlayer() {
-            const player = document.getElementById("mainVideoPlayer");
-            if (player.requestFullscreen) {
-                player.requestFullscreen();
-            } else if (player.webkitRequestFullscreen) {
-                player.webkitRequestFullscreen();
+                const data = await res.json();
+                if (data.success) {
+                    dlBtn.innerHTML = `✅ সফল হয়েছে! ইনবক্স চেক করুন`;
+                    setTimeout(() => {
+                        if (tg && tg.close) tg.close();
+                    }, 800);
+                } else {
+                    alert("ভিডিও পাঠানো যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
+                    dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                    dlBtn.classList.remove("disabled");
+                }
+            } catch (err) {
+                alert("সার্ভারে সংযোগ দেওয়া যাচ্ছে না। অনুগ্রহ করে ২ সেকেন্ড পর আবার চেষ্টা করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
             }
         }
 
         initData();
     </script>
 </body>
-    </html>
+                </html>
