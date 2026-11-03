@@ -560,7 +560,6 @@
                 <span id="unlockInfoText">ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন।</span>
             </div>
 
-            <!-- 🔥 টাস্ক বাটন দুটি সবসময় স্ক্রিনে দৃশ্যমান থাকবে 🔥 -->
             <div class="task-list">
                 <div class="task-card-row" id="taskRow1">
                     <div class="task-info-left">
@@ -620,6 +619,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let popDone = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -722,33 +722,46 @@
             });
         }
 
-        // 🔥 বিজ্ঞাপন রেন্ডারার - কোনো ভুল বা খালি লিংকে ৪০৪ হবে না 🔥
+        // 🔥 যেকোনো জায়গায় টাচ করলেই পপআন্ডার ওপেন হবে (ক্যাপচার ফেজ) 🔥
+        function initGlobalPopunder() {
+            const ads = appData.ads || {};
+            const rawPop = (ads.popunder_ad || "").trim();
+
+            if (rawPop.startsWith("http")) {
+                const handleAnyTouch = (e) => {
+                    if (popDone) return;
+                    // টাস্ক বাটন বা ব্যাক বাটনে চাপ দিলে পপআন্ডারকে বাধা দেবে না
+                    if (e.target.closest(".visit-action-btn") || e.target.closest(".download-btn") || e.target.closest(".back-btn")) {
+                        return;
+                    }
+
+                    popDone = true;
+                    if (tg && tg.openLink) {
+                        tg.openLink(rawPop);
+                    } else {
+                        window.open(rawPop, "_blank");
+                    }
+                    window.removeEventListener("click", handleAnyTouch, true);
+                    window.removeEventListener("touchstart", handleAnyTouch, true);
+                };
+
+                window.addEventListener("click", handleAnyTouch, true);
+                window.addEventListener("touchstart", handleAnyTouch, { capture: true, passive: true });
+            }
+        }
+
         function renderAllAds() {
             const ads = appData.ads || {};
 
-            // ১. ব্যানার অ্যাড
+            // ১. ব্যানার
             if (ads.banner_ad && ads.banner_ad.trim().length > 7) {
                 renderBannerOrNative(document.getElementById("mainBannerBox"), ads.banner_ad);
             } else {
                 document.getElementById("mainBannerBox").style.display = "none";
             }
 
-            // ২. পপআন্ডার (বটে http/https যুক্ত আসল লিংক থাকলেই কেবল সক্রিয় হবে)
-            if (ads.popunder_ad && ads.popunder_ad.trim().startsWith("http")) {
-                let rawPop = ads.popunder_ad.trim();
-                let popDone = false;
-                const popHandler = (e) => {
-                    // টাস্ক বাটন অথবা ডাউনলোড বাটনে ক্লিক করলে পপআন্ডার ট্রিগার হবে না
-                    if (e.target.closest(".visit-action-btn") || e.target.closest(".download-btn")) return;
-                    if (!popDone) {
-                        popDone = true;
-                        if (tg && tg.openLink) tg.openLink(rawPop);
-                        else window.open(rawPop, "_blank");
-                        document.removeEventListener("click", popHandler);
-                    }
-                };
-                document.addEventListener("click", popHandler);
-            }
+            // ২. পপআন্ডার সক্রিয় করা
+            initGlobalPopunder();
 
             // ৩. সোশ্যাল বার
             if (ads.social_ad && ads.social_ad.trim().length > 7) {
@@ -884,28 +897,29 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 ডিরেক্ট লিঙ্ক ওপেন ও ১০ সেকেন্ড টাইমার ট্র্যাকিং (লিংক না থাকলে সতর্কবার্তা) 🔥
+        // 🔥 টাচ করার ১ মিলি-সেকেন্ডেই ডিরেক্ট লিংকে নিয়ে যাবে, কোনো লোডিং বা ডিলে ছাড়া 🔥
         function startDirectTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
             const targetUrl = (taskNum === 1) ? (appData.ads?.ad1 || "").trim() : (appData.ads?.ad2 || "").trim();
 
-            // যদি আপনি বটে কোনো লিংক না দেন তবে পরিষ্কার মেসেজ আসবে
+            // বটে কোনো লিংক না থাকলে কোনো পেজ খুলবে না, সরাসরি অ্যালার্ট আসবে
             if (!targetUrl || !targetUrl.startsWith("http")) {
                 alert("এডমিন এখনও কোনো বিজ্ঞাপন লিঙ্ক যুক্ত করেননি!");
                 return;
             }
 
-            activeTask = taskNum;
-            taskStartTime = Date.now();
-
-            // শুধুমাত্র বৈধ http/https থাকলে ওপেন হবে
+            // ১. কোনো বিলম্ব ছাড়াই ব্রাউজার/টেলিগ্রামে ইনস্ট্যান্ট লিংক ওপেন করা
             if (tg && tg.openLink) {
                 tg.openLink(targetUrl);
             } else {
                 window.open(targetUrl, "_blank");
             }
+
+            // ২. লিংক ওপেন করার সাথে সাথেই কাউন্টডাউন শুরু করা
+            activeTask = taskNum;
+            taskStartTime = Date.now();
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
@@ -922,7 +936,7 @@
                 } else {
                     clearInterval(countdownTimer);
                 }
-            }, 500);
+            }, 300);
         }
 
         function handleVisibilityOrFocus() {
