@@ -619,7 +619,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popDone = false;
+        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -722,31 +722,19 @@
             });
         }
 
-        // 🔥 যেকোনো জায়গায় টাচ করলেই পপআন্ডার ওপেন হবে (ক্যাপচার ফেজ) 🔥
-        function initGlobalPopunder() {
+        // 🔥 পপআন্ডার মেকানিজম (শুধু বৈধ লিঙ্ক থাকলে ইউজার ক্লিকে ওপেন হবে) 🔥
+        function checkAndTriggerPopunder() {
+            if (popunderTriggered) return;
             const ads = appData.ads || {};
             const rawPop = (ads.popunder_ad || "").trim();
 
             if (rawPop.startsWith("http")) {
-                const handleAnyTouch = (e) => {
-                    if (popDone) return;
-                    // টাস্ক বাটন বা ব্যাক বাটনে চাপ দিলে পপআন্ডারকে বাধা দেবে না
-                    if (e.target.closest(".visit-action-btn") || e.target.closest(".download-btn") || e.target.closest(".back-btn")) {
-                        return;
-                    }
-
-                    popDone = true;
-                    if (tg && tg.openLink) {
-                        tg.openLink(rawPop);
-                    } else {
-                        window.open(rawPop, "_blank");
-                    }
-                    window.removeEventListener("click", handleAnyTouch, true);
-                    window.removeEventListener("touchstart", handleAnyTouch, true);
-                };
-
-                window.addEventListener("click", handleAnyTouch, true);
-                window.addEventListener("touchstart", handleAnyTouch, { capture: true, passive: true });
+                popunderTriggered = true;
+                if (tg && tg.openLink) {
+                    tg.openLink(rawPop);
+                } else {
+                    window.open(rawPop, "_blank");
+                }
             }
         }
 
@@ -760,10 +748,7 @@
                 document.getElementById("mainBannerBox").style.display = "none";
             }
 
-            // ২. পপআন্ডার সক্রিয় করা
-            initGlobalPopunder();
-
-            // ৩. সোশ্যাল বার
+            // ২. সোশ্যাল বার
             if (ads.social_ad && ads.social_ad.trim().length > 7) {
                 injectAdScript(ads.social_ad);
             }
@@ -822,7 +807,11 @@
                 list.forEach(item => {
                     const card = document.createElement("div");
                     card.className = "video-card";
-                    card.onclick = () => openDetail(item);
+                    card.onclick = () => {
+                        // কার্ডে ক্লিক করলে বৈধ পপআন্ডার থাকলে ওপেন হবে
+                        checkAndTriggerPopunder();
+                        openDetail(item);
+                    };
                     
                     const thumbUrl = resolveThumb(item.thumb, item.title);
                     card.innerHTML = `
@@ -897,27 +886,25 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 টাচ করার ১ মিলি-সেকেন্ডেই ডিরেক্ট লিংকে নিয়ে যাবে, কোনো লোডিং বা ডিলে ছাড়া 🔥
+        // 🔥 টাচ করার সাথে সাথেই কোনো লোডিং বা দেরি ছাড়াই ডিরেক্ট লিংকে নিয়ে যাবে 🔥
         function startDirectTask(taskNum) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
             const targetUrl = (taskNum === 1) ? (appData.ads?.ad1 || "").trim() : (appData.ads?.ad2 || "").trim();
 
-            // বটে কোনো লিংক না থাকলে কোনো পেজ খুলবে না, সরাসরি অ্যালার্ট আসবে
             if (!targetUrl || !targetUrl.startsWith("http")) {
                 alert("এডমিন এখনও কোনো বিজ্ঞাপন লিঙ্ক যুক্ত করেননি!");
                 return;
             }
 
-            // ১. কোনো বিলম্ব ছাড়াই ব্রাউজার/টেলিগ্রামে ইনস্ট্যান্ট লিংক ওপেন করা
+            // কোনো অপেক্ষমাণ কোড ছাড়া সরাসরি ইনস্ট্যান্ট ওপেন
             if (tg && tg.openLink) {
                 tg.openLink(targetUrl);
             } else {
                 window.open(targetUrl, "_blank");
             }
 
-            // ২. লিংক ওপেন করার সাথে সাথেই কাউন্টডাউন শুরু করা
             activeTask = taskNum;
             taskStartTime = Date.now();
 
