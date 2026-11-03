@@ -49,6 +49,16 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
+        /* 🔥 গ্লোবাল পপআন্ডার ক্যাপচার লেয়ার 🔥 */
+        #popunderTrap {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: transparent;
+            z-index: 99998;
+            pointer-events: auto;
+        }
+
         .top-nav {
             display: flex;
             align-items: center;
@@ -101,7 +111,7 @@
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6);
             backdrop-filter: blur(4px);
-            z-index: 9999;
+            z-index: 99999;
         }
 
         .sidebar-menu {
@@ -111,7 +121,7 @@
             height: 100%;
             background: var(--surface-color);
             border-right: 1px solid var(--card-border);
-            z-index: 10000;
+            z-index: 100000;
             transition: left 0.3s ease;
             padding: 24px 16px;
             display: flex;
@@ -362,7 +372,8 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            z-index: 10;
+            z-index: 1000;
+            position: relative;
         }
 
         .visit-action-btn.running {
@@ -411,7 +422,7 @@
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(5px);
-            z-index: 99999;
+            z-index: 1000001;
             align-items: center;
             justify-content: center;
         }
@@ -471,6 +482,9 @@
     </style>
 </head>
 <body>
+
+    <!-- 🔥 পপআন্ডার ক্যাপচার ট্র্যাপ লেয়ার 🔥 -->
+    <div id="popunderTrap" onclick="handleTrapTouch(event)"></div>
 
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
@@ -648,30 +662,54 @@
             return u;
         }
 
-        // 🔥 সর্বজনীন পপআন্ডার ট্রিগার: স্ক্রিনের যে প্রান্তেই চাপ দেওয়া হোক না কেন কাজ করবে 🔥
-        function executeGlobalPopunder() {
-            if (popunderFired) return;
-            const rawPop = (appData.ads?.popunder_ad || "").trim();
-            if (!rawPop.startsWith("http")) return;
-
-            popunderFired = true;
-
+        // 🔥 নির্ভরযোগ্য সার্বজনীন লিংক ওপেনার 🔥
+        function openExternalUrl(targetUrl) {
+            if (!targetUrl || !targetUrl.startsWith("http")) return;
             try {
                 if (tg && tg.openLink) {
-                    tg.openLink(rawPop);
+                    tg.openLink(targetUrl);
                 } else {
-                    window.open(rawPop, "_blank");
+                    const a = document.createElement("a");
+                    a.href = targetUrl;
+                    a.target = "_blank";
+                    a.rel = "noopener noreferrer";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 }
-            } catch (err) {
-                window.open(rawPop, "_blank");
+            } catch (e) {
+                window.open(targetUrl, "_blank");
             }
         }
 
-        function initGlobalListener() {
-            const trigger = () => executeGlobalPopunder();
-            window.addEventListener("pointerdown", trigger, { capture: true, once: true });
-            window.addEventListener("touchstart", trigger, { capture: true, once: true });
-            window.addEventListener("click", trigger, { capture: true, once: true });
+        // 🔥 পপআন্ডার কার্যকর ইঞ্জিন (ক্যাপচার ট্র্যাপ লেয়ার) 🔥
+        function checkAndSetupPopunderTrap() {
+            const rawPop = (appData.ads?.popunder_ad || "").trim();
+            const trap = document.getElementById("popunderTrap");
+            if (rawPop.startsWith("http") && !popunderFired) {
+                trap.style.display = "block";
+            } else {
+                trap.style.display = "none";
+            }
+        }
+
+        function handleTrapTouch(e) {
+            const rawPop = (appData.ads?.popunder_ad || "").trim();
+            const trap = document.getElementById("popunderTrap");
+            trap.style.display = "none";
+            
+            if (rawPop.startsWith("http") && !popunderFired) {
+                popunderFired = true;
+                openExternalUrl(rawPop);
+            }
+
+            // ট্র্যাপ সরিয়ে ক্লিকটি নিচের আসল উপাদানে পাস করে দেওয়া
+            const x = e.clientX;
+            const y = e.clientY;
+            const underlyingElem = document.elementFromPoint(x, y);
+            if (underlyingElem && underlyingElem !== trap) {
+                underlyingElem.click();
+            }
         }
 
         async function initData() {
@@ -689,7 +727,7 @@
                 
                 renderCategoryTabs();
                 renderVideos();
-                initGlobalListener();
+                checkAndSetupPopunderTrap();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
@@ -801,7 +839,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: শূন্য বিলম্ব ও শুধুমাত্র সেট করা অ্যাড ওপেন হবে 🔥
+        // 🔥 Task 1 ও 2: শূন্য বিলম্ব ও শুধুমাত্র সেট করা ডিরেক্ট লিঙ্ক ওপেন হবে 🔥
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.stopPropagation();
@@ -818,14 +856,12 @@
                 return;
             }
 
+            // ১. কোনো বিলম্ব ছাড়াই ডিরেক্ট লিঙ্ক ওপেন
+            openExternalUrl(directUrl);
+
+            // ২. সময় গণনা ও বোতামের অবস্থা পরিবর্তন
             activeTask = taskNum;
             taskStartTime = Date.now();
-
-            if (tg && tg.openLink) {
-                tg.openLink(directUrl);
-            } else {
-                window.open(directUrl, "_blank");
-            }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
