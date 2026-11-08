@@ -589,7 +589,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let lastPopunderTime = 0;
+        let lastPopunderTouchTime = 0;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -666,12 +666,11 @@
             }
         }
 
-        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (ক্যাপিং বাইপাস ও অবিরাম সক্রিয়) 🔥
+        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (ক্যাপিং বাইপাস ও সব জায়গায় অবিরাম সক্রিয়) 🔥
         function setupUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
 
-            // স্ক্রিপ্ট সোর্স বের করা
             let scriptSrc = null;
             if (raw.includes("src=")) {
                 const m = raw.match(/src=["'](.*?)["']/);
@@ -680,7 +679,7 @@
                 scriptSrc = raw;
             }
 
-            // ১. স্ক্রিপ্ট ইনজেকশন (টাইমস্ট্যাম্প সহ যাতে ব্রাউজার ক্যাশে আটকে না থাকে)
+            // ১. স্ক্রিপ্ট ইনজেকশন (ক্যাশ প্রতিরোধক টাইমস্ট্যাম্প সহ)
             if (scriptSrc) {
                 if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
                 const finalSrc = scriptSrc + (scriptSrc.includes("?") ? "&" : "?") + "t=" + Date.now();
@@ -693,16 +692,15 @@
                 document.head.appendChild(s);
             }
 
-            // ২. স্ক্রিনের যেকোনো জায়গায় স্পর্শ করলে ব্যাকআপ ডিরেক্ট ট্রিগার (প্রতি ২০ সেকেন্ড পর পর সতেজ হবে)
+            // ২. স্ক্রিনের যেকোনো স্থানে চাপ দিলে তাৎক্ষণিক ট্রিগার
             const handleTouch = (e) => {
                 if (e.target.closest(".visit-action-btn")) return;
                 
                 const now = Date.now();
-                // ২০ সেকেন্ডের ব্যবধানে ফ্রেশ ট্রিগার
-                if (now - lastPopunderTime > 20000) {
-                    lastPopunderTime = now;
+                // প্রতি ১৫ সেকেন্ড পরপর ফ্রেশ ইভেন্ট নিশ্চিত করবে
+                if (now - lastPopunderTouchTime > 15000) {
+                    lastPopunderTouchTime = now;
                     
-                    // সরাসরি লিংক হলে ওপেন করবে
                     if (raw.startsWith("http") && !raw.includes("<script") && !raw.includes("/1/")) {
                         openTargetUrlDirectly(raw);
                     }
@@ -726,7 +724,7 @@
                 
                 renderCategoryTabs();
                 renderVideos();
-                setupUniversalPopunder(); // অবিরাম পপআন্ডার সক্রিয় করা
+                setupUniversalPopunder();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
