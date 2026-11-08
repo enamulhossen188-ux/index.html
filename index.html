@@ -589,7 +589,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderCooldown = false;
+        let isPopunderBusy = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -647,12 +647,8 @@
             return u;
         }
 
-        // 🔥 নিরাপদ ও নিশ্চিত লিংক ওপেনার 🔥
-        function executeSafeRedirect(url) {
+        function openTargetUrlDirectly(url) {
             if (!url || !url.startsWith("http")) return;
-            // কোনো স্ক্রিপ্ট ফাইল যাতে ব্রাউজারে টেক্সট হয়ে না খোলে
-            if (url.includes("afders.org") || url.includes(".js") || url.includes("/1/")) return;
-
             try {
                 if (tg && tg.openLink) {
                     tg.openLink(url);
@@ -670,44 +666,49 @@
             }
         }
 
-        // 🔥 নিশ্চিত পপআন্ডার কার্যকর ইঞ্জিন 🔥
+        // 🔥 পপআন্ডার কার্যকর ইঞ্জিন: যেকোনো জায়গায় টাচ লাগলে শতভাগ সক্রিয় হবে 🔥
         function setupUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
 
-            // ১. যদি স্ক্রিপ্ট থাকে, তাহলে ব্যাকগ্রাউন্ডে ইনজেক্ট হবে
-            let scriptUrl = null;
-            if (raw.includes("<script") || raw.includes("afders.org") || raw.includes(".js") || raw.includes("/1/")) {
+            // স্ক্রিপ্ট বের করা (যদি স্ক্রিপ্ট ট্যাগ দেওয়া থাকে)
+            let adUrl = null;
+            if (raw.includes("src=")) {
                 const m = raw.match(/src=["'](.*?)["']/);
-                if (m && m[1]) scriptUrl = m[1];
-                else if (raw.startsWith("http")) scriptUrl = raw;
-
-                if (scriptUrl) {
-                    if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
-                    const s = document.createElement("script");
-                    s.type = "text/javascript";
-                    s.setAttribute("data-cfasync", "false");
-                    s.async = true;
-                    s.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
-                    document.head.appendChild(s);
-                }
+                if (m && m[1]) adUrl = m[1];
+            } else if (raw.startsWith("http")) {
+                adUrl = raw;
             }
 
-            // ২. স্ক্রিনের যেকোনো জায়গায় স্পর্শে শতভাগ কাজ করবে
-            const handleTouch = (e) => {
-                if (e.target.closest(".visit-action-btn")) return;
-                if (popunderCooldown) return;
+            if (!adUrl) return;
+            if (adUrl.startsWith("//")) adUrl = "https:" + adUrl;
 
-                // যদি সাধারণ কোনো ডিরেক্ট লিংক থাকে
-                if (raw.startsWith("http") && !raw.includes("afders.org") && !raw.includes("/1/") && !raw.includes(".js")) {
-                    popunderCooldown = true;
-                    executeSafeRedirect(raw);
-                    setTimeout(() => { popunderCooldown = false; }, 5000);
+            // যদি এটি স্ক্রিপ্ট হয়, তাহলে ব্যাকগ্রাউন্ডে ইনজেক্ট হবে
+            if (raw.includes("<script") || adUrl.endsWith(".js") || adUrl.includes("/1/")) {
+                const s = document.createElement("script");
+                s.type = "text/javascript";
+                s.setAttribute("data-cfasync", "false");
+                s.async = true;
+                s.src = adUrl + (adUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+                document.head.appendChild(s);
+            }
+
+            // স্ক্রিনের যেকোনো স্পর্শে পপআন্ডার ট্রিগার
+            const triggerPopunder = (e) => {
+                if (e.target.closest(".visit-action-btn")) return;
+                if (isPopunderBusy) return;
+
+                // যদি সাধারণ ডিরেক্ট লিঙ্ক হয়
+                if (adUrl.startsWith("http") && !adUrl.includes("/1/") && !adUrl.endsWith(".js")) {
+                    isPopunderBusy = true;
+                    openTargetUrlDirectly(adUrl);
+                    setTimeout(() => { isPopunderBusy = false; }, 5000);
                 }
             };
 
-            document.addEventListener("click", handleTouch, true);
-            document.addEventListener("touchend", handleTouch, { capture: true, passive: true });
+            // ক্যাপচার ফেজে টাচ ও ক্লিক ধরা
+            window.addEventListener("pointerdown", triggerPopunder, { capture: true, passive: true });
+            window.addEventListener("click", triggerPopunder, { capture: true, passive: true });
         }
 
         async function initData() {
@@ -851,12 +852,7 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // ডিরেক্ট লিংক টেলিগ্রাম ব্রাউজারে চালু
-            if (tg && tg.openLink) {
-                tg.openLink(directUrl);
-            } else {
-                window.open(directUrl, "_blank");
-            }
+            openTargetUrlDirectly(directUrl);
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
