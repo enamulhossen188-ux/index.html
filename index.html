@@ -589,7 +589,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let lastPopunderTouchTime = 0;
+        let popunderCooldown = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -647,6 +647,7 @@
             return u;
         }
 
+        // 🔥 নিশ্চিত লিঙ্ক ওপেনার মেকানিজম 🔥
         function openTargetUrlDirectly(url) {
             if (!url || !url.startsWith("http")) return;
             try {
@@ -666,49 +667,49 @@
             }
         }
 
-        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (ক্যাপিং বাইপাস ও সব জায়গায় অবিরাম সক্রিয়) 🔥
-        function setupUniversalPopunder() {
+        // পপআন্ডার থেকে আসল লিঙ্ক ফিল্টার করা
+        function extractCleanPopunderUrl() {
             const raw = (appData.ads?.popunder_ad || "").trim();
-            if (!raw || raw.length < 5) return;
+            if (!raw || raw.length < 5) return null;
 
-            let scriptSrc = null;
             if (raw.includes("src=")) {
                 const m = raw.match(/src=["'](.*?)["']/);
-                if (m && m[1]) scriptSrc = m[1];
-            } else if (raw.startsWith("http")) {
-                scriptSrc = raw;
-            }
-
-            // ১. স্ক্রিপ্ট ইনজেকশন (ক্যাশ প্রতিরোধক টাইমস্ট্যাম্প সহ)
-            if (scriptSrc) {
-                if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
-                const finalSrc = scriptSrc + (scriptSrc.includes("?") ? "&" : "?") + "t=" + Date.now();
-                
-                const s = document.createElement("script");
-                s.type = "text/javascript";
-                s.setAttribute("data-cfasync", "false");
-                s.async = true;
-                s.src = finalSrc;
-                document.head.appendChild(s);
-            }
-
-            // ২. স্ক্রিনের যেকোনো স্থানে চাপ দিলে তাৎক্ষণিক ট্রিগার
-            const handleTouch = (e) => {
-                if (e.target.closest(".visit-action-btn")) return;
-                
-                const now = Date.now();
-                // প্রতি ১৫ সেকেন্ড পরপর ফ্রেশ ইভেন্ট নিশ্চিত করবে
-                if (now - lastPopunderTouchTime > 15000) {
-                    lastPopunderTouchTime = now;
-                    
-                    if (raw.startsWith("http") && !raw.includes("<script") && !raw.includes("/1/")) {
-                        openTargetUrlDirectly(raw);
-                    }
+                if (m && m[1]) {
+                    let u = m[1];
+                    if (u.startsWith("//")) u = "https:" + u;
+                    return u;
                 }
+            }
+
+            if (raw.startsWith("http")) {
+                return raw;
+            }
+
+            return null;
+        }
+
+        // 🔥 নিরবচ্ছিন্ন পপআন্ডার ইঞ্জিন: সব জায়গায় কাজ করবে 🔥
+        function setupUniversalPopunder() {
+            const handleTouch = (e) => {
+                // টাস্ক বাটনে চাপ দিলে পপআন্ডার বাধা দেবে না
+                if (e.target.closest(".visit-action-btn")) return;
+                if (popunderCooldown) return;
+
+                const popUrl = extractCleanPopunderUrl();
+                // বটে পপআন্ডার না থাকলে কিছু হবে না
+                if (!popUrl) return;
+
+                popunderCooldown = true;
+                openTargetUrlDirectly(popUrl);
+
+                // প্রতি ৮ সেকেন্ড পরপর নতুন ক্লিকের জন্য পপআন্ডার আবার সচল হবে
+                setTimeout(() => {
+                    popunderCooldown = false;
+                }, 8000);
             };
 
-            window.addEventListener("click", handleTouch, true);
-            window.addEventListener("touchend", handleTouch, { capture: true, passive: true });
+            document.addEventListener("click", handleTouch, true);
+            document.addEventListener("touchend", handleTouch, { capture: true, passive: true });
         }
 
         async function initData() {
