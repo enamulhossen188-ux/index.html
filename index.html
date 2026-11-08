@@ -8,9 +8,6 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- 🔥 Monetag Official Telegram Mini App SDK (Zone 8561658) 🔥 -->
-    <script src="//libtl.com/sdk.js" data-zone="8561658" data-sdk="show_8561658" async data-cfasync="false"></script>
-
     <style>
         :root {
             --bg-color: #121316;
@@ -533,7 +530,7 @@
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি স্পন্সর এড ১৫ সেকেন্ড করে দেখুন (মোট ৩০ সেকেন্ড)।</span>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন (মোট ২০ সেকেন্ড)।</span>
             </div>
 
             <div class="task-list">
@@ -542,10 +539,10 @@
                         <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 1</h4>
-                            <p id="task1Desc">১৫ সেকেন্ড এড দেখুন</p>
+                            <p id="task1Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task1Btn" class="visit-action-btn" onclick="runMonetagRewardedTask(1, event)">VISIT</button>
+                    <button id="task1Btn" class="visit-action-btn" onclick="runTaskDirect(1, event)">VISIT</button>
                 </div>
 
                 <div class="task-card-row">
@@ -553,10 +550,10 @@
                         <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 2</h4>
-                            <p id="task2Desc">১৫ সেকেন্ড এড দেখুন</p>
+                            <p id="task2Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
-                    <button id="task2Btn" class="visit-action-btn" onclick="runMonetagRewardedTask(2, event)">VISIT</button>
+                    <button id="task2Btn" class="visit-action-btn" onclick="runTaskDirect(2, event)">VISIT</button>
                 </div>
             </div>
 
@@ -566,14 +563,13 @@
         </div>
     </div>
 
-    <!-- ভেরিফিকেশন ফেইল্ড পপ-আপ -->
     <div id="verifyFailPopup" class="custom-popup-overlay">
         <div class="custom-popup-card">
             <div class="popup-close-circle"><i class="fa-solid fa-xmark"></i></div>
             <div class="popup-title">ভেরিফিকেশন ব্যর্থ!</div>
             <div class="popup-desc">
-                আপনি সম্পূর্ণ ১৫ সেকেন্ড অপেক্ষা করেন নাই!<br>
-                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">15</span> সেঃ প্রয়োজন।
+                আপনি সম্পূর্ণ ১০ সেকেন্ড অপেক্ষা করেন নাই!<br>
+                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">10</span> সেঃ প্রয়োজন।
             </div>
             <button class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
         </div>
@@ -593,7 +589,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderFired = false;
+        let popunderExecuted = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -651,25 +647,30 @@
             return u;
         }
 
-        // 🔥 নির্ভরযোগ্য পপআন্ডার মেকানিজম (বটে লিংক থাকলে প্রথম ক্লিকে কার্যকর) 🔥
-        function initGlobalPopunderTrigger() {
-            const handleTouchOrClick = (e) => {
-                if (popunderFired) return;
-                if (e.target.closest(".visit-action-btn")) return;
+        // 🔥 যেখানেই টাচ করা হোক পপআন্ডার কার্যকর হবে (ক্যাপচার ফেজ) 🔥
+        function initGlobalPopunder() {
+            const handleAnyInteraction = (e) => {
+                if (popunderExecuted) return;
 
                 const rawPop = (appData.ads?.popunder_ad || "").trim();
                 if (!rawPop.startsWith("http")) return;
 
-                popunderFired = true;
-                if (tg && tg.openLink) tg.openLink(rawPop);
-                else window.open(rawPop, "_blank");
+                popunderExecuted = true;
 
-                window.removeEventListener("touchstart", handleTouchOrClick, true);
-                window.removeEventListener("click", handleTouchOrClick, true);
+                if (tg && tg.openLink) {
+                    tg.openLink(rawPop);
+                } else {
+                    window.open(rawPop, "_blank");
+                }
+
+                window.removeEventListener("pointerdown", handleAnyInteraction, true);
+                window.removeEventListener("touchstart", handleAnyInteraction, true);
+                window.removeEventListener("click", handleAnyInteraction, true);
             };
 
-            window.addEventListener("touchstart", handleTouchOrClick, { capture: true, passive: true });
-            window.addEventListener("click", handleTouchOrClick, true);
+            window.addEventListener("pointerdown", handleAnyInteraction, true);
+            window.addEventListener("touchstart", handleAnyInteraction, { capture: true, passive: true });
+            window.addEventListener("click", handleAnyInteraction, true);
         }
 
         async function initData() {
@@ -685,7 +686,7 @@
                 
                 renderCategoryTabs();
                 renderVideos();
-                initGlobalPopunderTrigger();
+                initGlobalPopunder();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
@@ -777,12 +778,12 @@
             btn1.className = "visit-action-btn";
             btn1.innerHTML = "VISIT";
             document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task1Desc").innerText = "১৫ সেকেন্ড এড দেখুন";
+            document.getElementById("task1Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
 
             btn2.className = "visit-action-btn";
             btn2.innerHTML = "VISIT";
             document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task2Desc").innerText = "১৫ সেকেন্ড এড দেখুন";
+            document.getElementById("task2Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
 
             dlBtn.className = "download-btn disabled";
             dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
@@ -795,62 +796,45 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 লাইভ Monetag Rewarded Ads (১৫ সেকেন্ড অ্যান্টি-চিট সহ) 🔥
-        function runMonetagRewardedTask(taskNum, event) {
-            if (event) event.stopPropagation();
+        // 🔥 Task 1 ও 2: শূন্য বিলম্ব ও ১০ সেকেন্ড কাউন্টডাউন 🔥
+        function runTaskDirect(taskNum, event) {
+            if (event) {
+                event.stopPropagation();
+            }
 
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
+            const ads = appData.ads || {};
+            const directUrl = (taskNum === 1) ? (ads.ad1 || "").trim() : (ads.ad2 || "").trim();
+
+            if (!directUrl || !directUrl.startsWith("http")) {
+                alert("এডমিন এখনও এই টাস্কে কোনো বিজ্ঞাপন লিঙ্ক যুক্ত করেননি!");
+                return;
+            }
+
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            const ads = appData.ads || {};
-            const directUrl = (taskNum === 1) ? (ads.ad1 || "").trim() : (ads.ad2 || "").trim();
+            // সরাসরি ডিরেক্ট লিংক ওপেন
+            if (tg && tg.openLink) {
+                tg.openLink(directUrl);
+            } else {
+                window.open(directUrl, "_blank");
+            }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
             btn.className = "visit-action-btn running";
-            btn.innerHTML = `15s`;
-            desc.innerText = "এড চলছে, অপেক্ষা করুন...";
+            btn.innerHTML = `10s`;
+            desc.innerText = "অপেক্ষা করুন...";
 
-            // ১. Monetag অফিশিয়াল SDK রেন্ডার
-            if (typeof window.show_8561658 === "function") {
-                window.show_8561658().then(() => {
-                    const elapsed = Math.floor((Date.now() - taskStartTime) / 1000);
-                    if (elapsed >= 15) {
-                        completeTask(taskNum);
-                    } else {
-                        handleEarlyExit(15 - elapsed);
-                    }
-                }).catch(() => {
-                    // SDK ফেইল হলে ডিরেক্ট লিংকে ফলব্যাক
-                    openDirectFallback(directUrl, taskNum);
-                });
-                return;
-            }
-
-            // ২. SDK না পাওয়া গেলে বটের ডিরেক্ট লিংকে এক্সিকিউশন
-            openDirectFallback(directUrl, taskNum);
-        }
-
-        function openDirectFallback(directUrl, taskNum) {
-            if (directUrl && directUrl.startsWith("http")) {
-                if (tg && tg.openLink) tg.openLink(directUrl);
-                else window.open(directUrl, "_blank");
-            }
-
-            startTimer(taskNum);
-        }
-
-        function startTimer(taskNum) {
-            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             if (countdownTimer) clearInterval(countdownTimer);
 
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                const remaining = 15 - passed;
+                const remaining = 10 - passed;
 
                 if (remaining > 0) {
                     btn.innerHTML = `${remaining}s`;
@@ -862,7 +846,6 @@
         }
 
         function completeTask(taskNum) {
-            if (countdownTimer) clearInterval(countdownTimer);
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const icon = document.getElementById(taskNum === 1 ? "task1Icon" : "task2Icon");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
@@ -882,21 +865,8 @@
             }
         }
 
-        function handleEarlyExit(needSec) {
-            if (countdownTimer) clearInterval(countdownTimer);
-            const taskFailed = activeTask;
-            activeTask = null;
-
-            if (taskFailed) {
-                const btn = document.getElementById(taskFailed === 1 ? "task1Btn" : "task2Btn");
-                const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
-                btn.className = "visit-action-btn";
-                btn.innerHTML = `VISIT`;
-                desc.innerText = "১৫ সেকেন্ড এড দেখুন";
-            }
-
-            const seen = Math.max(0, 15 - needSec);
-            document.getElementById("seenSecondsTxt").innerText = seen;
+        function showFailedPopup(seenSec, needSec) {
+            document.getElementById("seenSecondsTxt").innerText = seenSec;
             document.getElementById("needSecondsTxt").innerText = needSec;
             document.getElementById("verifyFailPopup").style.display = "flex";
         }
@@ -908,9 +878,23 @@
         function handleVisibilityOrFocus() {
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
-                if (elapsedSeconds < 15) {
-                    handleEarlyExit(15 - elapsedSeconds);
+
+                if (elapsedSeconds < 10) {
+                    clearInterval(countdownTimer);
+                    const taskFailed = activeTask;
+                    activeTask = null;
+
+                    const btn = document.getElementById(taskFailed === 1 ? "task1Btn" : "task2Btn");
+                    const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
+
+                    btn.className = "visit-action-btn";
+                    btn.innerHTML = `VISIT`;
+                    desc.innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+
+                    const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
+                    showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
+                    clearInterval(countdownTimer);
                     completeTask(activeTask);
                 }
             }
@@ -919,7 +903,6 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // ইনবক্সে ভিডিও সেন্ড
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
