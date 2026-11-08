@@ -589,7 +589,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderExecuted = false;
+        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -647,30 +647,43 @@
             return u;
         }
 
-        // 🔥 যেখানেই টাচ করা হোক পপআন্ডার কার্যকর হবে (ক্যাপচার ফেজ) 🔥
-        function initGlobalPopunder() {
-            const handleAnyInteraction = (e) => {
-                if (popunderExecuted) return;
+        // 🔥 নিরাপদ ও সরাসরি ওপেনার (টেলিগ্রাম ইন-অ্যাপে সরাসরি ওপেন হবে) 🔥
+        function launchDirectLink(linkUrl) {
+            if (!linkUrl || !linkUrl.startsWith("http")) return;
+            if (tg && tg.openLink) {
+                tg.openLink(linkUrl);
+            } else {
+                const linkTag = document.createElement("a");
+                linkTag.href = linkUrl;
+                linkTag.target = "_blank";
+                linkTag.rel = "noopener noreferrer";
+                document.body.appendChild(linkTag);
+                linkTag.click();
+                document.body.removeChild(linkTag);
+            }
+        }
 
+        // 🔥 যেকোনো জায়গায় চাপ দিলে নিশ্চিতভাবে পপআন্ডার কার্যকর করার ইঞ্জিন 🔥
+        function setupGlobalPopunder() {
+            const firePopunder = (e) => {
+                if (popunderTriggered) return;
+                
                 const rawPop = (appData.ads?.popunder_ad || "").trim();
+                // বটে পপআন্ডার ডিলিট বা খালি থাকলে কোনো বিজ্ঞাপন চালু হবে না
                 if (!rawPop.startsWith("http")) return;
 
-                popunderExecuted = true;
+                popunderTriggered = true;
+                launchDirectLink(rawPop);
 
-                if (tg && tg.openLink) {
-                    tg.openLink(rawPop);
-                } else {
-                    window.open(rawPop, "_blank");
-                }
-
-                window.removeEventListener("pointerdown", handleAnyInteraction, true);
-                window.removeEventListener("touchstart", handleAnyInteraction, true);
-                window.removeEventListener("click", handleAnyInteraction, true);
+                // একবার চালু হওয়ার পর লিসেনার সরিয়ে নেওয়া
+                window.removeEventListener("pointerdown", firePopunder, true);
+                window.removeEventListener("touchstart", firePopunder, true);
+                window.removeEventListener("click", firePopunder, true);
             };
 
-            window.addEventListener("pointerdown", handleAnyInteraction, true);
-            window.addEventListener("touchstart", handleAnyInteraction, { capture: true, passive: true });
-            window.addEventListener("click", handleAnyInteraction, true);
+            window.addEventListener("pointerdown", firePopunder, true);
+            window.addEventListener("touchstart", firePopunder, { capture: true, passive: true });
+            window.addEventListener("click", firePopunder, true);
         }
 
         async function initData() {
@@ -686,7 +699,7 @@
                 
                 renderCategoryTabs();
                 renderVideos();
-                initGlobalPopunder();
+                setupGlobalPopunder();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
@@ -796,11 +809,9 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: শূন্য বিলম্ব ও ১০ সেকেন্ড কাউন্টডাউন 🔥
+        // 🔥 Task 1 ও 2: শূন্য বিলম্ব ও শুধুমাত্র সেট করা ডিরেক্ট লিঙ্ক ওপেন হবে 🔥
         function runTaskDirect(taskNum, event) {
-            if (event) {
-                event.stopPropagation();
-            }
+            if (event) event.stopPropagation();
 
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -817,11 +828,7 @@
             taskStartTime = Date.now();
 
             // সরাসরি ডিরেক্ট লিংক ওপেন
-            if (tg && tg.openLink) {
-                tg.openLink(directUrl);
-            } else {
-                window.open(directUrl, "_blank");
-            }
+            launchDirectLink(directUrl);
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
