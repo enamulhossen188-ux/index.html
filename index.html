@@ -589,7 +589,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderCooldown = false;
+        let popunderBlocked = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -647,44 +647,40 @@
             return u;
         }
 
-        function openTargetUrlDirectly(url) {
-            // 🔥 কোড ফাইল বা স্ক্রিপ্ট ইউআরএল যাতে ব্রাউজারে কখনো টেক্সট আকারে না খোলে 🔥
-            if (!url || !url.startsWith("http") || url.includes("afders.org") || url.includes("/1/") || url.includes(".js")) return;
+        // 🔥 নিরাপদ ডিরেক্ট লিঙ্ক ওপেনার 🔥
+        function executeSafeRedirect(url) {
+            if (!url || !url.startsWith("http")) return;
             try {
                 if (tg && tg.openLink) {
                     tg.openLink(url);
                 } else {
-                    const tempAnchor = document.createElement("a");
-                    tempAnchor.href = url;
-                    tempAnchor.target = "_blank";
-                    tempAnchor.rel = "noopener noreferrer";
-                    document.body.appendChild(tempAnchor);
-                    tempAnchor.click();
-                    document.body.removeChild(tempAnchor);
+                    const temp = document.createElement("a");
+                    temp.href = url;
+                    temp.target = "_blank";
+                    temp.rel = "noopener noreferrer";
+                    document.body.appendChild(temp);
+                    temp.click();
+                    document.body.removeChild(temp);
                 }
-            } catch (err) {
+            } catch (e) {
                 window.open(url, "_blank");
             }
         }
 
-        // 🔥 Adsterra ও সাধারণ পপআন্ডার কার্যকর ইঞ্জিন (কালো স্ক্রিনে কোড আসা সম্পূর্ণ প্রতিরোধ) 🔥
+        // 🔥 পপআন্ডার কার্যকর ইঞ্জিন: সব জায়গায় কাজ করবে এবং কালো স্ক্রিন কোড ফাইল আটকাবে 🔥
         function setupUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
 
-            // ১. যদি Adsterra স্ক্রিপ্ট কোড দেওয়া থাকে
+            // যদি আপনি স্ক্রিপ্ট ট্যাগ দিয়েছেন
             if (raw.includes("<script") || raw.includes("afders.org") || raw.includes(".js") || raw.includes("/1/")) {
                 let scriptSrc = null;
                 const m = raw.match(/src=["'](.*?)["']/);
-                if (m && m[1]) {
-                    scriptSrc = m[1];
-                } else if (raw.startsWith("http")) {
-                    scriptSrc = raw;
-                }
+                if (m && m[1]) scriptSrc = m[1];
+                else if (raw.startsWith("http")) scriptSrc = raw;
 
                 if (scriptSrc) {
                     if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
-                    // ব্যাকগ্রাউন্ডে ইনজেক্ট হবে (কখনো ব্রাউজারে কোড ফাইল হিসেবে খুলবে না)
                     const s = document.createElement("script");
                     s.type = "text/javascript";
                     s.setAttribute("data-cfasync", "false");
@@ -692,24 +688,23 @@
                     s.src = scriptSrc + (scriptSrc.includes("?") ? "&" : "?") + "t=" + Date.now();
                     document.head.appendChild(s);
                 }
-                return;
             }
 
-            // ২. যদি সরাসরি ডিরেক্ট লিংক দেওয়া থাকে (যেমন Smartlink)
-            if (raw.startsWith("http")) {
-                const handleTouch = (e) => {
-                    if (e.target.closest(".visit-action-btn")) return;
-                    if (popunderCooldown) return;
+            // স্ক্রিনের যেকোনো স্পর্শে পপআন্ডার ট্রিগার
+            const handleTouch = (e) => {
+                if (e.target.closest(".visit-action-btn")) return;
+                if (popunderBlocked) return;
 
-                    popunderCooldown = true;
-                    openTargetUrlDirectly(raw);
+                // যদি সরাসরি কোনো সাধারণ অ্যাড লিংক থাকে
+                if (raw.startsWith("http") && !raw.includes("afders.org") && !raw.includes("/1/") && !raw.includes("<script")) {
+                    popunderBlocked = true;
+                    executeSafeRedirect(raw);
+                    setTimeout(() => { popunderBlocked = false; }, 6000);
+                }
+            };
 
-                    setTimeout(() => { popunderCooldown = false; }, 5000);
-                };
-
-                document.addEventListener("click", handleTouch, true);
-                document.addEventListener("touchend", handleTouch, { capture: true, passive: true });
-            }
+            document.addEventListener("click", handleTouch, true);
+            document.addEventListener("touchend", handleTouch, { capture: true, passive: true });
         }
 
         async function initData() {
@@ -853,7 +848,7 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            openTargetUrlDirectly(directUrl);
+            executeSafeRedirect(directUrl);
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
             const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
@@ -982,4 +977,4 @@
         initData();
     </script>
 </body>
-                        </html>
+    </html>
