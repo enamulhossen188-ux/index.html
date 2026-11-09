@@ -27,14 +27,13 @@ DB_CHANNEL_ID = -1004330425245
 RENDER_SERVER_URL = "https://index-html-6f0e.onrender.com"
 # ====================================================
 
-# threaded=False এবং সেশন ক্লিনআপ কনফ্লিক্ট আটকায়
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 CORS(app)
 
 cached_data = None
 last_cache_time = 0
-CACHE_DURATION = 30
+CACHE_DURATION = 15
 thumb_memory_cache = {}
 admin_state = {}
 
@@ -56,35 +55,72 @@ def get_default_data():
     }
 
 def get_db_file_content():
+    """চ্যানেলের পিন করা মেসেজ বা রিসেন্ট মেসেজ থেকে আসল ২৫১ কেবি ব্যাকআপ ফাইলটি খুঁজে বের করে"""
     try:
         chat = bot.get_chat(DB_CHANNEL_ID)
         pinned = chat.pinned_message
         if pinned and pinned.document:
             file_info = bot.get_file(pinned.document.file_id)
             content = bot.download_file(file_info.file_path)
-            return json.loads(content.decode('utf-8'))
+            parsed = json.loads(content.decode('utf-8'))
+            if parsed and len(parsed.get("videos", [])) > 0:
+                return parsed
     except Exception as e:
-        print("DB Read Error:", e)
+        print("Pinned DB Read Error:", e)
+
+    # যদি পিন করা ফাইলে ভিডিও না মেলে, তবে লোকাল ক্যাশ বা ডিফল্ট রিটার্ন করবে
     return None
+
+def normalize_categories(data):
+    """ক্যাটাগরির বানান ও বড়/ছোট হাতের অমিল দূর করে"""
+    if not data or "videos" not in data:
+        return data
+    for v in data["videos"]:
+        cat = str(v.get("category", "")).strip().upper()
+        if "COMING" in cat:
+            v["category"] = "COMING SOON"
+        elif "SERIES" in cat or "WEB" in cat:
+            v["category"] = "WEB SERIES"
+        elif "DRAMA" in cat:
+            v["category"] = "DRAMA"
+        elif "BPS" in cat:
+            v["category"] = "BPS5"
+        elif "MOVIE" in cat:
+            v["category"] = "MOVIES"
+    return data
 
 def load_data(force_refresh=False):
     global cached_data, last_cache_time
     cur_time = time.time()
-    if not force_refresh and cached_data and (cur_time - last_cache_time < CACHE_DURATION):
+    
+    # মেমোরিতে যদি ভিডিও ডেটা থাকে তবেই নির্দিষ্ট সময় ক্যাশ ব্যবহার করবে
+    if not force_refresh and cached_data and len(cached_data.get("videos", [])) > 0 and (cur_time - last_cache_time < CACHE_DURATION):
         return cached_data
+
     data = get_db_file_content()
-    if data and "videos" in data:
-        data.setdefault("ads", {})
+    if data and "videos" in data and len(data["videos"]) > 0:
+        data = normalize_categories(data)
+        data.setdefault("ads", {
+            "ad1": "https://omg10.com/4/8465535", 
+            "ad2": "https://omg10.com/4/8465535", 
+            "popunder_ad": "https://omg10.com/4/8465535"
+        })
         data.setdefault("sub_categories", {})
-        if "categories" not in data or not data["categories"]:
-            data["categories"] = ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"]
+        data["categories"] = ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"]
         cached_data = data
         last_cache_time = cur_time
         return cached_data
-    if cached_data: 
+
+    # যদি কোনো কারণে নতুন ফাইলে ভিডিও না আসে, আগের ক্যাশ করা ভিডিও ধরে রাখবে
+    if cached_data and len(cached_data.get("videos", [])) > 0:
         return cached_data
-    cached_data = get_default_data()
-    return cached_data
+
+    if data:
+        data = normalize_categories(data)
+        cached_data = data
+        return cached_data
+
+    return get_default_data()
 
 def save_data(data):
     global cached_data, last_cache_time
@@ -124,7 +160,6 @@ def serve_thumbnail(file_id):
             tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
             thumb_memory_cache[file_id] = tg_url
         
-        # সরাসরি বাইনারি প্রক্সি করে দেওয়া হচ্ছে যাতে ব্রাউজার ব্লক বা CORS ইস্যু না হয়
         r = requests.get(tg_url, timeout=10)
         if r.status_code == 200:
             resp = Response(r.content, mimetype=r.headers.get('Content-Type', 'image/jpeg'))
@@ -144,7 +179,7 @@ def get_app_data():
         resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
         return resp
 
-    data = load_data(force_refresh=False)
+    data = load_data(force_refresh=True)
     resp = make_response(jsonify(data))
     resp.headers['Access-Control-Allow-Origin'] = '*'
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -677,7 +712,6 @@ def internal_self_pinger():
         time.sleep(240)
 
 def run_polling_loop():
-    # পুরনো সমস্ত পেন্ডিং আপডেট এবং ওয়েবহুক ডিলিট করে একক পোলিং শুরু
     try:
         bot.remove_webhook()
         time.sleep(1)
