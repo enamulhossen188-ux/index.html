@@ -646,23 +646,24 @@
             return `data:image/svg+xml;utf8,${encodeURIComponent(svgContent)}`;
         }
 
+        // 🔥 থাম্বনেইল ফিক্স: যদি রেন্ডার প্রক্সি ফেইল করে সরাসরি টেলিগ্রাম এপিআই ট্রাই করবে 🔥
         function handleImageFallback(img) {
             const originalSrc = img.getAttribute("src") || "";
-            // যদি এটি অলরেডি ফলব্যাকে না থাকে এবং প্লেসহোল্ডার না হয়, তবে রেন্ডার প্রক্সি ট্রাই করবে
-            if (!originalSrc.startsWith("data:image") && !img.hasAttribute("data-tried-proxy")) {
-                img.setAttribute("data-tried-proxy", "true");
-                const fileId = originalSrc.split("/").pop();
-                if (fileId && fileId.length > 10) {
-                    img.src = `${CURRENT_RENDER_URL}/thumb/${fileId}`;
-                    return;
-                }
+            const fileId = img.getAttribute("data-file-id") || "";
+
+            // ১ম ট্রাই: টেলিগ্রামের মূল ফাইল লিংক দিয়ে সরাসরি লোড
+            if (fileId && !img.hasAttribute("data-tried-direct")) {
+                img.setAttribute("data-tried-direct", "true");
+                img.src = `https://api.telegram.org/file/bot8995171178:AAHfcZl-M4WogpvOx_NmnrLVkqiBVOwlwHY/photos/${fileId}.jpg`;
+                return;
             }
+
+            // ২য় ট্রাই: ব্যর্থ হলে লাল প্লে বাটনে ফলব্যাক
             const title = img.getAttribute("data-title") || "Bachelor Point";
             img.onerror = null;
             img.src = generateSvgPoster(title);
         }
 
-        // 🔥 থাম্বনেইলের আসল ছবি লোড করার ১০০% কার্যকর ফাংশন 🔥
         function resolveThumb(url, title) {
             if (!url || typeof url !== 'string' || url.trim() === "" || url.includes("placehold.co")) {
                 return generateSvgPoster(title);
@@ -670,53 +671,64 @@
             let u = url.trim();
             if (u.startsWith("data:image")) return u;
 
-            // যদি পূর্ণ লিংক থাকে
             if (u.startsWith("http://") || u.startsWith("https://")) {
-                if (u.includes("api.telegram.org")) {
-                    const parts = u.split("/");
-                    return `${CURRENT_RENDER_URL}/thumb/${parts[parts.length - 1]}`;
-                }
                 return u;
             }
 
-            // যদি রিলেটিভ /thumb/file_id থাকে
             if (u.includes("/thumb/")) {
                 const parts = u.split("/thumb/");
                 const fileId = parts[parts.length - 1].replace(/^\/+/, '');
                 return `${CURRENT_RENDER_URL}/thumb/${fileId}`;
             }
 
-            // সাধারণ file_id হলে
             return `${CURRENT_RENDER_URL}/thumb/${u.replace(/^\/+/, '')}`;
         }
 
-        // 🔥 টেলিগ্রাম মিনি অ্যাপে ১০০% কার্যকর পপআন্ডার ফাংশন 🔥
-        function triggerPopunder() {
-            const now = Date.now();
-            // ৩০ সেকেন্ড পর পর কার্যকর হবে
-            if (now - lastPopTime < 30000) return;
-            
-            const rawPop = (appData.ads?.popunder_ad || "https://omg10.com/4/8465535").trim();
-            let popUrl = rawPop;
-            
-            // স্ক্রিপ্ট ট্যাগ থাকলে সেখান থেকে আসল ইউআরএল বের করা
+        // 🔥 পপআন্ডার ইঞ্জিন ফিক্স: ব্যাকগ্রাউন্ডে স্ক্রিপ্ট ইনজেক্ট করবে, আর ক্লিকে ডিরেক্ট লিংক খুলবে 🔥
+        function initBackgroundPopunder() {
+            const rawPop = (appData.ads?.popunder_ad || "").trim();
+            if (!rawPop) return;
+
+            let scriptSrc = null;
             if (rawPop.includes("src=")) {
                 let m = rawPop.match(/src=["'](.*?)["']/);
-                if (m) popUrl = m[1];
+                if (m) scriptSrc = m[1];
+            } else if (rawPop.endsWith(".js") || rawPop.includes("/edbe54e")) {
+                scriptSrc = rawPop;
             }
-            if (popUrl.startsWith("//")) popUrl = "https:" + popUrl;
 
-            if (popUrl && popUrl.startsWith("http")) {
-                lastPopTime = now;
-                try {
-                    if (tg && tg.openLink) {
-                        tg.openLink(popUrl);
-                    } else {
-                        window.open(popUrl, "_blank");
-                    }
-                } catch (e) {
-                    window.open(popUrl, "_blank");
+            if (scriptSrc) {
+                if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
+                const sc = document.createElement("script");
+                sc.type = "text/javascript";
+                sc.async = true;
+                sc.setAttribute("data-cfasync", "false");
+                sc.src = scriptSrc;
+                document.head.appendChild(sc);
+            }
+        }
+
+        function triggerPopunder() {
+            const now = Date.now();
+            if (now - lastPopTime < 30000) return;
+
+            // যদি পপআন্ডার বক্সে ডিরেক্ট লিংক থাকে, সেটা ওপেন হবে; আর JS স্ক্রিপ্ট হলে ডিরেক্ট এড নেটওয়ার্ক খুলবে
+            const rawPop = (appData.ads?.popunder_ad || "").trim();
+            let clickUrl = "https://omg10.com/4/8465535";
+
+            if (rawPop.startsWith("http") && !rawPop.includes(".js") && !rawPop.includes("/edbe54e")) {
+                clickUrl = rawPop;
+            }
+
+            lastPopTime = now;
+            try {
+                if (tg && tg.openLink) {
+                    tg.openLink(clickUrl);
+                } else {
+                    window.open(clickUrl, "_blank");
                 }
+            } catch (e) {
+                window.open(clickUrl, "_blank");
             }
         }
 
@@ -770,6 +782,7 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
+            initBackgroundPopunder();
             if (ads.social_ad) injectScriptCode(ads.social_ad);
         }
 
@@ -812,7 +825,6 @@
             renderVideos();
         }
 
-        // 🔥 প্রতিটি ক্যাটাগরি আলাদা করার এবং থাম্বনেইল প্রদর্শন করার লজিক 🔥
         function renderVideos() {
             const container = document.getElementById("videoContainer");
             const empty = document.getElementById("emptyMessage");
@@ -864,9 +876,11 @@
                     };
                     
                     const thumbUrl = resolveThumb(item.thumb, item.title);
+                    const rawThumbId = (typeof item.thumb === 'string') ? item.thumb.split('/').pop() : '';
+
                     card.innerHTML = `
                         <div class="thumb-wrapper">
-                            <img class="thumb-img" src="${thumbUrl}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
+                            <img class="thumb-img" src="${thumbUrl}" data-file-id="${rawThumbId}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
                         </div>
                         <div class="card-details">
                             <div class="video-title">${item.title}</div>
@@ -892,6 +906,8 @@
 
             const detailImg = document.getElementById("detailThumb");
             detailImg.setAttribute("data-title", video.title || "");
+            const rawThumbId = (typeof video.thumb === 'string') ? video.thumb.split('/').pop() : '';
+            detailImg.setAttribute("data-file-id", rawThumbId);
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
