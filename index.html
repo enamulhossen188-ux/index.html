@@ -590,6 +590,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -617,13 +618,13 @@
         }
 
         function generateSvgPoster(title) {
-            const cleanTitle = (title || 'Bachelor Point').replace(/['"<>]/g, '').substring(0, 32);
+            const cleanTitle = (title || 'Bachelor Point').replace(/['"<>]/g, '').substring(0, 30);
             const svgContent = `
                 <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
                     <rect width="640" height="360" fill="#181920"/>
-                    <circle cx="320" cy="145" r="42" fill="#e50914" fill-opacity="0.95"/>
-                    <polygon points="312,130 338,145 312,160" fill="#ffffff"/>
-                    <text x="320" y="240" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="18" font-weight="700" fill="#ffffff" text-anchor="middle">${cleanTitle}</text>
+                    <circle cx="320" cy="145" r="40" fill="#e50914" fill-opacity="0.95"/>
+                    <polygon points="312,130 336,145 312,160" fill="#ffffff"/>
+                    <text x="320" y="240" font-family="-apple-system, sans-serif" font-size="18" font-weight="700" fill="#ffffff" text-anchor="middle">${cleanTitle}</text>
                 </svg>
             `.trim();
             return `data:image/svg+xml;utf8,${encodeURIComponent(svgContent)}`;
@@ -635,6 +636,7 @@
             img.src = generateSvgPoster(title);
         }
 
+        // 🔥 টেলিগ্রাম বটের মাধ্যমে আপলোড করা আসল থাম্বনেইল পাথ নিশ্চিত করার সমাধান 🔥
         function resolveThumb(thumbData, title) {
             if (!thumbData || typeof thumbData !== "string") {
                 return generateSvgPoster(title);
@@ -643,17 +645,22 @@
             if (u === "" || u.includes("placehold.co")) {
                 return generateSvgPoster(title);
             }
-            if (u.includes("/thumb/")) {
-                const parts = u.split("/thumb/");
-                return `${CURRENT_RENDER_URL}/thumb/${parts[parts.length - 1]}`;
+            
+            // যদি থাম্বনেইলে পুরো URL থাকে
+            if (u.startsWith("http://") || u.startsWith("https://")) {
+                return u;
             }
-            if (!u.startsWith("http://") && !u.startsWith("https://") && !u.startsWith("data:")) {
-                return `${CURRENT_RENDER_URL}/thumb/${u}`;
+            
+            // যদি রিলেটিভ পাথ থাকে
+            if (u.startsWith("/thumb/")) {
+                return `${CURRENT_RENDER_URL}${u}`;
             }
-            return u;
+            
+            // যদি শুধু ফাইল আইডি থাকে
+            return `${CURRENT_RENDER_URL}/thumb/${u.replace(/^\/+/, '')}`;
         }
 
-        // 🔥 আসল Adsterra পপআন্ডার স্ক্রিপ্ট এক্সিকিউশন (ডাইরেক্ট রিডাইরেক্ট সম্পূর্ণ বন্ধ) 🔥
+        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন 🔥
         function executeAdsterraScriptEngine() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
@@ -673,9 +680,23 @@
                 s.type = "text/javascript";
                 s.setAttribute("data-cfasync", "false");
                 s.async = true;
-                s.src = scriptSrc;
+                s.src = scriptSrc + (scriptSrc.includes("?") ? "&" : "?") + "t=" + Date.now();
                 document.head.appendChild(s);
             }
+
+            // স্ক্রিনের যেকোনো স্থানে প্রথম স্পর্শেই বিজ্ঞাপন কার্যকর করা
+            const handleTouch = (e) => {
+                if (popunderTriggered) return;
+                if (e.target.closest(".visit-action-btn")) return; // টাস্ক বাটনে চাপলে পপআন্ডার ট্রিগার হবে না
+
+                popunderTriggered = true;
+                
+                // ৮ সেকেন্ড পর আবার সক্রিয় হবে
+                setTimeout(() => { popunderTriggered = false; }, 8000);
+            };
+
+            window.addEventListener("click", handleTouch, true);
+            window.addEventListener("touchend", handleTouch, { capture: true, passive: true });
         }
 
         async function initData() {
@@ -764,7 +785,6 @@
 
             const detailImg = document.getElementById("detailThumb");
             detailImg.setAttribute("data-title", video.title || "");
-            detailImg.onerror = function() { handleImageFallback(this); };
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
@@ -802,7 +822,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: শুধুমাত্র বাটনে ক্লিক করলেই ডিরেক্ট লিংক ওপেন ও ১০ সেকেন্ড কাউন্টডাউন 🔥
+        // 🔥 Task 1 ও 2: ডিরেক্ট লিংক (Smartlink) সরাসরি ওপেন এবং ১০ সেকেন্ড কাউন্টডাউন 🔥
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
