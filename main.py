@@ -27,100 +27,54 @@ DB_CHANNEL_ID = -1004330425245
 RENDER_SERVER_URL = "https://index-html-6f0e.onrender.com"
 # ====================================================
 
-bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
+bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
 app = Flask(__name__)
 CORS(app)
 
 cached_data = None
 last_cache_time = 0
-CACHE_DURATION = 15
+CACHE_DURATION = 60
 thumb_memory_cache = {}
 admin_state = {}
 
 def get_default_data():
     return {
         "users": [],
-        "categories": ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"],
+        "categories": ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"],
         "sub_categories": {},
-        "ads": {
-            "ad1": "https://omg10.com/4/8465535", 
-            "ad2": "https://omg10.com/4/8465535", 
-            "social_ad": "", 
-            "native_ad": "", 
-            "popunder_ad": "https://omg10.com/4/8465535"
-        },
+        "ads": {"ad1": "https://google.com", "ad2": "https://google.com", "social_ad": "", "native_ad": "", "popunder_ad": ""},
         "welcome_video": "",
         "update_notice": "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!",
         "videos": []
     }
 
 def get_db_file_content():
-    """চ্যানেলের পিন করা মেসেজ বা রিসেন্ট মেসেজ থেকে আসল ২৫১ কেবি ব্যাকআপ ফাইলটি খুঁজে বের করে"""
     try:
         chat = bot.get_chat(DB_CHANNEL_ID)
         pinned = chat.pinned_message
         if pinned and pinned.document:
             file_info = bot.get_file(pinned.document.file_id)
             content = bot.download_file(file_info.file_path)
-            parsed = json.loads(content.decode('utf-8'))
-            if parsed and len(parsed.get("videos", [])) > 0:
-                return parsed
+            return json.loads(content.decode('utf-8'))
     except Exception as e:
-        print("Pinned DB Read Error:", e)
-
-    # যদি পিন করা ফাইলে ভিডিও না মেলে, তবে লোকাল ক্যাশ বা ডিফল্ট রিটার্ন করবে
+        print("DB Read Error:", e)
     return None
-
-def normalize_categories(data):
-    """ক্যাটাগরির বানান ও বড়/ছোট হাতের অমিল দূর করে"""
-    if not data or "videos" not in data:
-        return data
-    for v in data["videos"]:
-        cat = str(v.get("category", "")).strip().upper()
-        if "COMING" in cat:
-            v["category"] = "COMING SOON"
-        elif "SERIES" in cat or "WEB" in cat:
-            v["category"] = "WEB SERIES"
-        elif "DRAMA" in cat:
-            v["category"] = "DRAMA"
-        elif "BPS" in cat:
-            v["category"] = "BPS5"
-        elif "MOVIE" in cat:
-            v["category"] = "MOVIES"
-    return data
 
 def load_data(force_refresh=False):
     global cached_data, last_cache_time
     cur_time = time.time()
-    
-    # মেমোরিতে যদি ভিডিও ডেটা থাকে তবেই নির্দিষ্ট সময় ক্যাশ ব্যবহার করবে
-    if not force_refresh and cached_data and len(cached_data.get("videos", [])) > 0 and (cur_time - last_cache_time < CACHE_DURATION):
+    if not force_refresh and cached_data and (cur_time - last_cache_time < CACHE_DURATION):
         return cached_data
-
     data = get_db_file_content()
-    if data and "videos" in data and len(data["videos"]) > 0:
-        data = normalize_categories(data)
-        data.setdefault("ads", {
-            "ad1": "https://omg10.com/4/8465535", 
-            "ad2": "https://omg10.com/4/8465535", 
-            "popunder_ad": "https://omg10.com/4/8465535"
-        })
+    if data and "videos" in data:
+        data.setdefault("ads", {})
         data.setdefault("sub_categories", {})
-        data["categories"] = ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"]
         cached_data = data
         last_cache_time = cur_time
         return cached_data
-
-    # যদি কোনো কারণে নতুন ফাইলে ভিডিও না আসে, আগের ক্যাশ করা ভিডিও ধরে রাখবে
-    if cached_data and len(cached_data.get("videos", [])) > 0:
-        return cached_data
-
-    if data:
-        data = normalize_categories(data)
-        cached_data = data
-        return cached_data
-
-    return get_default_data()
+    if cached_data: return cached_data
+    cached_data = get_default_data()
+    return cached_data
 
 def save_data(data):
     global cached_data, last_cache_time
@@ -134,10 +88,8 @@ def save_data(data):
                 ("db_backup_bot2.json", json_bytes),
                 caption=f"📦 Update: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
             )
-            try: 
-                bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
-            except Exception: 
-                pass
+            try: bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
+            except Exception: pass
         except Exception as e:
             print("Save Error:", e)
     threading.Thread(target=_async_save, daemon=True).start()
@@ -160,35 +112,25 @@ def serve_thumbnail(file_id):
             tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
             thumb_memory_cache[file_id] = tg_url
         
-        r = requests.get(tg_url, timeout=10)
-        if r.status_code == 200:
-            resp = Response(r.content, mimetype=r.headers.get('Content-Type', 'image/jpeg'))
-            resp.headers['Cache-Control'] = 'public, max-age=604800, immutable'
-            resp.headers['Access-Control-Allow-Origin'] = '*'
-            return resp
-    except Exception as e:
-        print("Thumb proxy error:", e)
-    return redirect("https://placehold.co/600x400?text=No+Poster", code=302)
-
-@app.route('/api/data', methods=['GET', 'OPTIONS'])
-def get_app_data():
-    if request.method == 'OPTIONS':
-        resp = make_response()
+        resp = redirect(tg_url, code=302)
+        resp.headers['Cache-Control'] = 'public, max-age=604800, immutable'
         resp.headers['Access-Control-Allow-Origin'] = '*'
-        resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
         return resp
+    except Exception:
+        return redirect("https://placehold.co/600x400?text=No+Poster", code=302)
 
-    data = load_data(force_refresh=True)
+@app.route('/api/data', methods=['GET'])
+def get_app_data():
+    data = load_data(force_refresh=False)
     resp = make_response(jsonify(data))
     resp.headers['Access-Control-Allow-Origin'] = '*'
-    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Cache-Control'] = 'no-cache'
     return resp
 
 def deliver_single_video(chat_id, target_video):
     caption_text = f"🎬 **{target_video.get('title', 'Video')}**\n\nউপভোগ করুন!"
     try:
-        bot.send_video(chat_id, target_video['file_id'], caption=caption_text, supports_streaming=True, protect_content=False, parse_mode="Markdown")
+        bot.send_video(chat_id, target_video['file_id'], caption=caption_text, supports_streaming=True, protect_content=True, parse_mode="Markdown")
         return True
     except Exception:
         try:
@@ -197,33 +139,24 @@ def deliver_single_video(chat_id, target_video):
         except Exception:
             return False
 
-@app.route('/api/send_video', methods=['POST', 'OPTIONS'])
+@app.route('/api/send_video', methods=['POST'])
 def api_send_video():
-    if request.method == 'OPTIONS':
-        resp = make_response()
-        resp.headers['Access-Control-Allow-Origin'] = '*'
-        resp.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        return resp
-
     try:
         req_data = request.json or {}
         uid = req_data.get('user_id')
         vid = req_data.get('video_id')
-        if not uid or not vid: 
-            return jsonify({'success': False}), 400
+        if not uid or not vid: return jsonify({'success': False}), 400
         data = load_data()
         target = next((v for v in data.get("videos", []) if str(v.get("id")) == str(vid)), None)
         if target and target.get("file_id"):
-            if deliver_single_video(uid, target): 
-                return jsonify({'success': True})
+            if deliver_single_video(uid, target): return jsonify({'success': True})
         return jsonify({'success': False}), 404
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/')
 def home():
-    return "Bachelor Point Bot Server Active 24/7!"
+    return "Bot Server Active 24/7!"
 
 def get_action_buttons():
     fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
@@ -302,10 +235,9 @@ def get_delete_view_data(page=0):
 
 def get_category_keyboard():
     data = load_data(force_refresh=True)
-    cats = data.get("categories", ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"])
+    cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
     markup = types.InlineKeyboardMarkup()
-    for c in cats: 
-        markup.add(types.InlineKeyboardButton(f"🗑 Delete: {c}", callback_data=f"delcat_{c}"))
+    for c in cats: markup.add(types.InlineKeyboardButton(f"🗑 Delete: {c}", callback_data=f"delcat_{c}"))
     markup.add(types.InlineKeyboardButton("➕ Add New Category", callback_data="add_new_category"))
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return markup
@@ -502,10 +434,9 @@ def handle_admin_inputs(message):
     if message.text == "➕ Add Video":
         admin_state[chat_id] = {'step': 'category'}
         data = load_data(force_refresh=True)
-        cats = data.get("categories", ["BPS5", "DRAMA", "WEB SERIES", "MOVIES"])
+        cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES"])
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-        for i in range(0, len(cats), 2): 
-            markup.row(*[types.KeyboardButton(c) for c in cats[i:i+2]])
+        for i in range(0, len(cats), 2): markup.row(*[types.KeyboardButton(c) for c in cats[i:i+2]])
         bot.send_message(chat_id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup)
         return
     elif message.text == "📢 Add Coming Soon":
@@ -684,7 +615,7 @@ def handle_admin_inputs(message):
             "id": int(time.time()),
             "category": admin_state[chat_id]['category'],
             "title": admin_state[chat_id]['title'],
-            "thumb": admin_state[chat_id].get('thumb', ''),
+            "thumb": thumb_url if 'thumb_url' in locals() else admin_state[chat_id].get('thumb', ''),
             "file_id": incoming_file_id,
             "date": datetime.now().strftime("%b %d, %Y"),
             "time": datetime.now().strftime("%I:%M %p")
@@ -707,26 +638,20 @@ def internal_self_pinger():
     while True:
         try:
             requests.get(f"{RENDER_SERVER_URL}/", timeout=10)
-        except Exception: 
-            pass
+        except Exception: pass
         time.sleep(240)
 
 def run_polling_loop():
-    try:
-        bot.remove_webhook()
-        time.sleep(1)
-    except Exception:
-        pass
     while True:
         try:
-            bot.polling(none_stop=True, skip_pending=True, timeout=20)
+            bot.remove_webhook()
+            bot.infinity_polling(timeout=20, long_polling_timeout=20)
         except Exception as e:
-            print("Polling reconnecting...", e)
-            time.sleep(3)
+            time.sleep(2)
 
 if __name__ == "__main__":
     threading.Thread(target=internal_self_pinger, daemon=True).start()
     threading.Thread(target=run_polling_loop, daemon=True).start()
 
     port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
+    app.run(host="0.0.0.0", port=port)
