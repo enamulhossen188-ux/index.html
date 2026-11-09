@@ -9,14 +9,13 @@ for pkg in ["pyTelegramBotAPI", "Flask", "Flask-CORS", "requests"]:
 
 import telebot
 from telebot import types
-from flask import Flask, jsonify, make_response, send_file, Response, request, redirect
+from flask import Flask, jsonify, make_response, Response, request, redirect
 from flask_cors import CORS
 import threading
 import json
 import os
 import time
 import requests
-from io import BytesIO
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
@@ -102,30 +101,30 @@ def upload_thumb_securely(photo_id):
     except Exception:
         return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
 
-# 🔥 ফিক্সড থাম্বনেইল প্রক্সি: সরাসরি ইমেজ ডাটা রিটার্ন করবে 🔥
-@app.route('/thumb/<file_id>')
+# 🔥 স্থায়ী থাম্বনেইল প্রক্সি: সরাসরি ইমেজ রিটার্ন করবে 🔥
+@app.route('/thumb/<path:file_id>')
 def serve_thumbnail(file_id):
-    try:
-        if file_id in thumb_memory_cache:
-            img_data = thumb_memory_cache[file_id]
-        else:
-            file_info = bot.get_file(file_id)
-            tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
-            r = requests.get(tg_url, timeout=12)
-            if r.status_code == 200:
-                img_data = r.content
-                if len(thumb_memory_cache) < 300:
-                    thumb_memory_cache[file_id] = img_data
-            else:
-                return redirect("https://placehold.co/600x400?text=No+Poster", code=302)
-        
-        resp = Response(img_data, mimetype='image/jpeg')
-        resp.headers['Cache-Control'] = 'public, max-age=604800, immutable'
+    clean_id = file_id.strip().split('/')[-1]
+    if clean_id in thumb_memory_cache:
+        resp = Response(thumb_memory_cache[clean_id], mimetype='image/jpeg')
         resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Cache-Control'] = 'public, max-age=604800'
         return resp
+
+    try:
+        file_info = bot.get_file(clean_id)
+        tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+        r = requests.get(tg_url, timeout=12)
+        if r.status_code == 200:
+            thumb_memory_cache[clean_id] = r.content
+            resp = Response(r.content, mimetype='image/jpeg')
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            resp.headers['Cache-Control'] = 'public, max-age=604800'
+            return resp
     except Exception as e:
-        print("Thumb proxy error:", e)
-        return redirect("https://placehold.co/600x400?text=No+Poster", code=302)
+        print("Thumb Error:", e)
+
+    return redirect("https://placehold.co/600x400/181920/ffffff?text=Poster", code=302)
 
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
