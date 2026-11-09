@@ -597,7 +597,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderActive = true;
+        let popunderLocked = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -624,7 +624,7 @@
             alert(appData.update_notice || "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!");
         }
 
-        // 🔥 নিরাপদ Base64 SVG পোস্টার জেনারেটর (কোনো ভাঙা আইকন বা ডবল টেক্সট আসবে না) 🔥
+        // 🔥 নিরাপদ ও প্রফেশনাল SVG পোস্টার জেনারেটর (ভাঙা আইকন সম্পূর্ণ নির্মূল) 🔥
         function generateSvgPoster(title) {
             const cleanTitle = (title || 'Bachelor Point').replace(/['"<>]/g, '').substring(0, 30);
             const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
@@ -661,12 +661,12 @@
             return `${CURRENT_RENDER_URL}/thumb/${u.replace(/^\/+/, '')}`;
         }
 
-        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (যেকোনো ফাঁকা অংশে স্পর্শে শতভাগ সক্রিয়) 🔥
+        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন 🔥
         function setupUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
 
-            // ১. Adsterra স্ক্রিপ্ট ট্যাগ ইনজেকশন
+            // ১. স্ক্রিপ্ট ইনজেকশন
             let scriptSrc = null;
             if (raw.includes("src=")) {
                 const m = raw.match(/src=["'](.*?)["']/);
@@ -681,22 +681,19 @@
                 s.type = "text/javascript";
                 s.setAttribute("data-cfasync", "false");
                 s.async = true;
-                s.src = scriptSrc + (scriptSrc.includes("?") ? "&" : "?") + "_t=" + Date.now();
+                s.src = scriptSrc;
                 document.head.appendChild(s);
             }
 
-            // ২. স্ক্রিনে যেকোনো স্থানে প্রথম টাচ করলেই পপআন্ডার নিশ্চিত সক্রিয়করণ
-            const triggerPopunder = (e) => {
-                if (!popunderActive) return;
-                // টাস্ক বোতামে ক্লিক করলে পপআন্ডার কোনোভাবেই রান হবে না
-                if (e.target.closest(".visit-action-btn")) return;
-
-                popunderActive = false;
-                setTimeout(() => { popunderActive = true; }, 7000);
+            // ২. স্ক্রিনে যেকোনো স্থানে টাচ করলেই সক্রিয় পপআন্ডার ট্রিগার
+            const handleTouch = () => {
+                if (popunderLocked) return;
+                popunderLocked = true;
+                setTimeout(() => { popunderLocked = false; }, 6000);
             };
 
-            window.addEventListener("click", triggerPopunder, true);
-            window.addEventListener("touchend", triggerPopunder, { capture: true, passive: true });
+            window.addEventListener("click", handleTouch, true);
+            window.addEventListener("touchend", handleTouch, { capture: true, passive: true });
         }
 
         async function initData() {
@@ -823,14 +820,8 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: ১০০% সুরক্ষিত ডিরেক্ট লিঙ্ক (অন্য কোনো বিজ্ঞাপনী রিডাইরেক্ট ঘটবে না) 🔥
+        // 🔥 Task 1 ও 2: ডিরেক্ট লিঙ্ক ওপেন + পপআন্ডার কার্যকর হওয়া + ১০ সেকেন্ড অ্যান্টি-চিট টাইমার 🔥
         function runTaskDirect(taskNum, event) {
-            // কোনো ব্যাকগ্রাউন্ড ইভেন্ট বা পপআন্ডারকে এখানে আসতে দেওয়া হবে না
-            if (event) {
-                event.stopPropagation();
-                if (event.stopImmediatePropagation) event.stopImmediatePropagation();
-            }
-
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
 
@@ -845,7 +836,7 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // নির্ধারিত ডিরেক্ট লিঙ্ক সরাসরি টেলিগ্রাম ব্রাউজারে ওপেন
+            // নির্ধারিত লিঙ্ক সরাসরি টেলিগ্রাম ব্রাউজারে ওপেন
             try {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
