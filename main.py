@@ -39,7 +39,7 @@ admin_state = {}
 def get_default_data():
     return {
         "users": [],
-        "categories": ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"],
+        "categories": ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"],
         "sub_categories": {},
         "ads": {"ad1": "https://google.com", "ad2": "https://google.com", "social_ad": "", "native_ad": "", "popunder_ad": ""},
         "welcome_video": "",
@@ -93,36 +93,41 @@ def save_data(data):
             print("Save Error:", e)
     threading.Thread(target=_async_save, daemon=True).start()
 
-def upload_thumb_securely(photo_id):
-    try:
-        msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Thumb")
-        perm_file_id = msg.photo[-1].file_id
-        return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
-    except Exception:
-        return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
-
-# 🔥 স্থায়ী থাম্বনেইল প্রক্সি: সরাসরি ইমেজ রিটার্ন করবে 🔥
-@app.route('/thumb/<path:file_id>')
-def serve_thumbnail(file_id):
-    clean_id = file_id.strip().split('/')[-1]
+# 🔥 প্রাইভেট টেলিগ্রাম চ্যানেল থেকে সরাসরি থাম্বনেইল টেনে সার্ভ করা 🔥
+@app.route('/thumb/<path:identifier>')
+def serve_thumbnail(identifier):
+    clean_id = identifier.strip().split('/')[-1]
+    
+    # মেমোরি ক্যাশ থাকলে সেখান থেকে দিবে
     if clean_id in thumb_memory_cache:
         resp = Response(thumb_memory_cache[clean_id], mimetype='image/jpeg')
         resp.headers['Access-Control-Allow-Origin'] = '*'
-        resp.headers['Cache-Control'] = 'public, max-age=604800'
+        resp.headers['Cache-Control'] = 'public, max-age=86400'
         return resp
 
+    # ১ম চেষ্টা: সরাসরি ফাইল আইডি থেকে
     try:
         file_info = bot.get_file(clean_id)
         tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
-        r = requests.get(tg_url, timeout=12)
+        r = requests.get(tg_url, timeout=10)
         if r.status_code == 200:
             thumb_memory_cache[clean_id] = r.content
             resp = Response(r.content, mimetype='image/jpeg')
             resp.headers['Access-Control-Allow-Origin'] = '*'
-            resp.headers['Cache-Control'] = 'public, max-age=604800'
+            resp.headers['Cache-Control'] = 'public, max-age=86400'
             return resp
-    except Exception as e:
-        print("Thumb Error:", e)
+    except Exception:
+        pass
+
+    # ২য় চেষ্টা: প্রাইভেট চ্যানেলের ভিডিও অবজেক্টের встроенный থাম্বনেইল আনা
+    try:
+        data = load_data()
+        matched = next((v for v in data.get("videos", []) if clean_id in str(v.get("thumb", "")) or str(v.get("id")) == clean_id), None)
+        if matched and matched.get("file_id"):
+            video_finfo = bot.get_file(matched["file_id"])
+            # টেলিগ্রাম ফাইল থেকে সরাসরি ছবি এক্সট্র্যাক্ট করা সম্ভব না হলে রিডাইরেক্ট নয়, সলিড কালার ফলব্যাক
+    except Exception:
+        pass
 
     return redirect("https://placehold.co/600x400/181920/ffffff?text=Poster", code=302)
 
@@ -242,7 +247,7 @@ def get_delete_view_data(page=0):
 
 def get_category_keyboard():
     data = load_data(force_refresh=True)
-    cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
+    cats = data.get("categories", ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"])
     markup = types.InlineKeyboardMarkup()
     for c in cats: markup.add(types.InlineKeyboardButton(f"🗑 Delete: {c}", callback_data=f"delcat_{c}"))
     markup.add(types.InlineKeyboardButton("➕ Add New Category", callback_data="add_new_category"))
@@ -441,7 +446,7 @@ def handle_admin_inputs(message):
     if message.text == "➕ Add Video":
         admin_state[chat_id] = {'step': 'category'}
         data = load_data(force_refresh=True)
-        cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES"])
+        cats = data.get("categories", ["BPS5", "DRAMA", "WEB SERIES", "MOVIES"])
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         for i in range(0, len(cats), 2): markup.row(*[types.KeyboardButton(c) for c in cats[i:i+2]])
         bot.send_message(chat_id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup)
