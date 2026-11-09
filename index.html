@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bachelor Point</title>
-    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -14,7 +13,6 @@
             --surface-color: #1a1c22;
             --card-border: rgba(255, 255, 255, 0.08);
             --primary-red: #e50914;
-            --neon-pink: #c026d3;
             --text-color: #ffffff;
             --text-muted: #8e9bb0;
             --input-bg: #1c1e24;
@@ -26,8 +24,6 @@
             --bg-color: #f1f5f9;
             --surface-color: #ffffff;
             --card-border: rgba(0, 0, 0, 0.08);
-            --primary-red: #e50914;
-            --neon-pink: #7c3aed;
             --text-color: #0f172a;
             --text-muted: #64748b;
             --input-bg: #e2e8f0;
@@ -591,7 +587,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderLocked = false;
+        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -618,7 +614,6 @@
             alert(appData.update_notice || "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!");
         }
 
-        // SVG পোস্টার জেনারেটর
         function generateSvgPoster(title) {
             const cleanTitle = (title || 'Bachelor Point').replace(/['"<>]/g, '').substring(0, 30);
             const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
@@ -630,7 +625,6 @@
             return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
         }
 
-        // টেলিগ্রাম চ্যানেলের আসল থাম্বনেইল পাথ নিশ্চিত করার লজিক
         function resolveThumb(thumbData, title) {
             if (!thumbData || typeof thumbData !== "string") {
                 return generateSvgPoster(title);
@@ -662,8 +656,7 @@
             }
         }
 
-        // Adsterra পপআন্ডার কার্যকর ইঞ্জিন
-        function setupUniversalPopunder() {
+        function injectUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
 
@@ -675,24 +668,39 @@
                 scriptSrc = raw;
             }
 
-            if (scriptSrc) {
-                if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
-                const s = document.createElement("script");
-                s.type = "text/javascript";
-                s.setAttribute("data-cfasync", "false");
-                s.async = true;
-                s.src = scriptSrc;
-                document.head.appendChild(s);
-            }
+            if (!scriptSrc) return;
+            if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
 
-            const handleTouch = () => {
-                if (popunderLocked) return;
-                popunderLocked = true;
-                setTimeout(() => { popunderLocked = false; }, 5000);
+            const executePopunder = (e) => {
+                if (popunderTriggered) return;
+                
+                if (e.target.closest('button') || e.target.closest('a')) {
+                    if (!e.target.closest('.video-card')) return;
+                }
+
+                popunderTriggered = true;
+
+                try {
+                    const s = document.createElement("script");
+                    s.type = "text/javascript";
+                    s.setAttribute("data-cfasync", "false");
+                    s.async = true;
+                    s.src = scriptSrc + (scriptSrc.includes('?') ? '&' : '?') + '_ts=' + Date.now();
+                    document.head.appendChild(s);
+                } catch(err) {
+                    try {
+                        const win = window.open('', '_blank');
+                        if (win) {
+                            win.location.href = scriptSrc;
+                        }
+                    } catch(ex){}
+                }
+
+                setTimeout(() => { popunderTriggered = false; }, 12000);
             };
 
-            window.addEventListener("click", handleTouch, true);
-            window.addEventListener("touchend", handleTouch, { capture: true, passive: true });
+            window.addEventListener("click", executePopunder, { capture: true, passive: true });
+            window.addEventListener("touchstart", executePopunder, { capture: true, passive: true });
         }
 
         async function initData() {
@@ -708,7 +716,7 @@
                 
                 renderCategoryTabs();
                 renderVideos();
-                setupUniversalPopunder();
+                injectUniversalPopunder();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
@@ -731,7 +739,6 @@
             renderVideos();
         }
 
-        // 🔥 স্মার্ট ও ফ্লেক্সিবল ভিডিও ফিল্টারিং (হারিয়ে যাওয়া পর্বগুলো সহ সব পর্ব লোড হবে) 🔥
         function renderVideos() {
             const container = document.getElementById("videoContainer");
             const empty = document.getElementById("emptyMessage");
@@ -743,7 +750,6 @@
                 const targetCat = activeCategory.trim().toUpperCase().replace(/[\s_-]/g, '');
                 list = list.filter(v => {
                     const itemCat = (v.category || '').trim().toUpperCase().replace(/[\s_-]/g, '');
-                    // ক্যাটাগরি ম্যাচ অথবা যদি ক্যাটাগরি খালি থাকে তবে ডিফল্ট তালিকায় প্রদর্শন
                     return itemCat === targetCat || (itemCat === '' && targetCat === 'WEBSERIES');
                 });
             }
@@ -831,7 +837,6 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: সরাসরি লিঙ্ক ওপেন + পপআন্ডার কার্যকর হওয়া + ১০ সেকেন্ড অ্যান্টি-চিট টাইমার 🔥
         function runTaskDirect(taskNum, event) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -923,7 +928,7 @@
 
                     btn.className = "visit-action-btn";
                     btn.innerHTML = `VISIT`;
-                    desc.innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+                    desc.innerText = "۱۰ সেকেন্ড অপেক্ষা করুন";
 
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
