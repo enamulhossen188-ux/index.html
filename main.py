@@ -39,7 +39,7 @@ admin_state = {}
 def get_default_data():
     return {
         "users": [],
-        "categories": ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"],
+        "categories": ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"],
         "sub_categories": {},
         "ads": {"ad1": "https://google.com", "ad2": "https://google.com", "social_ad": "", "native_ad": "", "popunder_ad": ""},
         "welcome_video": "",
@@ -93,41 +93,35 @@ def save_data(data):
             print("Save Error:", e)
     threading.Thread(target=_async_save, daemon=True).start()
 
-# 🔥 প্রাইভেট টেলিগ্রাম চ্যানেল থেকে সরাসরি থাম্বনেইল টেনে সার্ভ করা 🔥
-@app.route('/thumb/<path:identifier>')
-def serve_thumbnail(identifier):
-    clean_id = identifier.strip().split('/')[-1]
-    
-    # মেমোরি ক্যাশ থাকলে সেখান থেকে দিবে
+def upload_thumb_securely(photo_id):
+    try:
+        msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Thumb")
+        perm_file_id = msg.photo[-1].file_id
+        return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
+    except Exception:
+        return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
+
+@app.route('/thumb/<path:file_id>')
+def serve_thumbnail(file_id):
+    clean_id = file_id.strip().split('/')[-1]
     if clean_id in thumb_memory_cache:
         resp = Response(thumb_memory_cache[clean_id], mimetype='image/jpeg')
         resp.headers['Access-Control-Allow-Origin'] = '*'
-        resp.headers['Cache-Control'] = 'public, max-age=86400'
+        resp.headers['Cache-Control'] = 'public, max-age=604800'
         return resp
 
-    # ১ম চেষ্টা: সরাসরি ফাইল আইডি থেকে
     try:
         file_info = bot.get_file(clean_id)
         tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
-        r = requests.get(tg_url, timeout=10)
+        r = requests.get(tg_url, timeout=12)
         if r.status_code == 200:
             thumb_memory_cache[clean_id] = r.content
             resp = Response(r.content, mimetype='image/jpeg')
             resp.headers['Access-Control-Allow-Origin'] = '*'
-            resp.headers['Cache-Control'] = 'public, max-age=86400'
+            resp.headers['Cache-Control'] = 'public, max-age=604800'
             return resp
-    except Exception:
-        pass
-
-    # ২য় চেষ্টা: প্রাইভেট চ্যানেলের ভিডিও অবজেক্টের встроенный থাম্বনেইল আনা
-    try:
-        data = load_data()
-        matched = next((v for v in data.get("videos", []) if clean_id in str(v.get("thumb", "")) or str(v.get("id")) == clean_id), None)
-        if matched and matched.get("file_id"):
-            video_finfo = bot.get_file(matched["file_id"])
-            # টেলিগ্রাম ফাইল থেকে সরাসরি ছবি এক্সট্র্যাক্ট করা সম্ভব না হলে রিডাইরেক্ট নয়, সলিড কালার ফলব্যাক
-    except Exception:
-        pass
+    except Exception as e:
+        print("Thumb Error:", e)
 
     return redirect("https://placehold.co/600x400/181920/ffffff?text=Poster", code=302)
 
@@ -183,11 +177,11 @@ def get_action_buttons():
 def get_admin_keyboard():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     markup.add(
-        types.KeyboardButton("➕ Add Video"), types.KeyboardButton("📢 Add Coming Soon"),
-        types.KeyboardButton("🔕 Delete Video"), types.KeyboardButton("📊 Total Users"),
-        types.KeyboardButton("📁 Set Category"), types.KeyboardButton("🎯 Set Ads Link"),
-        types.KeyboardButton("🎥 Set Welcome Video"), types.KeyboardButton("🔔 Set Video Update"),
-        types.KeyboardButton("📢 BOT NOTICE")
+        types.KeyboardButton("➕ Add Video"), types.KeyboardButton("🖼 Update Thumb"),
+        types.KeyboardButton("📢 Add Coming Soon"), types.KeyboardButton("🔕 Delete Video"),
+        types.KeyboardButton("📊 Total Users"), types.KeyboardButton("📁 Set Category"),
+        types.KeyboardButton("🎯 Set Ads Link"), types.KeyboardButton("🎥 Set Welcome Video"),
+        types.KeyboardButton("🔔 Set Video Update"), types.KeyboardButton("📢 BOT NOTICE")
     )
     return markup
 
@@ -245,9 +239,33 @@ def get_delete_view_data(page=0):
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return text_msg, markup
 
+def get_thumb_view_data(page=0):
+    data = load_data(force_refresh=True)
+    videos = data.get("videos", [])
+    if not videos: return None, None
+
+    per_page = 8
+    start_idx = page * per_page
+    end_idx = start_idx + per_page
+    current_videos = videos[start_idx:end_idx]
+
+    text_msg = f"🖼 **থাম্বনেইল পরিবর্তনের তালিকা (পেজ: {page+1}/{(len(videos)+per_page-1)//per_page}):**\n\nযে ভিডিওর থাম্বনেইল বদলাতে চান তাতে চাপ দিন:\n"
+    markup = types.InlineKeyboardMarkup()
+
+    for idx, v in enumerate(current_videos, start=start_idx + 1):
+        t_label = f"🖼 {idx}. {v.get('title', 'Video')[:26]}"
+        markup.add(types.InlineKeyboardButton(t_label, callback_data=f"setthumb_{v.get('id')}_{page}"))
+
+    nav_buttons = []
+    if page > 0: nav_buttons.append(types.InlineKeyboardButton("⬅️ Previous", callback_data=f"thumbpage_{page-1}"))
+    if end_idx < len(videos): nav_buttons.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"thumbpage_{page+1}"))
+    if nav_buttons: markup.row(*nav_buttons)
+    markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
+    return text_msg, markup
+
 def get_category_keyboard():
     data = load_data(force_refresh=True)
-    cats = data.get("categories", ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"])
+    cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
     markup = types.InlineKeyboardMarkup()
     for c in cats: markup.add(types.InlineKeyboardButton(f"🗑 Delete: {c}", callback_data=f"delcat_{c}"))
     markup.add(types.InlineKeyboardButton("➕ Add New Category", callback_data="add_new_category"))
@@ -403,6 +421,22 @@ def handle_callbacks(call):
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
 
+    # 🔥 থাম্বনেইল পরিবর্তনের কলব্যাক পেজিং ও সিলেক্ট 🔥
+    if call.data.startswith("thumbpage_"):
+        page = int(call.data.split("_")[1])
+        txt, kb = get_thumb_view_data(page)
+        if kb: bot.edit_message_text(txt, chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
+        bot.answer_callback_query(call.id)
+        return
+
+    if call.data.startswith("setthumb_"):
+        parts = call.data.split("_")
+        vid_id = parts[1]
+        admin_state[chat_id] = {'step': 'upload_new_thumb', 'vid_id': vid_id}
+        bot.send_message(chat_id, "📷 **এই ভিডিওটির জন্য আপনার চ্যানেল থেকে আসল থাম্বনেইল ছবিটি পাঠিয়ে দিন:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.answer_callback_query(call.id)
+        return
+
     if call.data.startswith("delpage_"):
         page = int(call.data.split("_")[1])
         txt, kb = get_delete_view_data(page)
@@ -446,10 +480,17 @@ def handle_admin_inputs(message):
     if message.text == "➕ Add Video":
         admin_state[chat_id] = {'step': 'category'}
         data = load_data(force_refresh=True)
-        cats = data.get("categories", ["BPS5", "DRAMA", "WEB SERIES", "MOVIES"])
+        cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES"])
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         for i in range(0, len(cats), 2): markup.row(*[types.KeyboardButton(c) for c in cats[i:i+2]])
         bot.send_message(chat_id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup)
+        return
+    elif message.text == "🖼 Update Thumb":
+        txt, kb = get_thumb_view_data(0)
+        if not kb:
+            bot.send_message(chat_id, "❌ কোনো ভিডিও পাওয়া যায়নি!", reply_markup=get_admin_keyboard())
+            return
+        bot.send_message(chat_id, txt, reply_markup=kb, parse_mode="Markdown")
         return
     elif message.text == "📢 Add Coming Soon":
         admin_state[chat_id] = {'step': 'cs_title', 'category': 'COMING SOON', 'is_coming_soon': True}
@@ -489,6 +530,25 @@ def handle_admin_inputs(message):
 
     if chat_id not in admin_state: return
     step = admin_state[chat_id].get('step')
+
+    # 🔥 নতুন থাম্বনেইল ছবি সেভ করার হ্যান্ডলার 🔥
+    if step == 'upload_new_thumb' and (message.photo or message.text):
+        vid_id = admin_state[chat_id].get('vid_id')
+        thumb_url = upload_thumb_securely(message.photo[-1].file_id) if message.photo else message.text.strip()
+        data = load_data(force_refresh=True)
+        updated = False
+        for v in data.get("videos", []):
+            if str(v.get("id")) == str(vid_id):
+                v["thumb"] = thumb_url
+                updated = True
+                break
+        if updated:
+            save_data(data)
+            del admin_state[chat_id]
+            bot.reply_to(message, "🎉 **থাম্বনেইল সফলভাবে আপডেট হয়েছে! মিনি অ্যাপে সাথে সাথে শো করবে।**", reply_markup=get_admin_keyboard())
+        else:
+            bot.reply_to(message, "❌ ভিডিওটি খুঁজে পাওয়া যায়নি!", reply_markup=get_admin_keyboard())
+        return
 
     if step == 'notice_input':
         m_type = 'text'
