@@ -75,13 +75,8 @@
             letter-spacing: 0.5px;
         }
 
-        .brand-title .red-text {
-            color: #e50914;
-        }
-
-        .brand-title .white-text {
-            color: var(--text-color);
-        }
+        .brand-title .red-text { color: #e50914; }
+        .brand-title .white-text { color: var(--text-color); }
 
         .settings-circle {
             width: 38px;
@@ -98,9 +93,7 @@
             transition: transform 0.2s ease;
         }
 
-        .settings-circle:active {
-            transform: scale(0.92);
-        }
+        .settings-circle:active { transform: scale(0.92); }
 
         .sidebar-overlay {
             display: none;
@@ -126,9 +119,7 @@
             gap: 16px;
         }
 
-        .sidebar-menu.open {
-            left: 0;
-        }
+        .sidebar-menu.open { left: 0; }
 
         .sidebar-header {
             font-size: 18px;
@@ -162,9 +153,7 @@
             scrollbar-width: none;
             margin-bottom: 6px;
         }
-        .category-scroll::-webkit-scrollbar {
-            display: none;
-        }
+        .category-scroll::-webkit-scrollbar { display: none; }
 
         .category-chip {
             padding: 8px 16px;
@@ -202,9 +191,7 @@
             outline: none;
         }
 
-        .search-input::placeholder {
-            color: var(--text-muted);
-        }
+        .search-input::placeholder { color: var(--text-muted); }
 
         .search-icon {
             position: absolute;
@@ -236,7 +223,7 @@
             position: relative;
             width: 100%;
             padding-top: 56.25%;
-            background: #000;
+            background: #181920;
         }
 
         .thumb-img {
@@ -267,9 +254,7 @@
             color: var(--text-muted);
         }
 
-        .video-date-row i {
-            color: #ef4444;
-        }
+        .video-date-row i { color: #ef4444; }
 
         .detail-view {
             display: none;
@@ -301,7 +286,7 @@
             aspect-ratio: 16 / 9;
             object-fit: cover;
             border-radius: 12px;
-            background: #000;
+            background: #181920;
             margin-bottom: 12px;
         }
 
@@ -356,9 +341,7 @@
             color: #94a3b8;
         }
 
-        .task-icon.completed {
-            color: #10b981;
-        }
+        .task-icon.completed { color: #10b981; }
 
         .task-text h4 {
             font-size: 14px;
@@ -667,24 +650,31 @@
             img.src = generateSvgPoster(title);
         }
 
+        // 🔥 সব ধরণের থাম্বনেইল ফরম্যাট সঠিকভাবে হ্যান্ডেল করার ফাংশন 🔥
         function resolveThumb(url, title) {
-            if (!url || url.trim() === "" || url.includes("placehold.co")) {
+            if (!url || typeof url !== 'string' || url.trim() === "" || url.includes("placehold.co")) {
                 return generateSvgPoster(title);
             }
             let u = url.trim();
+            if (u.startsWith("data:image")) return u;
+            
+            // রেন্ডার সার্ভার পাথ
             if (u.includes("/thumb/")) {
-                const fileId = u.split("/thumb/").pop();
+                const parts = u.split("/thumb/");
+                const fileId = parts[parts.length - 1].replace(/^\/+/, '');
                 return `${CURRENT_RENDER_URL}/thumb/${fileId}`;
             }
-            return u;
+            if (u.startsWith("http://") || u.startsWith("https://")) {
+                return u;
+            }
+            // শুধু টেলিগ্রাম file_id হলে
+            return `${CURRENT_RENDER_URL}/thumb/${u.replace(/^\/+/, '')}`;
         }
 
-        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (ক্যাপিং রিসেট ও ব্যাকগ্রাউন্ড এক্সিকিউশন) 🔥
         function initAdsterraPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
 
-            // সোর্স লিঙ্ক বের করা
             let scriptUrl = null;
             if (raw.includes("src=")) {
                 let m = raw.match(/src=["'](.*?)["']/);
@@ -700,7 +690,6 @@
 
             if (scriptUrl) {
                 if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
-                // টাইমস্ট্যাম্প যোগ করে ক্যাশ ও লিমিট বাইপাস
                 sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
             } else {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
@@ -894,11 +883,8 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: শুধুমাত্র VISIT বাটনে চাপ দিলেই নির্ধারিত ডিরেক্ট লিংক ওপেন হবে 🔥
         function runTaskDirect(taskNum, event) {
-            if (event) {
-                event.stopPropagation();
-            }
+            if (event) event.stopPropagation();
 
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -909,7 +895,6 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
@@ -927,7 +912,6 @@
 
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১০ সেকেন্ড কাউন্টডাউন
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
                 const remaining = 10 - passed;
@@ -999,7 +983,6 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // ইনবক্সে ভিডিও সেন্ড
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
