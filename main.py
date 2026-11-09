@@ -20,7 +20,7 @@ from io import BytesIO
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
-BOT_TOKEN = "8995171178:AAG8u0bCDO51BsGyFf2l14m978Pnqjzq3dU"
+BOT_TOKEN = "8995171178:AAHfcZl-M4WogpvOx_NmnrLVkqiBVOwlwHY"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
