@@ -658,7 +658,6 @@
             }
         }
 
-        // পপআন্ডার কার্যকর স্ক্রিপ্ট
         function triggerPopunderDirect() {
             if (popunderTriggered) return;
             const popLink = (appData.ads?.popunder_ad || "https://omg10.com/4/8465535").trim();
@@ -727,11 +726,14 @@
             let list = appData.videos || [];
             
             if (activeCategory) {
-                const targetCat = activeCategory.trim().toUpperCase().replace(/[\s_-]/g, '');
-                list = list.filter(v => {
-                    const itemCat = (v.category || '').trim().toUpperCase().replace(/[\s_-]/g, '');
-                    return itemCat === targetCat;
+                const targetCat = activeCategory.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                const filtered = list.filter(v => {
+                    const itemCat = (v.category || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    return itemCat.includes(targetCat) || targetCat.includes(itemCat) || (itemCat === '' && targetCat.includes('SERIES'));
                 });
+                if (filtered.length > 0) {
+                    list = filtered;
+                }
             }
             if (query) {
                 list = list.filter(v => (v.title || '').toLowerCase().includes(query));
