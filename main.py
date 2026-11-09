@@ -19,7 +19,7 @@ import requests
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
-BOT_TOKEN = "8995171178:AAGyLaDh8P-R2KYQYXLPDVYW_Ysyv-JuBbk"
+BOT_TOKEN = "8995171178:AAHfcZl-M4WogpvOx_NmnrLVkqiBVOwlwHY"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
@@ -408,12 +408,15 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id, "🗑️ নেটিভ ব্যানার মুছে ফেলা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
-    elif call.data == "set_popunder_ad":
+
+    # 🔥 ফিক্স: বাটনের দুটি বানানের জন্যই হ্যান্ডলার সক্রিয় 🔥
+    elif call.data in ["set_ad_popunder", "set_popunder_ad"]:
         admin_state[chat_id] = {'step': 'set_popunder_ad'}
-        bot.send_message(chat_id, "💥 **পপআন্ডার কোড বা লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "💥 **পপআন্ডার স্ক্রিপ্ট কোড বা লিংকটি পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
-    elif call.data == "del_ad_popunder":
+
+    elif call.data in ["del_ad_popunder", "del_popunder_ad"]:
         data = load_data(force_refresh=True)
         data.setdefault("ads", {})["popunder_ad"] = ""
         save_data(data)
@@ -421,7 +424,6 @@ def handle_callbacks(call):
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
 
-    # 🔥 থাম্বনেইল পরিবর্তনের কলব্যাক পেজিং ও সিলেক্ট 🔥
     if call.data.startswith("thumbpage_"):
         page = int(call.data.split("_")[1])
         txt, kb = get_thumb_view_data(page)
@@ -531,7 +533,6 @@ def handle_admin_inputs(message):
     if chat_id not in admin_state: return
     step = admin_state[chat_id].get('step')
 
-    # 🔥 নতুন থাম্বনেইল ছবি সেভ করার হ্যান্ডলার 🔥
     if step == 'upload_new_thumb' and (message.photo or message.text):
         vid_id = admin_state[chat_id].get('vid_id')
         thumb_url = upload_thumb_securely(message.photo[-1].file_id) if message.photo else message.text.strip()
