@@ -221,7 +221,6 @@
             box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
         }
 
-        /* 🔥 নিখুঁত প্রিভিউ পোস্টার বক্স (ভাঙা আইকন সম্পূর্ণ প্রতিরোধ) 🔥 */
         .thumb-box {
             position: relative;
             width: 100%;
@@ -619,7 +618,7 @@
             alert(appData.update_notice || "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!");
         }
 
-        // 🔥 নিরাপদ ও প্রফেশনাল প্লে-পোস্টার জেনারেটর (SVG) 🔥
+        // SVG পোস্টার জেনারেটর
         function generateSvgPoster(title) {
             const cleanTitle = (title || 'Bachelor Point').replace(/['"<>]/g, '').substring(0, 30);
             const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
@@ -631,7 +630,7 @@
             return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
         }
 
-        // 🔥 প্রাইভেট চ্যানেল/বটের আসল থাম্বনেইল পাওয়ার শতভাগ স্থায়ী সমাধান 🔥
+        // টেলিগ্রাম চ্যানেলের আসল থাম্বনেইল পাথ নিশ্চিত করার লজিক
         function resolveThumb(thumbData, title) {
             if (!thumbData || typeof thumbData !== "string") {
                 return generateSvgPoster(title);
@@ -650,7 +649,6 @@
             return `${CURRENT_RENDER_URL}/thumb/${u.replace(/^\/+/, '')}`;
         }
 
-        // ইমেজ লোড যাচাই করে ব্যাকগ্রাউন্ড সেট করার নিরাপদ মেথড
         function applySafeThumb(element, thumbUrl, fallbackTitle) {
             const fallback = generateSvgPoster(fallbackTitle);
             element.style.backgroundImage = `url('${fallback}')`;
@@ -664,7 +662,7 @@
             }
         }
 
-        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (স্ক্রিনের যেকোনো জায়গায় কাজ করবে) 🔥
+        // Adsterra পপআন্ডার কার্যকর ইঞ্জিন
         function setupUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
@@ -687,11 +685,10 @@
                 document.head.appendChild(s);
             }
 
-            // স্ক্রিনের যেকোনো স্থানে টাচ করলেই পপআন্ডার সক্রিয় হবে
             const handleTouch = () => {
                 if (popunderLocked) return;
                 popunderLocked = true;
-                setTimeout(() => { popunderLocked = false; }, 6000);
+                setTimeout(() => { popunderLocked = false; }, 5000);
             };
 
             window.addEventListener("click", handleTouch, true);
@@ -706,7 +703,7 @@
                 });
                 appData = await res.json();
                 
-                const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
+                const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "WEB SERIES", "COMING SOON"];
                 if (cats.length > 0 && !activeCategory) activeCategory = cats[0];
                 
                 renderCategoryTabs();
@@ -719,7 +716,7 @@
 
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById("categoryTabs");
-            const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
+            const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "WEB SERIES", "COMING SOON"];
             let html = '';
             cats.forEach((c) => {
                 const isActive = (activeCategory.trim().toUpperCase() === c.trim().toUpperCase());
@@ -734,14 +731,21 @@
             renderVideos();
         }
 
+        // 🔥 স্মার্ট ও ফ্লেক্সিবল ভিডিও ফিল্টারিং (হারিয়ে যাওয়া পর্বগুলো সহ সব পর্ব লোড হবে) 🔥
         function renderVideos() {
             const container = document.getElementById("videoContainer");
             const empty = document.getElementById("emptyMessage");
             const query = document.getElementById("searchInput").value.toLowerCase().trim();
 
             let list = appData.videos || [];
+            
             if (activeCategory) {
-                list = list.filter(v => (v.category || '').trim().toUpperCase() === activeCategory.trim().toUpperCase());
+                const targetCat = activeCategory.trim().toUpperCase().replace(/[\s_-]/g, '');
+                list = list.filter(v => {
+                    const itemCat = (v.category || '').trim().toUpperCase().replace(/[\s_-]/g, '');
+                    // ক্যাটাগরি ম্যাচ অথবা যদি ক্যাটাগরি খালি থাকে তবে ডিফল্ট তালিকায় প্রদর্শন
+                    return itemCat === targetCat || (itemCat === '' && targetCat === 'WEBSERIES');
+                });
             }
             if (query) {
                 list = list.filter(v => (v.title || '').toLowerCase().includes(query));
@@ -843,7 +847,6 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // সরাসরি নির্ধারিত লিঙ্ক টেলিগ্রাম ব্রাউজারে ওপেন
             try {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
@@ -981,4 +984,4 @@
         initData();
     </script>
 </body>
-    </html>
+        </html>
