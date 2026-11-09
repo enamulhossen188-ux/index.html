@@ -6,7 +6,7 @@
     <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         :root {
             --bg-color: #121316;
@@ -363,8 +363,7 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            z-index: 100;
-            position: relative;
+            z-index: 10;
         }
 
         .visit-action-btn.running {
@@ -398,6 +397,19 @@
             background: #1e293b;
             color: #64748b;
             pointer-events: none;
+        }
+
+        .native-ad-container {
+            width: 100%;
+            min-height: 80px;
+            margin-top: 14px;
+            padding: 8px 4px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            text-align: center;
+            overflow: visible;
+            display: none;
         }
 
         .empty-msg {
@@ -461,3 +473,565 @@
 
         .popup-action-btn {
             background: #ffffff;
+            color: #0f172a;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar-menu" id="sidebarMenu">
+        <div class="sidebar-header">
+            <span>মেনু অপশন</span>
+            <i class="fa-solid fa-xmark" onclick="toggleSidebar()" style="cursor: pointer;"></i>
+        </div>
+        <div class="sidebar-item" onclick="toggleTheme()">
+            <i class="fa-solid fa-circle-half-stroke"></i>
+            <span id="themeMenuText">ডার্ক / লাইট মোড</span>
+        </div>
+        <div class="sidebar-item" onclick="showBotNotice()">
+            <i class="fa-solid fa-bullhorn"></i>
+            <span>বট নোটিশ</span>
+        </div>
+        <div class="sidebar-item" onclick="window.location.reload()">
+            <i class="fa-solid fa-rotate-right"></i>
+            <span>রিফ্রেশ করুন</span>
+        </div>
+    </div>
+
+    <div id="mainView">
+        <div class="top-nav">
+            <div class="nav-left">
+                <i class="fa-solid fa-bars menu-bar-icon" onclick="toggleSidebar()"></i>
+                <div class="brand-title">
+                    <span class="red-text">Bachelor</span> <span class="white-text">Point</span>
+                </div>
+            </div>
+            <div class="settings-circle" onclick="toggleTheme()" title="ডার্ক / লাইট মোড">
+                <i class="fa-solid fa-gear" id="themeIcon"></i>
+            </div>
+        </div>
+
+        <div class="category-scroll" id="categoryTabs"></div>
+
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="ভিডিও নাম বা এপিসোড লিখে সার্চ দিন" oninput="handleSearch()">
+        </div>
+
+        <div class="video-grid" id="videoContainer"></div>
+        <div class="empty-msg" id="emptyMessage" style="display: none;">কোনো ভিডিও খুঁজে পাওয়া যায়নি!</div>
+    </div>
+
+    <div class="detail-view" id="detailView">
+        <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
+        <div class="detail-card">
+            
+            <img id="detailThumb" src="" alt="Thumbnail" onerror="handleImageFallback(this)">
+
+            <div class="detail-title-card">
+                <h2 id="detailTitle" style="font-size: 15px; font-weight: 700;"></h2>
+            </div>
+
+            <div class="unlock-info-box">
+                <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন (মোট ২০ সেকেন্ড)।</span>
+            </div>
+
+            <div class="task-list">
+                <div class="task-card-row">
+                    <div class="task-info-left">
+                        <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
+                        <div class="task-text">
+                            <h4>Task 1</h4>
+                            <p id="task1Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
+                        </div>
+                    </div>
+                    <button id="task1Btn" class="visit-action-btn" onclick="runTaskDirect(1, event)">VISIT</button>
+                </div>
+
+                <div class="task-card-row">
+                    <div class="task-info-left">
+                        <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
+                        <div class="task-text">
+                            <h4>Task 2</h4>
+                            <p id="task2Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
+                        </div>
+                    </div>
+                    <button id="task2Btn" class="visit-action-btn" onclick="runTaskDirect(2, event)">VISIT</button>
+                </div>
+            </div>
+
+            <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
+                <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
+            </button>
+
+            <div id="nativeAdBox" class="native-ad-container"></div>
+        </div>
+    </div>
+
+    <div id="verifyFailPopup" class="custom-popup-overlay">
+        <div class="custom-popup-card">
+            <div class="popup-close-circle"><i class="fa-solid fa-xmark"></i></div>
+            <div class="popup-title">ভেরিফিকেশন ব্যর্থ!</div>
+            <div class="popup-desc">
+                আপনি সম্পূর্ণ ১০ সেকেন্ড অপেক্ষা করেন নাই!<br>
+                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">10</span> সেঃ প্রয়োজন।
+            </div>
+            <button class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
+        </div>
+    </div>
+
+    <script>
+        const CURRENT_RENDER_URL = "https://index-html-6f0e.onrender.com";
+        const tg = window.Telegram?.WebApp;
+        if (tg) tg.expand();
+
+        let appData = { videos: [], ads: {}, categories: [] };
+        let activeCategory = '';
+        let currentSelectedVideo = null;
+
+        let task1Done = false;
+        let task2Done = false;
+        let activeTask = null;
+        let taskStartTime = 0;
+        let countdownTimer = null;
+
+        // 🔥 স্ক্রিপ্টকে ব্যাকগ্রাউন্ডে নিরাপদভাবে লোড করা (যাতে পেজ কখনো ব্লক না হয়) 🔥
+        function loadPopunderSafely() {
+            try {
+                const s = document.createElement("script");
+                s.src = "https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2";
+                s.async = true;
+                document.body.appendChild(s);
+            } catch(e){}
+        }
+
+        function toggleSidebar() {
+            const sb = document.getElementById("sidebarMenu");
+            const overlay = document.getElementById("sidebarOverlay");
+            if (sb.classList.contains("open")) {
+                sb.classList.remove("open");
+                overlay.style.display = "none";
+            } else {
+                sb.classList.add("open");
+                overlay.style.display = "block";
+            }
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle("light-mode");
+            const isLight = document.body.classList.contains("light-mode");
+            const icon = document.getElementById("themeIcon");
+            if (isLight) {
+                icon.className = "fa-solid fa-moon";
+            } else {
+                icon.className = "fa-solid fa-gear";
+            }
+        }
+
+        function showBotNotice() {
+            toggleSidebar();
+            alert(appData.update_notice || "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!");
+        }
+
+        function generateSvgPoster(title) {
+            const cleanTitle = (title || 'Bachelor Point').replace(/[\'<>\"]/g, '').substring(0, 30);
+            const svgContent = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+                    <rect width="640" height="360" fill="#181920"/>
+                    <circle cx="320" cy="150" r="42" fill="#e50914" fill-opacity="0.9"/>
+                    <polygon points="312,135 336,150 312,165" fill="#ffffff"/>
+                    <text x="320" y="240" font-family="-apple-system, sans-serif" font-size="20" font-weight="700" fill="#ffffff" text-anchor="middle">${cleanTitle}</text>
+                </svg>
+            `.trim();
+            return `data:image/svg+xml;utf8,${encodeURIComponent(svgContent)}`;
+        }
+
+        function handleImageFallback(img) {
+            const title = img.getAttribute("data-title") || "Bachelor Point";
+            img.onerror = null;
+            img.src = generateSvgPoster(title);
+        }
+
+        function resolveThumb(url, title) {
+            if (!url || typeof url !== 'string' || url.trim() === "" || url.includes("placehold.co")) {
+                return generateSvgPoster(title);
+            }
+            let u = url.trim();
+            if (u.startsWith("data:image")) return u;
+
+            if (u.startsWith("http://") || u.startsWith("https://")) {
+                if (u.includes("index-html-6f0e.onrender.com") || (!u.includes("api.telegram.org") && !u.includes("/thumb/"))) {
+                    return u;
+                }
+            }
+
+            const cleanFileId = u.split("/").pop().replace(/^\/+/, '');
+            return `${CURRENT_RENDER_URL}/thumb/${cleanFileId}`;
+        }
+
+        function injectScriptCode(codeStr) {
+            if (!codeStr || !codeStr.trim()) return;
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.async = true;
+            let raw = codeStr.trim();
+            let srcMatch = raw.match(/src=["'](.*?)["']/);
+            if (srcMatch) {
+                sc.src = srcMatch[1];
+            } else if (raw.startsWith("http")) {
+                sc.src = raw;
+            } else {
+                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            }
+            document.head.appendChild(sc);
+        }
+
+        function injectNativeBanner(container, codeStr) {
+            if (!codeStr || !codeStr.trim() || !container) {
+                if (container) container.style.display = "none";
+                return;
+            }
+            container.style.display = "block";
+            container.innerHTML = "";
+
+            let raw = codeStr.trim();
+            const doc = new DOMParser().parseFromString(raw, "text/html");
+            const divs = doc.querySelectorAll("div");
+            divs.forEach(d => container.appendChild(d.cloneNode(true)));
+
+            const scripts = doc.querySelectorAll("script");
+            if (scripts.length > 0) {
+                scripts.forEach(sc => {
+                    const s = document.createElement("script");
+                    if (sc.src) s.src = sc.src;
+                    s.async = true;
+                    s.text = sc.innerHTML;
+                    container.appendChild(s);
+                });
+            } else if (raw.startsWith("http")) {
+                const s = document.createElement("script");
+                s.src = raw;
+                s.async = true;
+                container.appendChild(s);
+            }
+        }
+
+        function renderAllAds() {
+            const ads = appData.ads || {};
+            if (ads.social_ad) injectScriptCode(ads.social_ad);
+            loadPopunderSafely();
+        }
+
+        async function initData() {
+            try {
+                const res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                appData = await res.json();
+                
+                const cats = appData.categories || ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"];
+                if (cats.length > 0 && !activeCategory) {
+                    activeCategory = cats[0];
+                }
+                
+                renderCategoryTabs();
+                renderVideos();
+                renderAllAds();
+            } catch (err) {
+                console.error("ডাটা লোড ত্রুটি:", err);
+            }
+        }
+
+        function renderCategoryTabs() {
+            const tabsContainer = document.getElementById("categoryTabs");
+            const cats = appData.categories || ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"];
+            let html = '';
+            cats.forEach((c) => {
+                const isActive = (activeCategory.trim().toUpperCase() === c.trim().toUpperCase());
+                html += `<div class="category-chip ${isActive ? 'active' : ''}" onclick="filterCategory('${c}')">${c}</div>`;
+            });
+            tabsContainer.innerHTML = html;
+        }
+
+        function filterCategory(cat) {
+            activeCategory = cat;
+            renderCategoryTabs();
+            renderVideos();
+        }
+
+        function renderVideos() {
+            const container = document.getElementById("videoContainer");
+            const empty = document.getElementById("emptyMessage");
+            const query = document.getElementById("searchInput").value.toLowerCase().trim();
+
+            let list = appData.videos || [];
+            
+            if (activeCategory) {
+                const target = activeCategory.trim().toUpperCase();
+                
+                list = list.filter(v => {
+                    const itemCat = (v.category || '').trim().toUpperCase();
+                    const itemTitle = (v.title || '').trim().toLowerCase();
+
+                    if (target === "BPS5") {
+                        return itemCat === "BPS5" || itemTitle.includes("bachelor point") || itemTitle.includes("ব্যাচেলর পয়েন্ট");
+                    }
+                    if (target === "DRAMA") {
+                        return (itemCat === "DRAMA" || itemTitle.includes("নাটক")) && !itemTitle.includes("bachelor point");
+                    }
+                    if (target.includes("SERIES")) {
+                        return (itemCat.includes("SERIES") || itemTitle.includes("সালাউদ্দিন") || itemTitle.includes("season") || itemTitle.includes("সিজন")) && !itemTitle.includes("bachelor point");
+                    }
+                    if (target.includes("MOVIE")) {
+                        return itemCat.includes("MOVIE") || itemTitle.includes("movie");
+                    }
+                    if (target.includes("COMING")) {
+                        return v.is_coming_soon || itemCat.includes("COMING");
+                    }
+                    return itemCat === target;
+                });
+            }
+
+            if (query) {
+                list = list.filter(v => (v.title || '').toLowerCase().includes(query));
+            }
+
+            container.innerHTML = "";
+            if (list.length === 0) {
+                empty.style.display = "block";
+            } else {
+                empty.style.display = "none";
+                list.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "video-card";
+                    card.onclick = () => openDetail(item);
+                    
+                    const thumbUrl = resolveThumb(item.thumb, item.title);
+
+                    card.innerHTML = `
+                        <div class="thumb-wrapper">
+                            <img class="thumb-img" src="${thumbUrl}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
+                        </div>
+                        <div class="card-details">
+                            <div class="video-title">${item.title}</div>
+                            <div class="video-date-row">
+                                <i class="fa-regular fa-clock"></i>
+                                <span>${item.date || '13 October 2026'}</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        }
+
+        function handleSearch() {
+            renderVideos();
+        }
+
+        function openDetail(video) {
+            currentSelectedVideo = video;
+            document.getElementById("mainView").style.display = "none";
+            document.getElementById("detailView").style.display = "block";
+
+            const detailImg = document.getElementById("detailThumb");
+            detailImg.setAttribute("data-title", video.title || "");
+            detailImg.src = resolveThumb(video.thumb, video.title);
+            document.getElementById("detailTitle").innerText = video.title;
+
+            const ads = appData.ads || {};
+            if (ads.native_ad) {
+                injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
+            }
+            resetTasks();
+        }
+
+        function resetTasks() {
+            task1Done = false;
+            task2Done = false;
+            activeTask = null;
+            if (countdownTimer) clearInterval(countdownTimer);
+
+            const btn1 = document.getElementById("task1Btn");
+            const btn2 = document.getElementById("task2Btn");
+            const dlBtn = document.getElementById("downloadBtn");
+
+            btn1.className = "visit-action-btn";
+            btn1.innerHTML = "VISIT";
+            document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
+            document.getElementById("task1Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+
+            btn2.className = "visit-action-btn";
+            btn2.innerHTML = "VISIT";
+            document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
+            document.getElementById("task2Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+
+            dlBtn.className = "download-btn disabled";
+            dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+        }
+
+        function goBack() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            activeTask = null;
+            document.getElementById("detailView").style.display = "none";
+            document.getElementById("mainView").style.display = "block";
+        }
+
+        function runTaskDirect(taskNum, event) {
+            if (event) event.stopPropagation();
+
+            if (taskNum === 1 && task1Done) return;
+            if (taskNum === 2 && task2Done) return;
+
+            activeTask = taskNum;
+            taskStartTime = Date.now();
+
+            const ads = appData.ads || {};
+            const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
+
+            if (directUrl && directUrl.startsWith("http")) {
+                if (tg && tg.openLink) {
+                    tg.openLink(directUrl);
+                } else {
+                    window.open(directUrl, "_blank");
+                }
+            }
+
+            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
+            const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
+
+            btn.className = "visit-action-btn running";
+            btn.innerHTML = `10s`;
+            desc.innerText = "অপেক্ষা করুন...";
+
+            if (countdownTimer) clearInterval(countdownTimer);
+
+            countdownTimer = setInterval(() => {
+                const passed = Math.floor((Date.now() - taskStartTime) / 1000);
+                const remaining = 10 - passed;
+
+                if (remaining > 0) {
+                    btn.innerHTML = `${remaining}s`;
+                } else {
+                    clearInterval(countdownTimer);
+                    completeTask(taskNum);
+                }
+            }, 500);
+        }
+
+        function completeTask(taskNum) {
+            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
+            const icon = document.getElementById(taskNum === 1 ? "task1Icon" : "task2Icon");
+            const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
+
+            btn.className = "visit-action-btn done";
+            btn.innerHTML = `DONE`;
+            icon.classList.add("completed");
+            desc.innerText = "টাস্ক সম্পন্ন হয়েছে ✅";
+
+            if (taskNum === 1) task1Done = true;
+            if (taskNum === 2) task2Done = true;
+
+            activeTask = null;
+            if (task1Done && task2Done) {
+                const dlBtn = document.getElementById("downloadBtn");
+                dlBtn.className = "download-btn";
+            }
+        }
+
+        function showFailedPopup(seenSec, needSec) {
+            document.getElementById("seenSecondsTxt").innerText = seenSec;
+            document.getElementById("needSecondsTxt").innerText = needSec;
+            document.getElementById("verifyFailPopup").style.display = "flex";
+        }
+
+        function closePopup() {
+            document.getElementById("verifyFailPopup").style.display = "none";
+        }
+
+        function handleVisibilityOrFocus() {
+            if (document.visibilityState === "visible" && activeTask !== null) {
+                const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
+
+                if (elapsedSeconds < 10) {
+                    clearInterval(countdownTimer);
+                    const taskFailed = activeTask;
+                    activeTask = null;
+
+                    const btn = document.getElementById(taskFailed === 1 ? "task1Btn" : "task2Btn");
+                    const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
+
+                    btn.className = "visit-action-btn";
+                    btn.innerHTML = `VISIT`;
+                    desc.innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+
+                    const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
+                    showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
+                } else {
+                    clearInterval(countdownTimer);
+                    completeTask(activeTask);
+                }
+            }
+        }
+
+        document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+        window.addEventListener("focus", handleVisibilityOrFocus);
+
+        async function sendToInbox() {
+            if (!task1Done || !task2Done) return;
+
+            const dlBtn = document.getElementById("downloadBtn");
+            dlBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ইনবক্সে পাঠানো হচ্ছে...`;
+            dlBtn.classList.add("disabled");
+
+            const userId = tg?.initDataUnsafe?.user?.id;
+            if (!userId) {
+                alert("ইউজার আইডি পাওয়া যায়নি! টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${CURRENT_RENDER_URL}/api/send_video`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        video_id: currentSelectedVideo.id
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    dlBtn.innerHTML = `✅ সফল হয়েছে!`;
+                    setTimeout(() => {
+                        if (tg && tg.close) tg.close();
+                    }, 500);
+                } else {
+                    alert("ভিডিও পাঠানো যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
+                    dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                    dlBtn.classList.remove("disabled");
+                }
+            } catch (err) {
+                console.error("ভিডিও সেন্ড এরর:", err);
+                alert("সার্ভারে সংযোগ দেওয়া যাচ্ছে না। অনুগ্রহ করে ১ সেকেন্ড পর আবার চেষ্টা করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
+            }
+        }
+
+        initData();
+    </script>
+</body>
+    </html>
