@@ -7,7 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- 🔥 আপনার আসল পপআন্ডার স্ক্রিপ্ট 🔥 -->
+    <!-- Adsterra Popunder Script -->
     <script data-cfasync="false" src="https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2"></script>
 
     <style>
@@ -605,17 +605,38 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let lastPopTime = 0;
 
-        // 🔥 পপআন্ডার কার্যকর করার নিরাপদ মেকানিজম 🔥
-        function triggerAdsterraScript() {
-            try {
-                // ব্রাউজারের কোনো লিংক ব্লক না করে Adsterra স্ক্রিপ্টকে ক্লিক ইভেন্ট দেওয়া
-                window.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-            } catch (e) {}
+        function triggerPopunder() {
+            const now = Date.now();
+            if (now - lastPopTime < 25000) return;
+            
+            const popSrc = (appData.ads?.popunder_ad || "").trim();
+            let targetUrl = "";
+
+            if (popSrc.startsWith("http")) {
+                targetUrl = popSrc;
+            } else if (popSrc.includes("src=")) {
+                const match = popSrc.match(/src=["'](.*?)["']/);
+                if (match) targetUrl = match[1];
+            }
+
+            if (targetUrl) {
+                lastPopTime = now;
+                try {
+                    if (tg && tg.openLink) {
+                        tg.openLink(targetUrl);
+                    } else {
+                        window.open(targetUrl, "_blank");
+                    }
+                } catch (e) {
+                    window.open(targetUrl, "_blank");
+                }
+            }
         }
 
         function toggleSidebar() {
-            triggerAdsterraScript();
+            triggerPopunder();
             const sb = document.getElementById("sidebarMenu");
             const overlay = document.getElementById("sidebarOverlay");
             if (sb.classList.contains("open")) {
@@ -764,7 +785,7 @@
         }
 
         function filterCategory(cat) {
-            triggerAdsterraScript();
+            triggerPopunder();
             activeCategory = cat;
             renderCategoryTabs();
             renderVideos();
@@ -816,7 +837,7 @@
                     const card = document.createElement("div");
                     card.className = "video-card";
                     card.onclick = () => {
-                        triggerAdsterraScript();
+                        triggerPopunder();
                         openDetail(item);
                     };
                     
@@ -885,14 +906,13 @@
         }
 
         function goBack() {
-            triggerAdsterraScript();
+            triggerPopunder();
             if (countdownTimer) clearInterval(countdownTimer);
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 এবং Task 2 এর VISIT চাপলে এড ট্রিগার ও টাইমার চালুকরণ 🔥
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
@@ -902,18 +922,24 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // আপনার Adsterra স্ক্রিপ্ট ট্রিগার করা
-            triggerAdsterraScript();
-
-            // যদি আপনি বটে Task 1 বা 2 এর নির্দিষ্ট লিংক দিয়ে থাকেন তবে সেটি ওপেন হবে
             const ads = appData.ads || {};
-            const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
+            let taskUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            if (directUrl && directUrl.startsWith("http") && !directUrl.includes("omg10.com")) {
+            if (!taskUrl || !taskUrl.startsWith("http")) {
+                const popSrc = (ads.popunder_ad || "").trim();
+                if (popSrc.startsWith("http")) {
+                    taskUrl = popSrc;
+                } else if (popSrc.includes("src=")) {
+                    const match = popSrc.match(/src=["'](.*?)["']/);
+                    if (match) taskUrl = match[1];
+                }
+            }
+
+            if (taskUrl && taskUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
-                    tg.openLink(directUrl);
+                    tg.openLink(taskUrl);
                 } else {
-                    window.open(directUrl, "_blank");
+                    window.open(taskUrl, "_blank");
                 }
             }
 
