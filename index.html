@@ -616,17 +616,16 @@
             alert(appData.update_notice || "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!");
         }
 
+        // 🔥 নিরাপদ Base64 SVG পোস্টার জেনারেটর (কখনো ব্রোকেন আইকন আসবে না) 🔥
         function generateSvgPoster(title) {
             const cleanTitle = (title || 'Bachelor Point').replace(/['"<>]/g, '').substring(0, 32);
-            const svgContent = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
-                    <rect width="640" height="360" fill="#181920"/>
-                    <circle cx="320" cy="145" r="42" fill="#e50914" fill-opacity="0.95"/>
-                    <polygon points="312,130 338,145 312,160" fill="#ffffff"/>
-                    <text x="320" y="240" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="18" font-weight="700" fill="#ffffff" text-anchor="middle">${cleanTitle}</text>
-                </svg>
-            `.trim();
-            return `data:image/svg+xml;utf8,${encodeURIComponent(svgContent)}`;
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+                <rect width="640" height="360" fill="#181920"/>
+                <circle cx="320" cy="145" r="42" fill="#e50914" fill-opacity="0.95"/>
+                <polygon points="312,130 338,145 312,160" fill="#ffffff"/>
+                <text x="320" y="240" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="18" font-weight="700" fill="#ffffff" text-anchor="middle">${cleanTitle}</text>
+            </svg>`;
+            return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
         }
 
         function handleImageFallback(img) {
@@ -635,7 +634,7 @@
             img.src = generateSvgPoster(title);
         }
 
-        // 🔥 থাম্বনেইল হ্যান্ডলার (আসল ছবি থাকলে দেখাবে, না থাকলে লাল প্লে পোস্টার) 🔥
+        // 🔥 আসল থাম্বনেইল পাথ নিশ্চিত করার পারফেক্ট মেথড 🔥
         function resolveThumb(thumbData, title) {
             if (!thumbData || typeof thumbData !== "string") {
                 return generateSvgPoster(title);
@@ -654,8 +653,8 @@
             return `${CURRENT_RENDER_URL}/thumb/${u.replace(/^\/+/, '')}`;
         }
 
-        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (ক্যাশলেস রি-ইনজেকশন) 🔥
-        function executeAdsterraScriptEngine() {
+        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (কোনো জোরপূর্বক রিডাইরেক্ট নেই) 🔥
+        function executeAdsterraPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
 
@@ -670,12 +669,11 @@
             if (scriptSrc) {
                 if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
                 
-                // ক্যাশলেস স্ক্রিপ্ট তৈরি যাতে ফ্রিকোয়েন্সি ক্যাপিং এড়ানো যায়
                 const s = document.createElement("script");
                 s.type = "text/javascript";
                 s.setAttribute("data-cfasync", "false");
                 s.async = true;
-                s.src = scriptSrc + (scriptSrc.includes("?") ? "&" : "?") + "_session=" + Date.now();
+                s.src = scriptSrc;
                 document.head.appendChild(s);
             }
         }
@@ -693,7 +691,7 @@
                 
                 renderCategoryTabs();
                 renderVideos();
-                executeAdsterraScriptEngine();
+                executeAdsterraPopunder();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
@@ -766,6 +764,7 @@
 
             const detailImg = document.getElementById("detailThumb");
             detailImg.setAttribute("data-title", video.title || "");
+            detailImg.onerror = function() { handleImageFallback(this); };
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
@@ -803,7 +802,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: শুধুমাত্র বাটনে চাপ দিলে ডিরেক্ট লিংক ওপেন ও ১০ সেকেন্ড কাউন্টডাউন 🔥
+        // 🔥 Task 1 ও 2: শুধুমাত্র বাটন চাপলে ডিরেক্ট লিংক ওপেন ও ১০ সেকেন্ড কাউন্টডাউন 🔥
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
@@ -954,4 +953,4 @@
         initData();
     </script>
 </body>
-    </html>
+                </html>
