@@ -19,7 +19,7 @@ import requests
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
-BOT_TOKEN = "8995171178:AAHfcZl-M4WogpvOx_NmnrLVkqiBVOwlwHY"
+BOT_TOKEN = "8995171178:AAGyLaDh8P-R2KYQYXLPDVYW_Ysyv-JuBbk"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
