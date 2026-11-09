@@ -533,7 +533,6 @@
     <div class="detail-view" id="detailView">
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         <div class="detail-card">
-            
             <img id="detailThumb" src="" alt="Thumbnail" onerror="handleImageFallback(this)">
 
             <div class="detail-title-card">
@@ -591,6 +590,7 @@
 
     <script>
         const CURRENT_RENDER_URL = "https://index-html-6f0e.onrender.com";
+        const DIRECT_AD_LINK = "https://omg10.com/4/8465535";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
@@ -603,18 +603,39 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let lastPopTime = 0;
 
-        // 🔥 স্ক্রিপ্টকে ব্যাকগ্রাউন্ডে নিরাপদভাবে লোড করা (যাতে পেজ কখনো ব্লক না হয়) 🔥
-        function loadPopunderSafely() {
+        // 🔥 ডাইরেক্ট লিংক ও পপআন্ডার কার্যকর ইঞ্জিন 🔥
+        function executeAdAction() {
+            const now = Date.now();
+            if (now - lastPopTime < 30000) return; // ৩০ সেকেন্ড পর পর কার্যকর
+            lastPopTime = now;
+
             try {
-                const s = document.createElement("script");
-                s.src = "https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2";
-                s.async = true;
-                document.body.appendChild(s);
-            } catch(e){}
+                if (tg && tg.openLink) {
+                    tg.openLink(DIRECT_AD_LINK);
+                } else {
+                    window.open(DIRECT_AD_LINK, "_blank");
+                }
+            } catch (e) {
+                window.open(DIRECT_AD_LINK, "_blank");
+            }
+        }
+
+        // 🔥 ব্যাকগ্রাউন্ড পপআন্ডার স্ক্রিপ্ট লোডার 🔥
+        function loadPopunderScript() {
+            try {
+                const sc = document.createElement("script");
+                sc.type = "text/javascript";
+                sc.src = "https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2";
+                sc.async = true;
+                sc.setAttribute("data-cfasync", "false");
+                document.head.appendChild(sc);
+            } catch(e) {}
         }
 
         function toggleSidebar() {
+            executeAdAction();
             const sb = document.getElementById("sidebarMenu");
             const overlay = document.getElementById("sidebarOverlay");
             if (sb.classList.contains("open")) {
@@ -713,14 +734,14 @@
                 scripts.forEach(sc => {
                     const s = document.createElement("script");
                     if (sc.src) s.src = sc.src;
-                    s.async = true;
+                    s.setAttribute("data-cfasync", "false");
                     s.text = sc.innerHTML;
                     container.appendChild(s);
                 });
             } else if (raw.startsWith("http")) {
                 const s = document.createElement("script");
                 s.src = raw;
-                s.async = true;
+                s.setAttribute("data-cfasync", "false");
                 container.appendChild(s);
             }
         }
@@ -728,7 +749,7 @@
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) injectScriptCode(ads.social_ad);
-            loadPopunderSafely();
+            loadPopunderScript();
         }
 
         async function initData() {
@@ -764,6 +785,7 @@
         }
 
         function filterCategory(cat) {
+            executeAdAction();
             activeCategory = cat;
             renderCategoryTabs();
             renderVideos();
@@ -814,7 +836,10 @@
                 list.forEach(item => {
                     const card = document.createElement("div");
                     card.className = "video-card";
-                    card.onclick = () => openDetail(item);
+                    card.onclick = () => {
+                        executeAdAction();
+                        openDetail(item);
+                    };
                     
                     const thumbUrl = resolveThumb(item.thumb, item.title);
 
@@ -881,6 +906,7 @@
         }
 
         function goBack() {
+            executeAdAction();
             if (countdownTimer) clearInterval(countdownTimer);
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
