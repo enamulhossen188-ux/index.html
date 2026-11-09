@@ -221,21 +221,16 @@
             box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
         }
 
-        .thumb-wrapper {
+        /* 🔥 নিখুঁত প্রিভিউ পোস্টার বক্স (ভাঙা আইকন সম্পূর্ণ প্রতিরোধ) 🔥 */
+        .thumb-box {
             position: relative;
             width: 100%;
             padding-top: 56.25%;
-            background: #181920;
+            background-color: #181920;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
             overflow: hidden;
-        }
-
-        .thumb-img {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover;
-            display: block;
-            border: 0;
-            outline: none;
         }
 
         .card-details {
@@ -287,16 +282,16 @@
             padding: 14px;
         }
 
-        #detailThumb {
+        #detailThumbBox {
             width: 100%;
             aspect-ratio: 16 / 9;
-            object-fit: cover;
             border-radius: 12px;
-            background: #181920;
+            background-color: #181920;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
             margin-bottom: 12px;
             display: block;
-            border: 0;
-            outline: none;
         }
 
         .detail-title-card {
@@ -530,7 +525,7 @@
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         <div class="detail-card">
             
-            <img id="detailThumb" src="" onerror="handleImgError(this)">
+            <div id="detailThumbBox"></div>
 
             <div class="detail-title-card">
                 <h2 id="detailTitle" style="font-size: 15px; font-weight: 700;"></h2>
@@ -624,7 +619,7 @@
             alert(appData.update_notice || "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!");
         }
 
-        // 🔥 নিরাপদ ও প্রফেশনাল SVG পোস্টার জেনারেটর (ভাঙা আইকন সম্পূর্ণ নির্মূল) 🔥
+        // 🔥 নিরাপদ ও প্রফেশনাল প্লে-পোস্টার জেনারেটর (SVG) 🔥
         function generateSvgPoster(title) {
             const cleanTitle = (title || 'Bachelor Point').replace(/['"<>]/g, '').substring(0, 30);
             const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
@@ -636,13 +631,7 @@
             return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
         }
 
-        function handleImgError(img) {
-            img.onerror = null;
-            const t = img.getAttribute("data-title") || "Bachelor Point";
-            img.src = generateSvgPoster(t);
-        }
-
-        // 🔥 প্রাইভেট চ্যানেল/বটের আসল থাম্বনেইল পাওয়ার নিশ্চিত লজিক 🔥
+        // 🔥 প্রাইভেট চ্যানেল/বটের আসল থাম্বনেইল পাওয়ার শতভাগ স্থায়ী সমাধান 🔥
         function resolveThumb(thumbData, title) {
             if (!thumbData || typeof thumbData !== "string") {
                 return generateSvgPoster(title);
@@ -661,12 +650,25 @@
             return `${CURRENT_RENDER_URL}/thumb/${u.replace(/^\/+/, '')}`;
         }
 
-        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন 🔥
+        // ইমেজ লোড যাচাই করে ব্যাকগ্রাউন্ড সেট করার নিরাপদ মেথড
+        function applySafeThumb(element, thumbUrl, fallbackTitle) {
+            const fallback = generateSvgPoster(fallbackTitle);
+            element.style.backgroundImage = `url('${fallback}')`;
+            
+            if (thumbUrl && !thumbUrl.startsWith("data:")) {
+                const testImg = new Image();
+                testImg.onload = function() {
+                    element.style.backgroundImage = `url('${thumbUrl}')`;
+                };
+                testImg.src = thumbUrl;
+            }
+        }
+
+        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (স্ক্রিনের যেকোনো জায়গায় কাজ করবে) 🔥
         function setupUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
 
-            // ১. স্ক্রিপ্ট ইনজেকশন
             let scriptSrc = null;
             if (raw.includes("src=")) {
                 const m = raw.match(/src=["'](.*?)["']/);
@@ -685,7 +687,7 @@
                 document.head.appendChild(s);
             }
 
-            // ২. স্ক্রিনে যেকোনো স্থানে টাচ করলেই সক্রিয় পপআন্ডার ট্রিগার
+            // স্ক্রিনের যেকোনো স্থানে টাচ করলেই পপআন্ডার সক্রিয় হবে
             const handleTouch = () => {
                 if (popunderLocked) return;
                 popunderLocked = true;
@@ -756,18 +758,23 @@
                     card.onclick = () => openDetail(item);
                     
                     const thumbUrl = resolveThumb(item.thumb, item.title);
-                    card.innerHTML = `
-                        <div class="thumb-wrapper">
-                            <img class="thumb-img" src="${thumbUrl}" data-title="${item.title || ''}" loading="lazy" onerror="handleImgError(this)">
-                        </div>
-                        <div class="card-details">
-                            <div class="video-title">${item.title}</div>
-                            <div class="video-date-row">
-                                <i class="fa-regular fa-clock"></i>
-                                <span>${item.date || '13 October 2026'}</span>
-                            </div>
+                    
+                    const thumbBox = document.createElement("div");
+                    thumbBox.className = "thumb-box";
+                    applySafeThumb(thumbBox, thumbUrl, item.title);
+
+                    const details = document.createElement("div");
+                    details.className = "card-details";
+                    details.innerHTML = `
+                        <div class="video-title">${item.title}</div>
+                        <div class="video-date-row">
+                            <i class="fa-regular fa-clock"></i>
+                            <span>${item.date || '13 October 2026'}</span>
                         </div>
                     `;
+
+                    card.appendChild(thumbBox);
+                    card.appendChild(details);
                     container.appendChild(card);
                 });
             }
@@ -780,10 +787,10 @@
             document.getElementById("mainView").style.display = "none";
             document.getElementById("detailView").style.display = "block";
 
-            const detailImg = document.getElementById("detailThumb");
-            detailImg.setAttribute("data-title", video.title || "");
-            detailImg.onerror = function() { handleImgError(this); };
-            detailImg.src = resolveThumb(video.thumb, video.title);
+            const detailThumbBox = document.getElementById("detailThumbBox");
+            const thumbUrl = resolveThumb(video.thumb, video.title);
+            applySafeThumb(detailThumbBox, thumbUrl, video.title);
+            
             document.getElementById("detailTitle").innerText = video.title;
 
             resetTasks();
@@ -820,7 +827,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: ডিরেক্ট লিঙ্ক ওপেন + পপআন্ডার কার্যকর হওয়া + ১০ সেকেন্ড অ্যান্টি-চিট টাইমার 🔥
+        // 🔥 Task 1 ও 2: সরাসরি লিঙ্ক ওপেন + পপআন্ডার কার্যকর হওয়া + ১০ সেকেন্ড অ্যান্টি-চিট টাইমার 🔥
         function runTaskDirect(taskNum, event) {
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -836,7 +843,7 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // নির্ধারিত লিঙ্ক সরাসরি টেলিগ্রাম ব্রাউজারে ওপেন
+            // সরাসরি নির্ধারিত লিঙ্ক টেলিগ্রাম ব্রাউজারে ওপেন
             try {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
