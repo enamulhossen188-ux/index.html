@@ -226,12 +226,14 @@
             width: 100%;
             padding-top: 56.25%;
             background: #181920;
+            overflow: hidden;
         }
 
         .thumb-img {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover;
+            display: block;
         }
 
         .card-details {
@@ -365,7 +367,8 @@
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            z-index: 10;
+            z-index: 1000;
+            position: relative;
         }
 
         .visit-action-btn.running {
@@ -523,7 +526,7 @@
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         <div class="detail-card">
             
-            <img id="detailThumb" src="" alt="Thumbnail" onerror="handleImageFallback(this)">
+            <img id="detailThumb" src="" alt="Thumbnail" onerror="this.onerror=null;this.src=generateSvgPoster(document.getElementById('detailTitle').innerText);">
 
             <div class="detail-title-card">
                 <h2 id="detailTitle" style="font-size: 15px; font-weight: 700;"></h2>
@@ -590,6 +593,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let popunderCooldown = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -616,7 +620,7 @@
             alert(appData.update_notice || "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!");
         }
 
-        // 🔥 নিরাপদ Base64 SVG পোস্টার জেনারেটর (কখনো ব্রোকেন আইকন আসবে না) 🔥
+        // 🔥 নিরাপদ Base64 SVG পোস্টার (কখনোই ভাঙা আইকন বা ডবল টেক্সট আসবে না) 🔥
         function generateSvgPoster(title) {
             const cleanTitle = (title || 'Bachelor Point').replace(/['"<>]/g, '').substring(0, 32);
             const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
@@ -634,7 +638,7 @@
             img.src = generateSvgPoster(title);
         }
 
-        // 🔥 আসল থাম্বনেইল পাথ নিশ্চিত করার পারফেক্ট মেথড 🔥
+        // 🔥 প্রাইভেট চ্যানেল/বটের আপলোড করা আসল থাম্বনেইল পাথ নিশ্চিত করার পারফেক্ট মেথড 🔥
         function resolveThumb(thumbData, title) {
             if (!thumbData || typeof thumbData !== "string") {
                 return generateSvgPoster(title);
@@ -653,11 +657,12 @@
             return `${CURRENT_RENDER_URL}/thumb/${u.replace(/^\/+/, '')}`;
         }
 
-        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (কোনো জোরপূর্বক রিডাইরেক্ট নেই) 🔥
-        function executeAdsterraPopunder() {
+        // 🔥 পপআন্ডার ইঞ্জিন: যেকোনো জায়গায় টাচ দিলে নিশ্চিতভাবে কাজ করবে 🔥
+        function setupUniversalPopunder() {
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw || raw.length < 5) return;
 
+            // ১. Adsterra স্ক্রিপ্ট ট্যাগ ইনজেক্ট
             let scriptSrc = null;
             if (raw.includes("src=")) {
                 const m = raw.match(/src=["'](.*?)["']/);
@@ -668,14 +673,36 @@
 
             if (scriptSrc) {
                 if (scriptSrc.startsWith("//")) scriptSrc = "https:" + scriptSrc;
-                
                 const s = document.createElement("script");
                 s.type = "text/javascript";
                 s.setAttribute("data-cfasync", "false");
                 s.async = true;
-                s.src = scriptSrc;
+                s.src = scriptSrc + (scriptSrc.includes("?") ? "&" : "?") + "_t=" + Date.now();
                 document.head.appendChild(s);
             }
+
+            // ২. স্ক্রিনে যেকোনো স্থানে প্রথম টাচ করলেই সক্রিয় পপআন্ডার হ্যান্ডলার
+            const handleScreenClick = (e) => {
+                if (popunderCooldown) return;
+                // টাস্ক বোতামে চাপ দিলে পপআন্ডার একদম নাকচ থাকবে
+                if (e.target.closest(".visit-action-btn")) return;
+
+                popunderCooldown = true;
+
+                // যদি সাধারণ সরাসরি লিংক দেওয়া থাকে
+                if (raw.startsWith("http") && !raw.includes("afders.org") && !raw.includes(".js") && !raw.includes("<script")) {
+                    try {
+                        if (tg && tg.openLink) tg.openLink(raw);
+                        else window.open(raw, "_blank");
+                    } catch (err) {}
+                }
+
+                // ৮ সেকেন্ড পর আবার সক্রিয় হবে
+                setTimeout(() => { popunderCooldown = false; }, 8000);
+            };
+
+            window.addEventListener("click", handleScreenClick, true);
+            window.addEventListener("touchend", handleScreenClick, { capture: true, passive: true });
         }
 
         async function initData() {
@@ -691,7 +718,7 @@
                 
                 renderCategoryTabs();
                 renderVideos();
-                executeAdsterraPopunder();
+                setupUniversalPopunder();
             } catch (err) {
                 console.error("ডাটা লোড ত্রুটি:", err);
             }
@@ -740,7 +767,7 @@
                     const thumbUrl = resolveThumb(item.thumb, item.title);
                     card.innerHTML = `
                         <div class="thumb-wrapper">
-                            <img class="thumb-img" src="${thumbUrl}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
+                            <img class="thumb-img" src="${thumbUrl}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="this.onerror=null;this.src=generateSvgPoster(this.getAttribute('data-title'));">
                         </div>
                         <div class="card-details">
                             <div class="video-title">${item.title}</div>
@@ -764,7 +791,6 @@
 
             const detailImg = document.getElementById("detailThumb");
             detailImg.setAttribute("data-title", video.title || "");
-            detailImg.onerror = function() { handleImageFallback(this); };
             detailImg.src = resolveThumb(video.thumb, video.title);
             document.getElementById("detailTitle").innerText = video.title;
 
@@ -802,9 +828,13 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও 2: শুধুমাত্র বাটন চাপলে ডিরেক্ট লিংক ওপেন ও ১০ সেকেন্ড কাউন্টডাউন 🔥
+        // 🔥 Task 1 ও 2: ১০০% সুরক্ষিত ডিরেক্ট লিঙ্ক (অন্য কোনো বিজ্ঞাপনী রিডাইরেক্ট হবে না) 🔥
         function runTaskDirect(taskNum, event) {
-            if (event) event.stopPropagation();
+            // কোনো ব্যাকগ্রাউন্ড ইভেন্ট বা পপআন্ডারকে এখানে আসতে দেওয়া হবে না
+            if (event) {
+                event.stopPropagation();
+                if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            }
 
             if (taskNum === 1 && task1Done) return;
             if (taskNum === 2 && task2Done) return;
@@ -820,9 +850,14 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            if (tg && tg.openLink) {
-                tg.openLink(directUrl);
-            } else {
+            // নির্ধারিত ডিরেক্ট লিঙ্ক সরাসরি টেলিগ্রাম ব্রাউজারে ওপেন
+            try {
+                if (tg && tg.openLink) {
+                    tg.openLink(directUrl);
+                } else {
+                    window.open(directUrl, "_blank");
+                }
+            } catch (e) {
                 window.open(directUrl, "_blank");
             }
 
@@ -953,4 +988,4 @@
         initData();
     </script>
 </body>
-                </html>
+        </html>
