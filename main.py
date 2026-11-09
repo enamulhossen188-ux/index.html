@@ -102,21 +102,29 @@ def upload_thumb_securely(photo_id):
     except Exception:
         return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
 
+# 🔥 ফিক্সড থাম্বনেইল প্রক্সি: সরাসরি ইমেজ ডাটা রিটার্ন করবে 🔥
 @app.route('/thumb/<file_id>')
 def serve_thumbnail(file_id):
     try:
         if file_id in thumb_memory_cache:
-            tg_url = thumb_memory_cache[file_id]
+            img_data = thumb_memory_cache[file_id]
         else:
             file_info = bot.get_file(file_id)
             tg_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
-            thumb_memory_cache[file_id] = tg_url
+            r = requests.get(tg_url, timeout=12)
+            if r.status_code == 200:
+                img_data = r.content
+                if len(thumb_memory_cache) < 300:
+                    thumb_memory_cache[file_id] = img_data
+            else:
+                return redirect("https://placehold.co/600x400?text=No+Poster", code=302)
         
-        resp = redirect(tg_url, code=302)
+        resp = Response(img_data, mimetype='image/jpeg')
         resp.headers['Cache-Control'] = 'public, max-age=604800, immutable'
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
-    except Exception:
+    except Exception as e:
+        print("Thumb proxy error:", e)
         return redirect("https://placehold.co/600x400?text=No+Poster", code=302)
 
 @app.route('/api/data', methods=['GET'])
@@ -378,7 +386,7 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id, "🗑️ নেটিভ ব্যানার মুছে ফেলা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
-    elif call.data == "set_ad_popunder":
+    elif call.data == "set_popunder_ad":
         admin_state[chat_id] = {'step': 'set_popunder_ad'}
         bot.send_message(chat_id, "💥 **পপআন্ডার কোড বা লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
