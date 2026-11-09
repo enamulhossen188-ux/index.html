@@ -650,7 +650,6 @@
             img.src = generateSvgPoster(title);
         }
 
-        // 🔥 সব ধরণের থাম্বনেইল ফরম্যাট সঠিকভাবে হ্যান্ডেল করার ফাংশন 🔥
         function resolveThumb(url, title) {
             if (!url || typeof url !== 'string' || url.trim() === "" || url.includes("placehold.co")) {
                 return generateSvgPoster(title);
@@ -658,7 +657,6 @@
             let u = url.trim();
             if (u.startsWith("data:image")) return u;
             
-            // রেন্ডার সার্ভার পাথ
             if (u.includes("/thumb/")) {
                 const parts = u.split("/thumb/");
                 const fileId = parts[parts.length - 1].replace(/^\/+/, '');
@@ -667,7 +665,6 @@
             if (u.startsWith("http://") || u.startsWith("https://")) {
                 return u;
             }
-            // শুধু টেলিগ্রাম file_id হলে
             return `${CURRENT_RENDER_URL}/thumb/${u.replace(/^\/+/, '')}`;
         }
 
@@ -790,15 +787,30 @@
             renderVideos();
         }
 
+        // 🔥 সব ক্যাটাগরি ফ্লেক্সিবল ও স্বয়ংক্রিয়ভাবে মেলানোর ফাংশন 🔥
         function renderVideos() {
             const container = document.getElementById("videoContainer");
             const empty = document.getElementById("emptyMessage");
             const query = document.getElementById("searchInput").value.toLowerCase().trim();
 
             let list = appData.videos || [];
+            
             if (activeCategory) {
-                list = list.filter(v => (v.category || '').trim().toUpperCase() === activeCategory.trim().toUpperCase());
+                const targetCat = activeCategory.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                const filtered = list.filter(v => {
+                    const itemCat = (v.category || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    // BPS5, WEB SERIES বা SERIES সব একসাথে মেলাবে
+                    if (targetCat.includes("BPS") || targetCat.includes("SERIES")) {
+                        return itemCat.includes("BPS") || itemCat.includes("SERIES") || itemCat === "";
+                    }
+                    return itemCat.includes(targetCat) || targetCat.includes(itemCat);
+                });
+
+                if (filtered.length > 0) {
+                    list = filtered;
+                }
             }
+
             if (query) {
                 list = list.filter(v => (v.title || '').toLowerCase().includes(query));
             }
