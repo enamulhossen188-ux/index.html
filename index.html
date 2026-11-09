@@ -650,6 +650,7 @@
             img.src = generateSvgPoster(title);
         }
 
+        // 🔥 নিশ্চিতভাবে থাম্বনেইল লোড করার পাথ রিডার 🔥
         function resolveThumb(url, title) {
             if (!url || typeof url !== 'string' || url.trim() === "" || url.includes("placehold.co")) {
                 return generateSvgPoster(title);
@@ -757,7 +758,7 @@
                 });
                 appData = await res.json();
                 
-                const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
+                const cats = appData.categories || ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"];
                 if (cats.length > 0 && !activeCategory) {
                     activeCategory = cats[0];
                 }
@@ -772,7 +773,7 @@
 
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById("categoryTabs");
-            const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
+            const cats = appData.categories || ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"];
             let html = '';
             cats.forEach((c) => {
                 const isActive = (activeCategory.trim().toUpperCase() === c.trim().toUpperCase());
@@ -787,7 +788,7 @@
             renderVideos();
         }
 
-        // 🔥 সব ক্যাটাগরি ফ্লেক্সিবল ও স্বয়ংক্রিয়ভাবে মেলানোর ফাংশন 🔥
+        // 🔥 প্রতিটি ক্যাটাগরি আলাদা করার নিখুঁত লজিক (কখনই একটার ভিডিও অন্যটায় মিশবে না) 🔥
         function renderVideos() {
             const container = document.getElementById("videoContainer");
             const empty = document.getElementById("emptyMessage");
@@ -796,19 +797,39 @@
             let list = appData.videos || [];
             
             if (activeCategory) {
-                const targetCat = activeCategory.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-                const filtered = list.filter(v => {
-                    const itemCat = (v.category || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    // BPS5, WEB SERIES বা SERIES সব একসাথে মেলাবে
-                    if (targetCat.includes("BPS") || targetCat.includes("SERIES")) {
-                        return itemCat.includes("BPS") || itemCat.includes("SERIES") || itemCat === "";
-                    }
-                    return itemCat.includes(targetCat) || targetCat.includes(itemCat);
-                });
+                const target = activeCategory.trim().toUpperCase();
+                
+                list = list.filter(v => {
+                    const itemCat = (v.category || '').trim().toUpperCase();
+                    const itemTitle = (v.title || '').trim().toLowerCase();
 
-                if (filtered.length > 0) {
-                    list = filtered;
-                }
+                    // ১. BPS5: শুধুমাত্র ব্যাচেলর পয়েন্টের পর্ব
+                    if (target === "BPS5") {
+                        return itemCat === "BPS5" || itemTitle.includes("bachelor point") || itemTitle.includes("ব্যাচেলর পয়েন্ট");
+                    }
+                    
+                    // ২. DRAMA: শুধু নাটক
+                    if (target === "DRAMA") {
+                        return (itemCat === "DRAMA" || itemTitle.includes("নাটক")) && !itemTitle.includes("bachelor point");
+                    }
+
+                    // ৩. WEB SERIES / SERIES: সুলতান সালাউদ্দিন এবং অন্যান্য ওয়েব সিরিজ
+                    if (target.includes("SERIES")) {
+                        return (itemCat.includes("SERIES") || itemTitle.includes("সালাউদ্দিন") || itemTitle.includes("season") || itemTitle.includes("সিজন")) && !itemTitle.includes("bachelor point");
+                    }
+
+                    // ৪. MOVIES: মুভি
+                    if (target.includes("MOVIE")) {
+                        return itemCat.includes("MOVIE") || itemTitle.includes("movie");
+                    }
+
+                    // ৫. COMING SOON
+                    if (target.includes("COMING")) {
+                        return v.is_coming_soon || itemCat.includes("COMING");
+                    }
+
+                    return itemCat === target;
+                });
             }
 
             if (query) {
