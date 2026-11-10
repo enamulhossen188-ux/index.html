@@ -705,7 +705,7 @@
             document.head.appendChild(sc);
         }
 
-        // 🔥 বটের দেওয়া স্ক্রিপ্টকে সরাসরি এক্সিকিউট করার মাস্টার মেকানিজম 🔥
+        // 🔥 পপআন্ডারকে শুধুমাত্র ব্যাকগ্রাউন্ডে এক্সিকিউট করা (কোনো লিংক ব্রাউজারে খুলবে না) 🔥
         function initPopunderFromBot(popCode) {
             if (!popCode || !popCode.trim()) return;
             const raw = popCode.trim();
@@ -925,7 +925,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 ৪টি টাস্কের ৪টি স্বতন্ত্র লিঙ্ক হ্যান্ডলার 🔥
+        // 🔥 ৪টি টাস্কের হ্যান্ডলার (কোনো অবস্থাতেই যেন স্ক্রিপ্ট ওপেন না হয়) 🔥
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
@@ -943,7 +943,8 @@
 
             taskUrl = (taskUrl || "").trim();
 
-            if (!taskUrl || !taskUrl.startsWith("http")) {
+            // যদি কোনো স্ক্রিপ্ট ফাইল ঢুকে থাকে বা লিংক না থাকে তবে সরাসরি গুগলে যাবে
+            if (!taskUrl || !taskUrl.startsWith("http") || taskUrl.includes(".js") || taskUrl.includes("afders.org") || taskUrl.includes("<script")) {
                 taskUrl = "https://www.google.com";
             }
 
