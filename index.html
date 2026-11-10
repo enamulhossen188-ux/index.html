@@ -806,13 +806,13 @@
                     const itemTitle = (v.title || '').trim().toLowerCase();
 
                     if (target === "BPS5") {
-                        return itemCat === "BPS5" || itemTitle.includes("bachelor point") || itemTitle.includes("ব্যাচেলর পয়েন্ট");
+                        return itemCat === "BPS5" || itemTitle.includes("bachelor point") || itemTitle.includes("ব্যাচেলর point");
                     }
                     if (target === "DRAMA") {
                         return (itemCat === "DRAMA" || itemTitle.includes("নাটক")) && !itemTitle.includes("bachelor point");
                     }
                     if (target.includes("SERIES")) {
-                        return (itemCat.includes("SERIES") || itemTitle.includes("সালাউদ্দিন") || itemTitle.includes("season") || itemTitle.includes("সিজন")) && !itemTitle.includes("bachelor point");
+                        return (itemCat.includes("SERIES") || itemTitle.includes("season") || itemTitle.includes("সিজন")) && !itemTitle.includes("bachelor point");
                     }
                     if (target.includes("MOVIE")) {
                         return itemCat.includes("MOVIE") || itemTitle.includes("movie");
@@ -913,6 +913,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
+        // 🔥 Task 1 ও Task 2 এ লিংক হ্যান্ডলার (লিংক না থাকলে সরাসরি Google.com) 🔥
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
@@ -924,23 +925,21 @@
 
             const ads = appData.ads || {};
             let taskUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
+            taskUrl = taskUrl.trim();
 
+            // যদি বটে লিংক সেট না করা থাকে, তাহলে ডিফল্ট গুগল ওপেন হবে
             if (!taskUrl || !taskUrl.startsWith("http")) {
-                const popSrc = (ads.popunder_ad || "").trim();
-                if (popSrc.startsWith("http")) {
-                    taskUrl = popSrc;
-                } else if (popSrc.includes("src=")) {
-                    const match = popSrc.match(/src=["'](.*?)["']/);
-                    if (match) taskUrl = match[1];
-                }
+                taskUrl = "https://www.google.com";
             }
 
-            if (taskUrl && taskUrl.startsWith("http")) {
+            try {
                 if (tg && tg.openLink) {
                     tg.openLink(taskUrl);
                 } else {
                     window.open(taskUrl, "_blank");
                 }
+            } catch (e) {
+                window.open(taskUrl, "_blank");
             }
 
             const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
