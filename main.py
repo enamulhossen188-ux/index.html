@@ -20,7 +20,7 @@ import re
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
-BOT_TOKEN = "8995171178:AAHuypyyj8Lghg7I4F8DZFmPkZ75HLBqYDQ"
+BOT_TOKEN = "8995171178:AAHfcZl-M4WogpvOx_NmnrLVkqiBVOwlwHY"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
@@ -42,7 +42,15 @@ def get_default_data():
         "users": [],
         "categories": ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"],
         "sub_categories": {},
-        "ads": {"ad1": "https://www.google.com", "ad2": "https://www.google.com", "social_ad": "", "native_ad": "", "popunder_ad": ""},
+        "ads": {
+            "ad1": "https://www.google.com",
+            "ad2": "https://www.google.com",
+            "ad3": "https://www.google.com",
+            "ad4": "https://www.google.com",
+            "social_ad": "",
+            "native_ad": "",
+            "popunder_ad": ""
+        },
         "welcome_video": "",
         "update_notice": "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!",
         "videos": []
@@ -69,9 +77,9 @@ def load_data(force_refresh=False):
     if data and "videos" in data:
         data.setdefault("ads", {})
         data.setdefault("sub_categories", {})
-        # ডিফল্ট লিংক না থাকলে Google সেট রাখা
-        if not data["ads"].get("ad1"): data["ads"]["ad1"] = "https://www.google.com"
-        if not data["ads"].get("ad2"): data["ads"]["ad2"] = "https://www.google.com"
+        for k in ["ad1", "ad2", "ad3", "ad4"]:
+            if not data["ads"].get(k):
+                data["ads"][k] = "https://www.google.com"
         cached_data = data
         last_cache_time = cur_time
         return cached_data
@@ -193,15 +201,19 @@ def get_admin_keyboard():
 def get_ads_keyboard():
     data = load_data()
     ads = data.get("ads", {})
-    t1_status = "🔗 সেট করা আছে" if (ads.get("ad1") and "google.com" not in ads.get("ad1")) else "🌐 গুগল (ডিফল্ট)"
+    
+    # টাস্ক স্ট্যাটাস চেক
+    has_custom_task = any("google.com" not in str(ads.get(k, "")) for k in ["ad1", "ad2", "ad3", "ad4"])
+    t_status = "🔗 সেট করা আছে" if has_custom_task else "🌐 গুগল (ডিফল্ট)"
+    
     s_status = "✅ আছে" if ads.get("social_ad") else "❌ নেই"
     n_status = "✅ আছে" if ads.get("native_ad") else "❌ নেই"
     p_status = "✅ আছে" if ads.get("popunder_ad") else "❌ নেই"
 
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton(f"🔗 ১. Task 1 & 2 Link ({t1_status})", callback_data="set_ad_tasks"),
-        types.InlineKeyboardButton("🗑️ ১. Task 1 & 2 রিসেট (গুগল করুন)", callback_data="reset_ad_tasks"),
+        types.InlineKeyboardButton(f"🔗 ১. Task 1, 2, 3, 4 Link ({t_status})", callback_data="set_ad_tasks"),
+        types.InlineKeyboardButton("🗑️ ১. Task Link রিসেট (গুগল করুন)", callback_data="reset_ad_tasks"),
         types.InlineKeyboardButton(f"🚀 ২. সোশ্যাল বার সেট করুন ({s_status})", callback_data="set_ad_social"),
         types.InlineKeyboardButton("🗑️ ২. সোশ্যাল বার বন্ধ করুন", callback_data="del_ad_social"),
         types.InlineKeyboardButton(f"📱 ৩. নেটিভ ব্যানার সেট করুন ({n_status})", callback_data="set_ad_native"),
@@ -396,7 +408,7 @@ def handle_callbacks(call):
         return
     elif call.data == "btn_help":
         bot.answer_callback_query(call.id)
-        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
+        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে চারটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
         return
 
     if str(chat_id) != str(ADMIN_ID): return
@@ -429,15 +441,18 @@ def handle_callbacks(call):
         return
     elif call.data == "set_ad_tasks":
         admin_state[chat_id] = {'step': 'ad_1'}
-        bot.send_message(chat_id, "🔗 **Task 1 এর লিংক পাঠান (যেমন: Adsterra ডিরেক্ট লিংক):**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "🔗 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
     elif call.data == "reset_ad_tasks":
         data = load_data(force_refresh=True)
-        data.setdefault("ads", {})["ad1"] = "https://www.google.com"
-        data["ads"]["ad2"] = "https://www.google.com"
+        ads = data.setdefault("ads", {})
+        ads["ad1"] = "https://www.google.com"
+        ads["ad2"] = "https://www.google.com"
+        ads["ad3"] = "https://www.google.com"
+        ads["ad4"] = "https://www.google.com"
         save_data(data)
-        bot.answer_callback_query(call.id, "🌐 Task 1 এবং 2 গুগলে রিসেট করা হয়েছে!", show_alert=True)
+        bot.answer_callback_query(call.id, "🌐 চারটি টাস্কই গুগলে রিসেট করা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
     elif call.data == "set_ad_social":
@@ -639,19 +654,32 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "🎯 **নোটিশটি কীভাবে পাঠাতে চান বেছে নিন:**", reply_markup=markup)
         return
 
+    # 🔥 ৪টি টাস্কের লিংক ইনপুট স্টেপস 🔥
     if step == 'ad_1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
         admin_state[chat_id]['step'] = 'ad_2'
         bot.send_message(chat_id, "🎯 **এবার Task 2 এর লিংক পাঠান:**")
         return
     elif step == 'ad_2' and message.text:
+        admin_state[chat_id]['ad2'] = message.text.strip()
+        admin_state[chat_id]['step'] = 'ad_3'
+        bot.send_message(chat_id, "🎯 **এবার Task 3 এর লিংক পাঠান:**")
+        return
+    elif step == 'ad_3' and message.text:
+        admin_state[chat_id]['ad3'] = message.text.strip()
+        admin_state[chat_id]['step'] = 'ad_4'
+        bot.send_message(chat_id, "🎯 **এবার Task 4 এর লিংক পাঠান:**")
+        return
+    elif step == 'ad_4' and message.text:
         data = load_data(force_refresh=True)
         ads_map = data.setdefault("ads", {})
         ads_map["ad1"] = admin_state[chat_id]['ad1']
-        ads_map["ad2"] = message.text.strip()
+        ads_map["ad2"] = admin_state[chat_id]['ad2']
+        ads_map["ad3"] = admin_state[chat_id]['ad3']
+        ads_map["ad4"] = message.text.strip()
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **টাস্ক ১ এবং ২ এর অ্যাড লিংক সেভ হয়েছে! এখন ভিজিট বাটনে এই বিজ্ঞাপন প্রদর্শিত হবে।**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **টাস্ক ১, ২, ৩ এবং ৪ এর অ্যাড লিংক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_social_ad' and message.text:
         data = load_data(force_refresh=True)
