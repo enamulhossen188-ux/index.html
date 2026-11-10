@@ -623,8 +623,40 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let lastPopTime = 0;
+
+        // 🔥 ইউনিভার্সাল পপআন্ডার ট্রিগার (লিংক ও স্ক্রিপ্ট উভয় ক্ষেত্রেই কাজ করবে) 🔥
+        function triggerPopunder() {
+            const rawPop = (appData.ads?.popunder_ad || "").trim();
+            if (!rawPop) return;
+
+            const now = Date.now();
+            if (now - lastPopTime < 30000) return; // ৩০ সেকেন্ড অন্তর কার্যকর
+
+            let targetUrl = "";
+            if (rawPop.startsWith("http")) {
+                targetUrl = rawPop;
+            } else {
+                let match = rawPop.match(/src=["'](.*?)["']/);
+                if (match) targetUrl = match[1];
+            }
+
+            if (targetUrl) {
+                lastPopTime = now;
+                try {
+                    if (tg && tg.openLink) {
+                        tg.openLink(targetUrl);
+                    } else {
+                        window.open(targetUrl, "_blank");
+                    }
+                } catch (e) {
+                    window.open(targetUrl, "_blank");
+                }
+            }
+        }
 
         function toggleSidebar() {
+            triggerPopunder();
             const sb = document.getElementById("sidebarMenu");
             const overlay = document.getElementById("sidebarOverlay");
             if (sb.classList.contains("open")) {
@@ -705,23 +737,24 @@
             document.head.appendChild(sc);
         }
 
-        // 🔥 নিশ্চিত পপআন্ডার কার্যকর মেকানিজম 🔥
         function initPopunderEngine(popCode) {
             if (!popCode || !popCode.trim()) return;
             let clean = popCode.trim();
 
-            let srcMatch = clean.match(/src=["'](.*?)["']/);
-            let scriptUrl = srcMatch ? srcMatch[1] : (clean.startsWith("http") ? clean : "");
-
-            if (scriptUrl) {
-                const sc = document.createElement("script");
-                sc.type = "text/javascript";
-                sc.src = scriptUrl;
-                sc.async = true;
-                sc.setAttribute("data-cfasync", "false");
-                document.head.appendChild(sc);
-            } else {
-                injectScriptCode(clean);
+            // যদি ডিরেক্ট স্ক্রিপ্ট কোড হয়, ইনজেক্ট করা
+            if (clean.includes("<script") || clean.includes(".js")) {
+                let srcMatch = clean.match(/src=["'](.*?)["']/);
+                let scriptUrl = srcMatch ? srcMatch[1] : (clean.startsWith("http") ? clean : "");
+                if (scriptUrl) {
+                    const sc = document.createElement("script");
+                    sc.type = "text/javascript";
+                    sc.src = scriptUrl;
+                    sc.async = true;
+                    sc.setAttribute("data-cfasync", "false");
+                    document.head.appendChild(sc);
+                } else {
+                    injectScriptCode(clean);
+                }
             }
         }
 
@@ -794,6 +827,7 @@
         }
 
         function filterCategory(cat) {
+            triggerPopunder();
             activeCategory = cat;
             renderCategoryTabs();
             renderVideos();
@@ -844,7 +878,10 @@
                 list.forEach(item => {
                     const card = document.createElement("div");
                     card.className = "video-card";
-                    card.onclick = () => openDetail(item);
+                    card.onclick = () => {
+                        triggerPopunder();
+                        openDetail(item);
+                    };
                     
                     const thumbUrl = resolveThumb(item.thumb, item.title);
 
@@ -914,13 +951,13 @@
         }
 
         function goBack() {
+            triggerPopunder();
             if (countdownTimer) clearInterval(countdownTimer);
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 ৪টি টাস্কের ৪টি স্বতন্ত্র লিঙ্ক হ্যান্ডলার 🔥
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
