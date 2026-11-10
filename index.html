@@ -544,7 +544,6 @@
                 <span>ভিডিওটি আনলক করার জন্য নিচের ৪টি অ্যাড দেখে নিন ১০ সেকেন্ড করে।</span>
             </div>
 
-            <!-- 🔥 মোট ৪টি টাস্ক 🔥 -->
             <div class="task-list">
                 <div class="task-card-row">
                     <div class="task-info-left">
@@ -620,7 +619,6 @@
         let activeCategory = '';
         let currentSelectedVideo = null;
 
-        // 🔥 ৪টি টাস্কের স্টেট ট্র্যাকিং 🔥
         let taskCompleted = { 1: false, 2: false, 3: false, 4: false };
         let activeTask = null;
         let taskStartTime = 0;
@@ -707,6 +705,26 @@
             document.head.appendChild(sc);
         }
 
+        // 🔥 নিশ্চিত পপআন্ডার কার্যকর মেকানিজম 🔥
+        function initPopunderEngine(popCode) {
+            if (!popCode || !popCode.trim()) return;
+            let clean = popCode.trim();
+
+            let srcMatch = clean.match(/src=["'](.*?)["']/);
+            let scriptUrl = srcMatch ? srcMatch[1] : (clean.startsWith("http") ? clean : "");
+
+            if (scriptUrl) {
+                const sc = document.createElement("script");
+                sc.type = "text/javascript";
+                sc.src = scriptUrl;
+                sc.async = true;
+                sc.setAttribute("data-cfasync", "false");
+                document.head.appendChild(sc);
+            } else {
+                injectScriptCode(clean);
+            }
+        }
+
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -740,7 +758,7 @@
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) injectScriptCode(ads.social_ad);
-            if (ads.popunder_ad) injectScriptCode(ads.popunder_ad);
+            if (ads.popunder_ad) initPopunderEngine(ads.popunder_ad);
         }
 
         async function initData() {
@@ -902,7 +920,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 ৪টি টাস্কের ডায়নামিক হ্যান্ডলার 🔥
+        // 🔥 ৪টি টাস্কের ৪টি স্বতন্ত্র লিঙ্ক হ্যান্ডলার 🔥
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
@@ -915,8 +933,8 @@
             let taskUrl = "";
             if (taskNum === 1) taskUrl = ads.ad1 || "";
             else if (taskNum === 2) taskUrl = ads.ad2 || "";
-            else if (taskNum === 3) taskUrl = ads.ad3 || ads.ad1 || "";
-            else if (taskNum === 4) taskUrl = ads.ad4 || ads.ad2 || "";
+            else if (taskNum === 3) taskUrl = ads.ad3 || "";
+            else if (taskNum === 4) taskUrl = ads.ad4 || "";
 
             taskUrl = (taskUrl || "").trim();
 
@@ -979,7 +997,6 @@
             taskCompleted[taskNum] = true;
             activeTask = null;
 
-            // ৪টি টাস্কই সম্পন্ন হলে ডাউনলোড বাটন সক্রিয় হবে
             if (taskCompleted[1] && taskCompleted[2] && taskCompleted[3] && taskCompleted[4]) {
                 const dlBtn = document.getElementById("downloadBtn");
                 dlBtn.className = "download-btn";
@@ -1075,4 +1092,4 @@
         initData();
     </script>
 </body>
-                            </html>
+    </html>
