@@ -7,9 +7,6 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Adsterra Popunder Script -->
-    <script data-cfasync="false" src="https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2"></script>
-
     <style>
         :root {
             --bg-color: #121316;
@@ -605,38 +602,8 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let lastPopTime = 0;
-
-        function triggerPopunder() {
-            const now = Date.now();
-            if (now - lastPopTime < 25000) return;
-            
-            const popSrc = (appData.ads?.popunder_ad || "").trim();
-            let targetUrl = "";
-
-            if (popSrc.startsWith("http")) {
-                targetUrl = popSrc;
-            } else if (popSrc.includes("src=")) {
-                const match = popSrc.match(/src=["'](.*?)["']/);
-                if (match) targetUrl = match[1];
-            }
-
-            if (targetUrl) {
-                lastPopTime = now;
-                try {
-                    if (tg && tg.openLink) {
-                        tg.openLink(targetUrl);
-                    } else {
-                        window.open(targetUrl, "_blank");
-                    }
-                } catch (e) {
-                    window.open(targetUrl, "_blank");
-                }
-            }
-        }
 
         function toggleSidebar() {
-            triggerPopunder();
             const sb = document.getElementById("sidebarMenu");
             const overlay = document.getElementById("sidebarOverlay");
             if (sb.classList.contains("open")) {
@@ -747,9 +714,11 @@
             }
         }
 
+        // 🔥 বটে এড সেট করলেই শুধুমাত্র লোড হবে, নয়তো বন্ধ থাকবে 🔥
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) injectScriptCode(ads.social_ad);
+            if (ads.popunder_ad) injectScriptCode(ads.popunder_ad);
         }
 
         async function initData() {
@@ -785,7 +754,6 @@
         }
 
         function filterCategory(cat) {
-            triggerPopunder();
             activeCategory = cat;
             renderCategoryTabs();
             renderVideos();
@@ -836,10 +804,7 @@
                 list.forEach(item => {
                     const card = document.createElement("div");
                     card.className = "video-card";
-                    card.onclick = () => {
-                        triggerPopunder();
-                        openDetail(item);
-                    };
+                    card.onclick = () => openDetail(item);
                     
                     const thumbUrl = resolveThumb(item.thumb, item.title);
 
@@ -906,7 +871,6 @@
         }
 
         function goBack() {
-            triggerPopunder();
             if (countdownTimer) clearInterval(countdownTimer);
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
