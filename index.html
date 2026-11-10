@@ -482,9 +482,23 @@
             font-weight: 700;
             cursor: pointer;
         }
+
+        /* 🔥 ইনভিসিবল পপআন্ডার ট্রিগার লেয়ার 🔥 */
+        #adsterraTriggerBox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9998;
+            background: transparent;
+            display: none;
+        }
     </style>
 </head>
 <body>
+
+    <div id="adsterraTriggerBox" onclick="handleAdsterraClick(event)"></div>
 
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
@@ -623,6 +637,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
+        let hasPopped = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -705,7 +720,7 @@
             document.head.appendChild(sc);
         }
 
-        // 🔥 সরাসরি ক্লিন স্ক্রিপ্ট এক্সিকিউটর (কোনো ব্রাউজার ইউআরএল ওপেন করবে না) 🔥
+        // 🔥 Adsterra পপআন্ডারকে আসল নিয়মে ক্লিক ইভেন্টের সাথে সংযুক্তকরণ 🔥
         function initPopunderFromBot(popCode) {
             if (!popCode || !popCode.trim()) return;
             const raw = popCode.trim();
@@ -725,9 +740,21 @@
                 s.async = true;
                 s.setAttribute("data-cfasync", "false");
                 document.head.appendChild(s);
+
+                // প্রথম স্পর্শে পপআন্ডার ট্রিগার করানোর জন্য অদৃশ্য লেয়ার সচল করা
+                const triggerBox = document.getElementById("adsterraTriggerBox");
+                if (triggerBox && !hasPopped) {
+                    triggerBox.style.display = "block";
+                }
             } else {
                 injectScriptCode(raw);
             }
+        }
+
+        function handleAdsterraClick(e) {
+            hasPopped = true;
+            const triggerBox = document.getElementById("adsterraTriggerBox");
+            if (triggerBox) triggerBox.style.display = "none";
         }
 
         function injectNativeBanner(container, codeStr) {
@@ -925,7 +952,6 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 ৪টি টাস্কের হ্যান্ডলার (স্ক্রিপ্ট ফাইল ইউআরএল স্বয়ংক্রিয়ভাবে ফিল্টার করা) 🔥
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
