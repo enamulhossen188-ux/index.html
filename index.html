@@ -541,16 +541,17 @@
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন (মোট ২০ সেকেন্ড)।</span>
+                <span>ভিডিওটি আনলক করার জন্য নিচের ৪টি অ্যাড দেখে নিন ১০ সেকেন্ড করে।</span>
             </div>
 
+            <!-- 🔥 মোট ৪টি টাস্ক 🔥 -->
             <div class="task-list">
                 <div class="task-card-row">
                     <div class="task-info-left">
                         <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 1</h4>
-                            <p id="task1Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task1Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task1Btn" class="visit-action-btn" onclick="runTaskDirect(1, event)">VISIT</button>
@@ -561,10 +562,32 @@
                         <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
                         <div class="task-text">
                             <h4>Task 2</h4>
-                            <p id="task2Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
+                            <p id="task2Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
                         </div>
                     </div>
                     <button id="task2Btn" class="visit-action-btn" onclick="runTaskDirect(2, event)">VISIT</button>
+                </div>
+
+                <div class="task-card-row">
+                    <div class="task-info-left">
+                        <i id="task3Icon" class="fa-solid fa-circle-check task-icon"></i>
+                        <div class="task-text">
+                            <h4>Task 3</h4>
+                            <p id="task3Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                        </div>
+                    </div>
+                    <button id="task3Btn" class="visit-action-btn" onclick="runTaskDirect(3, event)">VISIT</button>
+                </div>
+
+                <div class="task-card-row">
+                    <div class="task-info-left">
+                        <i id="task4Icon" class="fa-solid fa-circle-check task-icon"></i>
+                        <div class="task-text">
+                            <h4>Task 4</h4>
+                            <p id="task4Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                        </div>
+                    </div>
+                    <button id="task4Btn" class="visit-action-btn" onclick="runTaskDirect(4, event)">VISIT</button>
                 </div>
             </div>
 
@@ -597,8 +620,8 @@
         let activeCategory = '';
         let currentSelectedVideo = null;
 
-        let task1Done = false;
-        let task2Done = false;
+        // 🔥 ৪টি টাস্কের স্টেট ট্র্যাকিং 🔥
+        let taskCompleted = { 1: false, 2: false, 3: false, 4: false };
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
@@ -714,7 +737,6 @@
             }
         }
 
-        // 🔥 বটে এড সেট করলেই শুধুমাত্র লোড হবে, নয়তো বন্ধ থাকবে 🔥
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) injectScriptCode(ads.social_ad);
@@ -847,25 +869,28 @@
         }
 
         function resetTasks() {
-            task1Done = false;
-            task2Done = false;
+            taskCompleted = { 1: false, 2: false, 3: false, 4: false };
             activeTask = null;
             if (countdownTimer) clearInterval(countdownTimer);
 
-            const btn1 = document.getElementById("task1Btn");
-            const btn2 = document.getElementById("task2Btn");
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById(`task${i}Btn`);
+                const icon = document.getElementById(`task${i}Icon`);
+                const desc = document.getElementById(`task${i}Desc`);
+                
+                if (btn) {
+                    btn.className = "visit-action-btn";
+                    btn.innerHTML = "VISIT";
+                }
+                if (icon) {
+                    icon.className = "fa-solid fa-circle-check task-icon";
+                }
+                if (desc) {
+                    desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
+                }
+            }
+
             const dlBtn = document.getElementById("downloadBtn");
-
-            btn1.className = "visit-action-btn";
-            btn1.innerHTML = "VISIT";
-            document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task1Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
-
-            btn2.className = "visit-action-btn";
-            btn2.innerHTML = "VISIT";
-            document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
-            document.getElementById("task2Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
-
             dlBtn.className = "download-btn disabled";
             dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
         }
@@ -877,21 +902,24 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // 🔥 Task 1 ও Task 2 এ লিংক হ্যান্ডলার (লিংক না থাকলে সরাসরি Google.com) 🔥
+        // 🔥 ৪টি টাস্কের ডায়নামিক হ্যান্ডলার 🔥
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
-            if (taskNum === 1 && task1Done) return;
-            if (taskNum === 2 && task2Done) return;
+            if (taskCompleted[taskNum]) return;
 
             activeTask = taskNum;
             taskStartTime = Date.now();
 
             const ads = appData.ads || {};
-            let taskUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
-            taskUrl = taskUrl.trim();
+            let taskUrl = "";
+            if (taskNum === 1) taskUrl = ads.ad1 || "";
+            else if (taskNum === 2) taskUrl = ads.ad2 || "";
+            else if (taskNum === 3) taskUrl = ads.ad3 || ads.ad1 || "";
+            else if (taskNum === 4) taskUrl = ads.ad4 || ads.ad2 || "";
 
-            // যদি বটে লিংক সেট না করা থাকে, তাহলে ডিফল্ট গুগল ওপেন হবে
+            taskUrl = (taskUrl || "").trim();
+
             if (!taskUrl || !taskUrl.startsWith("http")) {
                 taskUrl = "https://www.google.com";
             }
@@ -906,12 +934,16 @@
                 window.open(taskUrl, "_blank");
             }
 
-            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
-            const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
+            const btn = document.getElementById(`task${taskNum}Btn`);
+            const desc = document.getElementById(`task${taskNum}Desc`);
 
-            btn.className = "visit-action-btn running";
-            btn.innerHTML = `10s`;
-            desc.innerText = "অপেক্ষা করুন...";
+            if (btn) {
+                btn.className = "visit-action-btn running";
+                btn.innerHTML = `10s`;
+            }
+            if (desc) {
+                desc.innerText = "অপেক্ষা করুন...";
+            }
 
             if (countdownTimer) clearInterval(countdownTimer);
 
@@ -920,7 +952,7 @@
                 const remaining = 10 - passed;
 
                 if (remaining > 0) {
-                    btn.innerHTML = `${remaining}s`;
+                    if (btn) btn.innerHTML = `${remaining}s`;
                 } else {
                     clearInterval(countdownTimer);
                     completeTask(taskNum);
@@ -929,20 +961,26 @@
         }
 
         function completeTask(taskNum) {
-            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
-            const icon = document.getElementById(taskNum === 1 ? "task1Icon" : "task2Icon");
-            const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
+            const btn = document.getElementById(`task${taskNum}Btn`);
+            const icon = document.getElementById(`task${taskNum}Icon`);
+            const desc = document.getElementById(`task${taskNum}Desc`);
 
-            btn.className = "visit-action-btn done";
-            btn.innerHTML = `DONE`;
-            icon.classList.add("completed");
-            desc.innerText = "টাস্ক সম্পন্ন হয়েছে ✅";
+            if (btn) {
+                btn.className = "visit-action-btn done";
+                btn.innerHTML = `DONE`;
+            }
+            if (icon) {
+                icon.classList.add("completed");
+            }
+            if (desc) {
+                desc.innerText = "টাস্ক সম্পন্ন হয়েছে ✅";
+            }
 
-            if (taskNum === 1) task1Done = true;
-            if (taskNum === 2) task2Done = true;
-
+            taskCompleted[taskNum] = true;
             activeTask = null;
-            if (task1Done && task2Done) {
+
+            // ৪টি টাস্কই সম্পন্ন হলে ডাউনলোড বাটন সক্রিয় হবে
+            if (taskCompleted[1] && taskCompleted[2] && taskCompleted[3] && taskCompleted[4]) {
                 const dlBtn = document.getElementById("downloadBtn");
                 dlBtn.className = "download-btn";
             }
@@ -967,12 +1005,16 @@
                     const taskFailed = activeTask;
                     activeTask = null;
 
-                    const btn = document.getElementById(taskFailed === 1 ? "task1Btn" : "task2Btn");
-                    const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
+                    const btn = document.getElementById(`task${taskFailed}Btn`);
+                    const desc = document.getElementById(`task${taskFailed}Desc`);
 
-                    btn.className = "visit-action-btn";
-                    btn.innerHTML = `VISIT`;
-                    desc.innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+                    if (btn) {
+                        btn.className = "visit-action-btn";
+                        btn.innerHTML = `VISIT`;
+                    }
+                    if (desc) {
+                        desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
+                    }
 
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
@@ -987,7 +1029,7 @@
         window.addEventListener("focus", handleVisibilityOrFocus);
 
         async function sendToInbox() {
-            if (!task1Done || !task2Done) return;
+            if (!taskCompleted[1] || !taskCompleted[2] || !taskCompleted[3] || !taskCompleted[4]) return;
 
             const dlBtn = document.getElementById("downloadBtn");
             dlBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ইনবক্সে পাঠানো হচ্ছে...`;
@@ -1033,4 +1075,4 @@
         initData();
     </script>
 </body>
-    </html>
+                            </html>
