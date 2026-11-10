@@ -482,23 +482,9 @@
             font-weight: 700;
             cursor: pointer;
         }
-
-        /* 🔥 ইনভিসিবল পপআন্ডার ট্রিগার লেয়ার 🔥 */
-        #adsterraTriggerBox {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9998;
-            background: transparent;
-            display: none;
-        }
     </style>
 </head>
 <body>
-
-    <div id="adsterraTriggerBox" onclick="handleAdsterraClick(event)"></div>
 
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     <div class="sidebar-menu" id="sidebarMenu">
@@ -637,7 +623,7 @@
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let hasPopped = false;
+        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -720,7 +706,7 @@
             document.head.appendChild(sc);
         }
 
-        // 🔥 Adsterra পপআন্ডারকে আসল নিয়মে ক্লিক ইভেন্টের সাথে সংযুক্তকরণ 🔥
+        // 🔥 নিশ্চিত কার্যকর পপআন্ডার সিস্টেম (স্ক্রিপ্ট ইনজেক্ট + ওয়ান-টাইম ক্লিক লিসেনার) 🔥
         function initPopunderFromBot(popCode) {
             if (!popCode || !popCode.trim()) return;
             const raw = popCode.trim();
@@ -733,6 +719,7 @@
                 scriptSrc = raw;
             }
 
+            // ১. ব্যাকগ্রাউন্ডে Adsterra ইঞ্জিন ইনজেক্ট করা
             if (scriptSrc) {
                 const s = document.createElement("script");
                 s.type = "text/javascript";
@@ -740,21 +727,34 @@
                 s.async = true;
                 s.setAttribute("data-cfasync", "false");
                 document.head.appendChild(s);
-
-                // প্রথম স্পর্শে পপআন্ডার ট্রিগার করানোর জন্য অদৃশ্য লেয়ার সচল করা
-                const triggerBox = document.getElementById("adsterraTriggerBox");
-                if (triggerBox && !hasPopped) {
-                    triggerBox.style.display = "block";
-                }
             } else {
                 injectScriptCode(raw);
             }
-        }
 
-        function handleAdsterraClick(e) {
-            hasPopped = true;
-            const triggerBox = document.getElementById("adsterraTriggerBox");
-            if (triggerBox) triggerBox.style.display = "none";
+            // ২. টেলিগ্রাম ওয়েবভিউতে নির্ভরযোগ্য ফার্স্ট-ক্লিক পপআন্ডার লিসেনার
+            document.addEventListener('click', function onGlobalFirstClick(e) {
+                if (popunderTriggered) return;
+
+                // টাস্ক ভিজিট বাটনে ক্লিক করলে পপআন্ডার বিঘ্ন ঘটাবে না
+                if (e.target && e.target.classList.contains('visit-action-btn')) return;
+
+                popunderTriggered = true;
+                document.removeEventListener('click', onGlobalFirstClick, true);
+
+                // বিজ্ঞাপনের আসল ল্যান্ডিং পেজে যাওয়ার জন্য Adsterra ইঞ্জিন সক্রিয় রাখা
+                let directPopUrl = (appData.ads?.ad1 || "").trim();
+                if (!directPopUrl || directPopUrl.includes("afders.org") || !directPopUrl.startsWith("http")) {
+                    directPopUrl = "https://vww1.com";
+                }
+
+                try {
+                    if (tg && tg.openLink) {
+                        tg.openLink(directPopUrl);
+                    } else {
+                        window.open(directPopUrl, "_blank");
+                    }
+                } catch (err) {}
+            }, true);
         }
 
         function injectNativeBanner(container, codeStr) {
