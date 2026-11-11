@@ -20,7 +20,7 @@ import re
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
-BOT_TOKEN = "8995171178:AAHuypyyj8Lghg7I4F8DZFmPkZ75HLBqYDQ"
+BOT_TOKEN = "8995171178:AAG8OneJ4EUn5EraQ8cnx1taNBE6Z9wI4Nk"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
@@ -97,7 +97,8 @@ def save_data(data):
             sent_doc = bot.send_document(
                 DB_CHANNEL_ID,
                 ("db_backup_bot2.json", json_bytes),
-                caption=f"📦 Update: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}"
+                caption=f"📦 Update: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}",
+                protect_content=True
             )
             try: bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
             except Exception: pass
@@ -107,7 +108,7 @@ def save_data(data):
 
 def upload_thumb_securely(photo_id):
     try:
-        msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumb")
+        msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumb", protect_content=True)
         perm_file_id = msg.photo[-1].file_id
         return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
     except Exception:
@@ -152,7 +153,7 @@ def deliver_single_video(chat_id, target_video):
         return True
     except Exception:
         try:
-            bot.send_document(chat_id, target_video['file_id'], caption=caption_text)
+            bot.send_document(chat_id, target_video['file_id'], caption=caption_text, protect_content=True)
             return True
         except Exception:
             return False
@@ -174,7 +175,7 @@ def api_send_video():
 
 @app.route('/')
 def home():
-    return "Bot Server Active 24/7!"
+    return "Bot Server Active 24/7 (Security Locked)!"
 
 def get_action_buttons():
     fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
@@ -201,8 +202,6 @@ def get_admin_keyboard():
 def get_ads_keyboard():
     data = load_data()
     ads = data.get("ads", {})
-    
-    # টাস্ক স্ট্যাটাস চেক
     has_custom_task = any("google.com" not in str(ads.get(k, "")) for k in ["ad1", "ad2", "ad3", "ad4"])
     t_status = "🔗 সেট করা আছে" if has_custom_task else "🌐 গুগল (ডিফল্ট)"
     
@@ -332,16 +331,22 @@ def run_auto_sync_channel(admin_chat_id):
     except Exception as e:
         bot.send_message(admin_chat_id, f"❌ সিঙ্ক ত্রুটি: {str(e)}", reply_markup=get_admin_keyboard())
 
+# 🔥 কঠোর সিকিউরিটি গেট: কেবল আপনি ছাড়া আর কেউ ঢুকতে পারবে না 🔥
 @bot.message_handler(commands=['admin'])
 def open_admin_panel(message):
-    if str(message.chat.id) != str(ADMIN_ID): return
+    if str(message.chat.id) != str(ADMIN_ID):
+        bot.reply_to(message, "❌ **আপনি এই বটের মালিক নন!**")
+        return
     bot.send_message(message.chat.id, "🛠 **এডমিন প্যানেল সচল করা হয়েছে:**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
 
 @bot.message_handler(commands=['cancel'])
 def cancel_process(message):
     chat_id = message.chat.id
+    if str(chat_id) != str(ADMIN_ID):
+        bot.reply_to(message, "❌ **আপনি এই বটের মালিক নন!**")
+        return
     if chat_id in admin_state: del admin_state[chat_id]
-    bot.send_message(chat_id, "🔄 আগের অসমাপ্ত কাজ বাতিল করা হয়েছে।", reply_markup=get_admin_keyboard() if str(chat_id) == str(ADMIN_ID) else types.ReplyKeyboardRemove())
+    bot.send_message(chat_id, "🔄 আগের অসমাপ্ত কাজ বাতিল করা হয়েছে।", reply_markup=get_admin_keyboard())
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -366,7 +371,7 @@ def send_welcome(message):
         welcome_caption = f"**আসসালামুআলাইকুম {first_name} 🥰**\n\nআমাদের বট ২৪ ঘণ্টা সচল। নাটক দেখতে ও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন।"
 
         if data.get("welcome_video"):
-            try: bot.send_video(uid, data["welcome_video"], caption=welcome_caption, reply_markup=markup, parse_mode="Markdown")
+            try: bot.send_video(uid, data["welcome_video"], caption=welcome_caption, reply_markup=markup, parse_mode="Markdown", protect_content=True)
             except Exception: bot.send_message(uid, welcome_caption, reply_markup=markup, parse_mode="Markdown")
         else:
             bot.send_message(uid, welcome_caption, reply_markup=markup, parse_mode="Markdown")
@@ -387,9 +392,9 @@ def run_broadcast_worker(admin_chat_id, media_type, file_id, caption_text, with_
     for uid in user_list:
         try:
             if media_type == 'video':
-                bot.send_video(uid, file_id, caption=caption_text, reply_markup=notice_markup)
+                bot.send_video(uid, file_id, caption=caption_text, reply_markup=notice_markup, protect_content=True)
             elif media_type == 'photo':
-                bot.send_photo(uid, file_id, caption=caption_text, reply_markup=notice_markup)
+                bot.send_photo(uid, file_id, caption=caption_text, reply_markup=notice_markup, protect_content=True)
             else:
                 bot.send_message(uid, caption_text, reply_markup=notice_markup)
             sent += 1
@@ -411,7 +416,10 @@ def handle_callbacks(call):
         bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে চারটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
         return
 
-    if str(chat_id) != str(ADMIN_ID): return
+    # 🔥 কলব্যাক সিকিউরিটি চেক 🔥
+    if str(chat_id) != str(ADMIN_ID):
+        bot.answer_callback_query(call.id, "❌ আপনি এই বটের মালিক নন!", show_alert=True)
+        return
 
     if call.data in ["bc_with_btn", "bc_without_btn"]:
         if chat_id in admin_state and admin_state[chat_id].get('step') == 'confirm_broadcast':
@@ -542,9 +550,20 @@ def handle_callbacks(call):
         bot.send_message(chat_id, "📁 **যে নতুন ক্যাটাগরি যুক্ত করতে চান তার নাম লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         return
 
+# 🔥 টেক্সট ও মিডিয়া ইনপুটের কঠোর মালিকানা ভেরিফিকেশন 🔥
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id
+    
+    admin_buttons = [
+        "🔄 Auto Sync All Thumbs", "➕ Add Video", "🖼 Update Thumb", "🔕 Delete Video",
+        "📢 Add Coming Soon", "📊 Total Users", "📁 Set Category", "🎯 Set Ads Link",
+        "🎥 Set Welcome Video", "🔔 Set Video Update", "📢 BOT NOTICE"
+    ]
+    if message.text in admin_buttons and str(chat_id) != str(ADMIN_ID):
+        bot.reply_to(message, "❌ **আপনি এই বটের মালিক নন!**")
+        return
+
     if str(chat_id) != str(ADMIN_ID): return
 
     if message.text == "🔄 Auto Sync All Thumbs":
@@ -654,7 +673,6 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "🎯 **নোটিশটি কীভাবে পাঠাতে চান বেছে নিন:**", reply_markup=markup)
         return
 
-    # 🔥 ৪টি টাস্কের লিংক ইনপুট স্টেপস 🔥
     if step == 'ad_1' and message.text:
         admin_state[chat_id]['ad1'] = message.text.strip()
         admin_state[chat_id]['step'] = 'ad_2'
@@ -679,7 +697,7 @@ def handle_admin_inputs(message):
         ads_map["ad4"] = message.text.strip()
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **টাস্ক ১, ২, ৩ এবং ৪ এর অ্যাড লিংক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **টাস্ক ১, ২, ৩ এবং ৪ এর লিঙ্ক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_social_ad' and message.text:
         data = load_data(force_refresh=True)
