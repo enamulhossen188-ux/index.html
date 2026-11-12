@@ -795,10 +795,9 @@
 
         async function initData() {
             try {
-                const res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${Date.now()}`, {
-                    cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache' }
-                });
+                // ব্যান্ডউইথ বাঁচাতে ব্রাউজার ক্যাশ ব্যবহার করা হচ্ছে (প্রতি ২ মিনিট পরপর আপডেট হবে)
+                const cacheBucket = Math.floor(Date.now() / 120000);
+                const res = await fetch(`${CURRENT_RENDER_URL}/api/data?v=${cacheBucket}`);
                 appData = await res.json();
                 
                 const cats = appData.categories || ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"];
