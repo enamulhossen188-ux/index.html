@@ -33,7 +33,7 @@ CORS(app)
 
 cached_data = None
 last_cache_time = 0
-CACHE_DURATION = 60
+CACHE_DURATION = 120
 thumb_memory_cache = {}
 admin_state = {}
 
@@ -120,7 +120,7 @@ def serve_thumbnail(file_id):
     if clean_id in thumb_memory_cache:
         resp = Response(thumb_memory_cache[clean_id], mimetype='image/jpeg')
         resp.headers['Access-Control-Allow-Origin'] = '*'
-        resp.headers['Cache-Control'] = 'public, max-age=604800'
+        resp.headers['Cache-Control'] = 'public, max-age=2592000'
         return resp
 
     try:
@@ -131,7 +131,7 @@ def serve_thumbnail(file_id):
             thumb_memory_cache[clean_id] = r.content
             resp = Response(r.content, mimetype='image/jpeg')
             resp.headers['Access-Control-Allow-Origin'] = '*'
-            resp.headers['Cache-Control'] = 'public, max-age=604800'
+            resp.headers['Cache-Control'] = 'public, max-age=2592000'
             return resp
     except Exception as e:
         print("Thumb Error:", e)
@@ -141,9 +141,16 @@ def serve_thumbnail(file_id):
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
     data = load_data(force_refresh=False)
-    resp = make_response(jsonify(data))
+    # ব্যান্ডউইথ বাঁচাতে বিশাল ইউজার লিস্ট বাদ দিয়ে শুধু দরকারি ডাটা পাঠানো হচ্ছে
+    light_data = {
+        "categories": data.get("categories", []),
+        "ads": data.get("ads", {}),
+        "update_notice": data.get("update_notice", ""),
+        "videos": data.get("videos", [])
+    }
+    resp = make_response(jsonify(light_data))
     resp.headers['Access-Control-Allow-Origin'] = '*'
-    resp.headers['Cache-Control'] = 'no-cache'
+    resp.headers['Cache-Control'] = 'public, max-age=120'
     return resp
 
 def deliver_single_video(chat_id, target_video):
@@ -814,7 +821,7 @@ def internal_self_pinger():
         try:
             requests.get(f"{RENDER_SERVER_URL}/", timeout=10)
         except Exception: pass
-        time.sleep(240)
+        time.sleep(600)
 
 def run_polling_loop():
     while True:
