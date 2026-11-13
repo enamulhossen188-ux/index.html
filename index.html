@@ -541,7 +541,7 @@
 
             <div class="unlock-info-box">
                 <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের ৪টি অ্যাড দেখে নিন ১০ সেকেন্ড করে।</span>
+                <span>ভিডিওটি আনলক করার জন্য নিচের ২টি অ্যাড দেখে নিন ১০ সেকেন্ড করে।</span>
             </div>
 
             <div class="task-list">
@@ -566,28 +566,6 @@
                     </div>
                     <button id="task2Btn" class="visit-action-btn" onclick="runTaskDirect(2, event)">VISIT</button>
                 </div>
-
-                <div class="task-card-row">
-                    <div class="task-info-left">
-                        <i id="task3Icon" class="fa-solid fa-circle-check task-icon"></i>
-                        <div class="task-text">
-                            <h4>Task 3</h4>
-                            <p id="task3Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
-                        </div>
-                    </div>
-                    <button id="task3Btn" class="visit-action-btn" onclick="runTaskDirect(3, event)">VISIT</button>
-                </div>
-
-                <div class="task-card-row">
-                    <div class="task-info-left">
-                        <i id="task4Icon" class="fa-solid fa-circle-check task-icon"></i>
-                        <div class="task-text">
-                            <h4>Task 4</h4>
-                            <p id="task4Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
-                        </div>
-                    </div>
-                    <button id="task4Btn" class="visit-action-btn" onclick="runTaskDirect(4, event)">VISIT</button>
-                </div>
             </div>
 
             <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
@@ -611,19 +589,32 @@
     </div>
 
     <script>
-        const CURRENT_RENDER_URL = "https://index-html-1j91.onrender.com";
+        const CURRENT_RENDER_URL = "https://my-bot-server-yeui.onrender.com";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
+
+        // টেলিগ্রাম WebView-এর ভেতরে Adsterra পপআন্ডার স্ক্রিপ্টের window.open() রিকোয়েস্ট সচল করার ব্রিজ
+        const nativeWindowOpen = window.open;
+        window.open = function(url, target, features) {
+            if (url && typeof url === 'string' && url.startsWith('http')) {
+                if (!url.includes('afders.org/1/') && !url.endsWith('.js')) {
+                    if (tg && tg.openLink) {
+                        tg.openLink(url);
+                        return { closed: false, focus: function() {} };
+                    }
+                }
+            }
+            return nativeWindowOpen ? nativeWindowOpen.apply(window, arguments) : null;
+        };
 
         let appData = { videos: [], ads: {}, categories: [] };
         let activeCategory = '';
         let currentSelectedVideo = null;
 
-        let taskCompleted = { 1: false, 2: false, 3: false, 4: false };
+        let taskCompleted = { 1: false, 2: false };
         let activeTask = null;
         let taskStartTime = 0;
         let countdownTimer = null;
-        let popunderTriggered = false;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -679,8 +670,14 @@
             let u = url.trim();
             if (u.startsWith("data:image")) return u;
 
+            // পুরোনো সার্ভারের থাম্বনেইল লিংক থাকলে স্বয়ংক্রিয়ভাবে নতুন সার্ভারের সাথে যুক্ত হবে
+            if (u.includes("/thumb/")) {
+                const cleanFileId = u.split("/").pop().replace(/^\/+/, '');
+                return `${CURRENT_RENDER_URL}/thumb/${cleanFileId}`;
+            }
+
             if (u.startsWith("http://") || u.startsWith("https://")) {
-                if (u.includes("index-html-6f0e.onrender.com") || (!u.includes("api.telegram.org") && !u.includes("/thumb/"))) {
+                if (!u.includes("api.telegram.org")) {
                     return u;
                 }
             }
@@ -706,7 +703,7 @@
             document.head.appendChild(sc);
         }
 
-        // 🔥 নিশ্চিত কার্যকর পপআন্ডার সিস্টেম (স্ক্রিপ্ট ইনজেক্ট + ওয়ান-টাইম ক্লিক লিসেনার) 🔥
+        // শুধুমাত্র বট থেকে দেওয়া পপআন্ডার স্ক্রিপ্ট ইনজেক্ট করা (কোনো ডাইরেক্ট লিংক বা গুগল ফলব্যাক নেই)
         function initPopunderFromBot(popCode) {
             if (!popCode || !popCode.trim()) return;
             const raw = popCode.trim();
@@ -719,42 +716,16 @@
                 scriptSrc = raw;
             }
 
-            // ১. ব্যাকগ্রাউন্ডে Adsterra ইঞ্জিন ইনজেক্ট করা
             if (scriptSrc) {
                 const s = document.createElement("script");
                 s.type = "text/javascript";
                 s.src = scriptSrc;
                 s.async = true;
                 s.setAttribute("data-cfasync", "false");
-                document.head.appendChild(s);
+                document.body.appendChild(s);
             } else {
                 injectScriptCode(raw);
             }
-
-            // ২. টেলিগ্রাম ওয়েবভিউতে নির্ভরযোগ্য ফার্স্ট-ক্লিক পপআন্ডার লিসেনার
-            document.addEventListener('click', function onGlobalFirstClick(e) {
-                if (popunderTriggered) return;
-
-                // টাস্ক ভিজিট বাটনে ক্লিক করলে পপআন্ডার বিঘ্ন ঘটাবে না
-                if (e.target && e.target.classList.contains('visit-action-btn')) return;
-
-                popunderTriggered = true;
-                document.removeEventListener('click', onGlobalFirstClick, true);
-
-                // বিজ্ঞাপনের আসল ল্যান্ডিং পেজে যাওয়ার জন্য Adsterra ইঞ্জিন সক্রিয় রাখা
-                let directPopUrl = (appData.ads?.ad1 || "").trim();
-                if (!directPopUrl || directPopUrl.includes("afders.org") || !directPopUrl.startsWith("http")) {
-                    directPopUrl = "https://vww1.com";
-                }
-
-                try {
-                    if (tg && tg.openLink) {
-                        tg.openLink(directPopUrl);
-                    } else {
-                        window.open(directPopUrl, "_blank");
-                    }
-                } catch (err) {}
-            }, true);
         }
 
         function injectNativeBanner(container, codeStr) {
@@ -795,7 +766,6 @@
 
         async function initData() {
             try {
-                // ব্যান্ডউইথ বাঁচাতে ব্রাউজার ক্যাশ ব্যবহার করা হচ্ছে (প্রতি ২ মিনিট পরপর আপডেট হবে)
                 const cacheBucket = Math.floor(Date.now() / 120000);
                 const res = await fetch(`${CURRENT_RENDER_URL}/api/data?v=${cacheBucket}`);
                 appData = await res.json();
@@ -918,11 +888,11 @@
         }
 
         function resetTasks() {
-            taskCompleted = { 1: false, 2: false, 3: false, 4: false };
+            taskCompleted = { 1: false, 2: false };
             activeTask = null;
             if (countdownTimer) clearInterval(countdownTimer);
 
-            for (let i = 1; i <= 4; i++) {
+            for (let i = 1; i <= 2; i++) {
                 const btn = document.getElementById(`task${i}Btn`);
                 const icon = document.getElementById(`task${i}Icon`);
                 const desc = document.getElementById(`task${i}Desc`);
@@ -951,6 +921,7 @@
             document.getElementById("mainView").style.display = "block";
         }
 
+        // ডাইরেক্ট লিংকগুলো শুধুমাত্র এই ২টি টাস্ক বাটনেই কাজ করবে
         function runTaskDirect(taskNum, event) {
             if (event) event.stopPropagation();
 
@@ -963,8 +934,6 @@
             let taskUrl = "";
             if (taskNum === 1) taskUrl = ads.ad1 || "";
             else if (taskNum === 2) taskUrl = ads.ad2 || "";
-            else if (taskNum === 3) taskUrl = ads.ad3 || "";
-            else if (taskNum === 4) taskUrl = ads.ad4 || "";
 
             taskUrl = (taskUrl || "").trim();
 
@@ -976,10 +945,10 @@
                 if (tg && tg.openLink) {
                     tg.openLink(taskUrl);
                 } else {
-                    window.open(taskUrl, "_blank");
+                    nativeWindowOpen(taskUrl, "_blank");
                 }
             } catch (e) {
-                window.open(taskUrl, "_blank");
+                nativeWindowOpen(taskUrl, "_blank");
             }
 
             const btn = document.getElementById(`task${taskNum}Btn`);
@@ -1027,7 +996,7 @@
             taskCompleted[taskNum] = true;
             activeTask = null;
 
-            if (taskCompleted[1] && taskCompleted[2] && taskCompleted[3] && taskCompleted[4]) {
+            if (taskCompleted[1] && taskCompleted[2]) {
                 const dlBtn = document.getElementById("downloadBtn");
                 dlBtn.className = "download-btn";
             }
@@ -1076,7 +1045,7 @@
         window.addEventListener("focus", handleVisibilityOrFocus);
 
         async function sendToInbox() {
-            if (!taskCompleted[1] || !taskCompleted[2] || !taskCompleted[3] || !taskCompleted[4]) return;
+            if (!taskCompleted[1] || !taskCompleted[2]) return;
 
             const dlBtn = document.getElementById("downloadBtn");
             dlBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ইনবক্সে পাঠানো হচ্ছে...`;
