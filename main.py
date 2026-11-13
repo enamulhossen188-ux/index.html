@@ -20,7 +20,7 @@ import re
 from datetime import datetime
 
 # ==================== কনফিগারেশন ====================
-BOT_TOKEN = "8995171178:AAG8OneJ4EUn5EraQ8cnx1taNBE6Z9wI4Nk"
+BOT_TOKEN = "8995171178:AAFxdUeC4bR7L7AZn4_tLqU38t4burawv8c"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
