@@ -24,7 +24,7 @@ BOT_TOKEN = "8995171178:AAFxdUeC4bR7L7AZn4_tLqU38t4burawv8c"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
-RENDER_SERVER_URL = "https://index-html-1j91.onrender.com"
+RENDER_SERVER_URL = "https://my-bot-server-yeui.onrender.com"
 # ====================================================
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
@@ -45,8 +45,6 @@ def get_default_data():
         "ads": {
             "ad1": "https://www.google.com",
             "ad2": "https://www.google.com",
-            "ad3": "https://www.google.com",
-            "ad4": "https://www.google.com",
             "social_ad": "",
             "native_ad": "",
             "popunder_ad": ""
@@ -77,7 +75,7 @@ def load_data(force_refresh=False):
     if data and "videos" in data:
         data.setdefault("ads", {})
         data.setdefault("sub_categories", {})
-        for k in ["ad1", "ad2", "ad3", "ad4"]:
+        for k in ["ad1", "ad2"]:
             if not data["ads"].get(k):
                 data["ads"][k] = "https://www.google.com"
         cached_data = data
@@ -141,7 +139,6 @@ def serve_thumbnail(file_id):
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
     data = load_data(force_refresh=False)
-    # ব্যান্ডউইথ বাঁচাতে বিশাল ইউজার লিস্ট বাদ দিয়ে শুধু দরকারি ডাটা পাঠানো হচ্ছে
     light_data = {
         "categories": data.get("categories", []),
         "ads": data.get("ads", {}),
@@ -209,7 +206,7 @@ def get_admin_keyboard():
 def get_ads_keyboard():
     data = load_data()
     ads = data.get("ads", {})
-    has_custom_task = any("google.com" not in str(ads.get(k, "")) for k in ["ad1", "ad2", "ad3", "ad4"])
+    has_custom_task = any("google.com" not in str(ads.get(k, "")) for k in ["ad1", "ad2"])
     t_status = "🔗 সেট করা আছে" if has_custom_task else "🌐 গুগল (ডিফল্ট)"
     
     s_status = "✅ আছে" if ads.get("social_ad") else "❌ নেই"
@@ -218,7 +215,7 @@ def get_ads_keyboard():
 
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton(f"🔗 ১. Task 1, 2, 3, 4 Link ({t_status})", callback_data="set_ad_tasks"),
+        types.InlineKeyboardButton(f"🔗 ১. Task 1 & 2 Link ({t_status})", callback_data="set_ad_tasks"),
         types.InlineKeyboardButton("🗑️ ১. Task Link রিসেট (গুগল করুন)", callback_data="reset_ad_tasks"),
         types.InlineKeyboardButton(f"🚀 ২. সোশ্যাল বার সেট করুন ({s_status})", callback_data="set_ad_social"),
         types.InlineKeyboardButton("🗑️ ২. সোশ্যাল বার বন্ধ করুন", callback_data="del_ad_social"),
@@ -338,7 +335,6 @@ def run_auto_sync_channel(admin_chat_id):
     except Exception as e:
         bot.send_message(admin_chat_id, f"❌ সিঙ্ক ত্রুটি: {str(e)}", reply_markup=get_admin_keyboard())
 
-# 🔥 কঠোর সিকিউরিটি গেট: কেবল আপনি ছাড়া আর কেউ ঢুকতে পারবে না 🔥
 @bot.message_handler(commands=['admin'])
 def open_admin_panel(message):
     if str(message.chat.id) != str(ADMIN_ID):
@@ -420,10 +416,9 @@ def handle_callbacks(call):
         return
     elif call.data == "btn_help":
         bot.answer_callback_query(call.id)
-        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে চারটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
+        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
         return
 
-    # 🔥 কলব্যাক সিকিউরিটি চেক 🔥
     if str(chat_id) != str(ADMIN_ID):
         bot.answer_callback_query(call.id, "❌ আপনি এই বটের মালিক নন!", show_alert=True)
         return
@@ -464,10 +459,8 @@ def handle_callbacks(call):
         ads = data.setdefault("ads", {})
         ads["ad1"] = "https://www.google.com"
         ads["ad2"] = "https://www.google.com"
-        ads["ad3"] = "https://www.google.com"
-        ads["ad4"] = "https://www.google.com"
         save_data(data)
-        bot.answer_callback_query(call.id, "🌐 চারটি টাস্কই গুগলে রিসেট করা হয়েছে!", show_alert=True)
+        bot.answer_callback_query(call.id, "🌐 দুটি টাস্কই গুগলে রিসেট করা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
     elif call.data == "set_ad_social":
@@ -557,7 +550,6 @@ def handle_callbacks(call):
         bot.send_message(chat_id, "📁 **যে নতুন ক্যাটাগরি যুক্ত করতে চান তার নাম লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         return
 
-# 🔥 টেক্সট ও মিডিয়া ইনপুটের কঠোর মালিকানা ভেরিফিকেশন 🔥
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id
@@ -686,25 +678,13 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "🎯 **এবার Task 2 এর লিংক পাঠান:**")
         return
     elif step == 'ad_2' and message.text:
-        admin_state[chat_id]['ad2'] = message.text.strip()
-        admin_state[chat_id]['step'] = 'ad_3'
-        bot.send_message(chat_id, "🎯 **এবার Task 3 এর লিংক পাঠান:**")
-        return
-    elif step == 'ad_3' and message.text:
-        admin_state[chat_id]['ad3'] = message.text.strip()
-        admin_state[chat_id]['step'] = 'ad_4'
-        bot.send_message(chat_id, "🎯 **এবার Task 4 এর লিংক পাঠান:**")
-        return
-    elif step == 'ad_4' and message.text:
         data = load_data(force_refresh=True)
         ads_map = data.setdefault("ads", {})
         ads_map["ad1"] = admin_state[chat_id]['ad1']
-        ads_map["ad2"] = admin_state[chat_id]['ad2']
-        ads_map["ad3"] = admin_state[chat_id]['ad3']
-        ads_map["ad4"] = message.text.strip()
+        ads_map["ad2"] = message.text.strip()
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **টাস্ক ১, ২, ৩ এবং ৪ এর লিঙ্ক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **টাস্ক ১ এবং ২ এর লিঙ্ক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_social_ad' and message.text:
         data = load_data(force_refresh=True)
