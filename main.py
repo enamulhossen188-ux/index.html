@@ -15,6 +15,7 @@ import threading
 import json
 import os
 import time
+import base64
 import requests
 import re
 from datetime import datetime
@@ -25,6 +26,12 @@ ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
 RENDER_SERVER_URL = "https://my-bot-server-yeui.onrender.com"
+
+# GitHub Unlimited CDN কনফিগারেশন
+GITHUB_TOKEN = "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"
+GITHUB_USER = "enamulhossen188-ux"
+GITHUB_REPO = "index.html"
+GITHUB_BRANCH = "main"
 # ====================================================
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
@@ -36,6 +43,53 @@ last_cache_time = 0
 CACHE_DURATION = 120
 thumb_memory_cache = {}
 admin_state = {}
+github_lock = threading.Lock()
+
+def push_file_to_github(file_path, content_bytes, commit_msg):
+    """GitHub রিপোজিটরিতে সরাসরি ফাইল (data.json বা ছবি) আপলোড/আপডেট করে"""
+    if not GITHUB_TOKEN:
+        return None
+    with github_lock:
+        url = f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{file_path}"
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        sha = None
+        try:
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code == 200:
+                sha = r.json().get("sha")
+        except Exception:
+            pass
+
+        payload = {
+            "message": commit_msg,
+            "content": base64.b64encode(content_bytes).decode("utf-8"),
+            "branch": GITHUB_BRANCH
+        }
+        if sha:
+            payload["sha"] = sha
+
+        try:
+            res = requests.put(url, headers=headers, json=payload, timeout=15)
+            if res.status_code in [200, 201]:
+                return f"https://{GITHUB_USER}.github.io/{file_path}"
+        except Exception as e:
+            print("GitHub Push Error:", e)
+    return None
+
+def sync_public_data_to_github(data):
+    """মিনি অ্যাপের জন্য দরকারি ভিডিও লিস্ট ও অ্যাড লিংক GitHub data.json-এ সেভ করে"""
+    light_data = {
+        "categories": data.get("categories", []),
+        "sub_categories": data.get("sub_categories", {}),
+        "ads": data.get("ads", {}),
+        "update_notice": data.get("update_notice", ""),
+        "videos": data.get("videos", [])
+    }
+    json_bytes = json.dumps(light_data, ensure_ascii=False, indent=2).encode("utf-8")
+    push_file_to_github("data.json", json_bytes, f"Sync app data {datetime.now().strftime('%H:%M:%S')}")
 
 def get_default_data():
     return {
@@ -85,7 +139,7 @@ def load_data(force_refresh=False):
     cached_data = get_default_data()
     return cached_data
 
-def save_data(data):
+def save_data(data, sync_github=True):
     global cached_data, last_cache_time
     cached_data = data
     last_cache_time = time.time()
@@ -102,15 +156,31 @@ def save_data(data):
             except Exception: pass
         except Exception as e:
             print("Save Error:", e)
+
+        if sync_github:
+            sync_public_data_to_github(data)
+
     threading.Thread(target=_async_save, daemon=True).start()
 
 def upload_thumb_securely(photo_id):
+    """ছবিটি প্রাইভেট চ্যানেলে ব্যাকআপ রেখে সরাসরি GitHub CDN-এ আপলোড করে আনলিমিটেড লিংক দেয়"""
     try:
         msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumb", protect_content=True)
         perm_file_id = msg.photo[-1].file_id
-        return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
     except Exception:
-        return f"{RENDER_SERVER_URL}/thumb/{photo_id}"
+        perm_file_id = photo_id
+
+    try:
+        file_info = bot.get_file(perm_file_id)
+        img_bytes = bot.download_file(file_info.file_path)
+        file_name = f"thumbs/img_{int(time.time() * 1000)}.jpg"
+        gh_url = push_file_to_github(file_name, img_bytes, f"Upload {file_name}")
+        if gh_url:
+            return gh_url
+    except Exception as e:
+        print("GitHub Thumb Upload Error:", e)
+
+    return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
 
 @app.route('/thumb/<path:file_id>')
 def serve_thumbnail(file_id):
@@ -141,6 +211,7 @@ def get_app_data():
     data = load_data(force_refresh=False)
     light_data = {
         "categories": data.get("categories", []),
+        "sub_categories": data.get("sub_categories", {}),
         "ads": data.get("ads", {}),
         "update_notice": data.get("update_notice", ""),
         "videos": data.get("videos", [])
@@ -179,7 +250,7 @@ def api_send_video():
 
 @app.route('/')
 def home():
-    return "Bot Server Active 24/7 (Security Locked)!"
+    return "Bot Server Active 24/7 (GitHub Unlimited CDN Enabled)!"
 
 def get_action_buttons():
     fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
@@ -287,49 +358,33 @@ def get_delete_view_data(page=0):
     return text_msg, markup
 
 def run_auto_sync_channel(admin_chat_id):
+    """পুরোনো সব Render থাম্বনেইল এবং ডাটা এক ক্লিকে GitHub Unlimited CDN-এ স্থানান্তর করে"""
     try:
-        status_msg = bot.send_message(admin_chat_id, "⏳ **প্রাইভেট চ্যানেল থেকে ছবিগুলো স্বয়ংক্রিয়ভাবে সিঙ্ক করা হচ্ছে... অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন।**")
+        status_msg = bot.send_message(admin_chat_id, "⏳ **সব থাম্বনেইল ও ভিডিও ডাটা GitHub Unlimited CDN-এ সিঙ্ক করা হচ্ছে... অনুগ্রহ করে ১-২ মিনিট অপেক্ষা করুন।**")
         data = load_data(force_refresh=True)
         videos = data.get("videos", [])
+        migrated_count = 0
 
-        chat = bot.get_chat(DB_CHANNEL_ID)
-        latest_msg_id = chat.pinned_message.message_id if chat.pinned_message else 15000
+        for v in videos:
+            thumb_val = str(v.get("thumb", "")).strip()
+            if thumb_val and "github.io" not in thumb_val and not thumb_val.startswith("data:image"):
+                clean_id = thumb_val.split("/")[-1]
+                try:
+                    file_info = bot.get_file(clean_id)
+                    img_bytes = bot.download_file(file_info.file_path)
+                    file_name = f"thumbs/vid_{v.get('id')}.jpg"
+                    gh_url = push_file_to_github(file_name, img_bytes, f"Migrate {file_name}")
+                    if gh_url:
+                        v["thumb"] = gh_url
+                        migrated_count += 1
+                except Exception:
+                    pass
 
-        recovered_count = 0
-        scan_range = range(latest_msg_id, max(1, latest_msg_id - 450), -1)
-
-        for m_id in scan_range:
-            try:
-                f_msg = bot.forward_message(admin_chat_id, DB_CHANNEL_ID, m_id)
-                cap = (f_msg.caption or "").strip().lower()
-                photo = f_msg.photo[-1] if f_msg.photo else None
-                bot.delete_message(admin_chat_id, f_msg.message_id)
-
-                if photo and cap:
-                    for v in videos:
-                        v_title = v.get("title", "").lower()
-                        ep_match_v = re.findall(r'\d+', v_title)
-                        ep_match_c = re.findall(r'\d+', cap)
-
-                        matched = False
-                        if ep_match_v and ep_match_c and ep_match_v[-1] == ep_match_c[-1]:
-                            matched = True
-                        elif cap in v_title or v_title in cap:
-                            matched = True
-
-                        if matched:
-                            new_thumb_url = upload_thumb_securely(photo.file_id)
-                            v["thumb"] = new_thumb_url
-                            recovered_count += 1
-                            break
-            except Exception:
-                continue
-
-        save_data(data)
+        save_data(data, sync_github=True)
         bot.delete_message(admin_chat_id, status_msg.message_id)
         bot.send_message(
             admin_chat_id,
-            f"🎉 **সফল হয়েছে!**\n\nমোট **{recovered_count}** টি ভিডিওর থাম্বনেইল চ্যানেল থেকে সরাসরি পার্মানেন্টলি সিঙ্ক করে নেওয়া হয়েছে।",
+            f"🎉 **সফল হয়েছে!**\n\nমোট **{migrated_count}** টি থাম্বনেইল এবং সম্পূর্ণ ভিডিও ডাটাবেস GitHub Unlimited CDN-এ সেভ হয়েছে। এখন আর Render-এর ব্যান্ডউইথ শেষ হবে না!",
             reply_markup=get_admin_keyboard()
         )
     except Exception as e:
@@ -359,7 +414,7 @@ def send_welcome(message):
         if "users" not in data: data["users"] = []
         if uid not in data["users"]:
             data["users"].append(uid)
-            save_data(data)
+            save_data(data, sync_github=False)
 
         text_parts = message.text.split()
         if len(text_parts) > 1 and text_parts[1].startswith("vid_"):
@@ -459,7 +514,7 @@ def handle_callbacks(call):
         ads = data.setdefault("ads", {})
         ads["ad1"] = "https://www.google.com"
         ads["ad2"] = "https://www.google.com"
-        save_data(data)
+        save_data(data, sync_github=True)
         bot.answer_callback_query(call.id, "🌐 দুটি টাস্কই গুগলে রিসেট করা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
@@ -471,7 +526,7 @@ def handle_callbacks(call):
     elif call.data == "del_ad_social":
         data = load_data(force_refresh=True)
         data.setdefault("ads", {})["social_ad"] = ""
-        save_data(data)
+        save_data(data, sync_github=True)
         bot.answer_callback_query(call.id, "🗑️ সোশ্যাল বার বন্ধ করা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
@@ -483,7 +538,7 @@ def handle_callbacks(call):
     elif call.data == "del_ad_native":
         data = load_data(force_refresh=True)
         data.setdefault("ads", {})["native_ad"] = ""
-        save_data(data)
+        save_data(data, sync_github=True)
         bot.answer_callback_query(call.id, "🗑️ নেটিভ ব্যানার বন্ধ করা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
@@ -495,7 +550,7 @@ def handle_callbacks(call):
     elif call.data in ["del_ad_popunder", "del_popunder_ad"]:
         data = load_data(force_refresh=True)
         data.setdefault("ads", {})["popunder_ad"] = ""
-        save_data(data)
+        save_data(data, sync_github=True)
         bot.answer_callback_query(call.id, "🗑️ পপআন্ডার বন্ধ করা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
@@ -527,7 +582,7 @@ def handle_callbacks(call):
         page = int(parts[2]) if len(parts) > 2 else 0
         data = load_data(force_refresh=True)
         data["videos"] = [v for v in data.get("videos", []) if str(v.get('id')) != str(del_id)]
-        save_data(data)
+        save_data(data, sync_github=True)
         bot.answer_callback_query(call.id, "✅ সফলভাবে ডিলিট করা হয়েছে!", show_alert=True)
         txt, kb = get_delete_view_data(page)
         if kb: bot.edit_message_text(txt, chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
@@ -540,7 +595,7 @@ def handle_callbacks(call):
         if cat_to_del in cats:
             cats.remove(cat_to_del)
             data["categories"] = cats
-            save_data(data)
+            save_data(data, sync_github=True)
             bot.answer_callback_query(call.id, f"✅ '{cat_to_del}' মুছে ফেলা হয়েছে!", show_alert=True)
             bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_category_keyboard())
         return
@@ -633,9 +688,9 @@ def handle_admin_inputs(message):
                 updated = True
                 break
         if updated:
-            save_data(data)
+            save_data(data, sync_github=True)
             del admin_state[chat_id]
-            bot.reply_to(message, "🎉 **থাম্বনেইল সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
+            bot.reply_to(message, "🎉 **থাম্বনেইল সফলভাবে আপডেট ও GitHub-এ সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         else:
             bot.reply_to(message, "❌ ভিডিওটি পাওয়া যায়নি!", reply_markup=get_admin_keyboard())
         return
@@ -682,28 +737,28 @@ def handle_admin_inputs(message):
         ads_map = data.setdefault("ads", {})
         ads_map["ad1"] = admin_state[chat_id]['ad1']
         ads_map["ad2"] = message.text.strip()
-        save_data(data)
+        save_data(data, sync_github=True)
         del admin_state[chat_id]
         bot.send_message(chat_id, "✅ **টাস্ক ১ এবং ২ এর লিঙ্ক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_social_ad' and message.text:
         data = load_data(force_refresh=True)
         data.setdefault("ads", {})["social_ad"] = message.text.strip()
-        save_data(data)
+        save_data(data, sync_github=True)
         del admin_state[chat_id]
         bot.send_message(chat_id, "✅ **সোশ্যাল বার সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_native_ad' and message.text:
         data = load_data(force_refresh=True)
         data.setdefault("ads", {})["native_ad"] = message.text.strip()
-        save_data(data)
+        save_data(data, sync_github=True)
         del admin_state[chat_id]
         bot.send_message(chat_id, "✅ **নেটিভ ব্যানার সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_popunder_ad' and message.text:
         data = load_data(force_refresh=True)
         data.setdefault("ads", {})["popunder_ad"] = message.text.strip()
-        save_data(data)
+        save_data(data, sync_github=True)
         del admin_state[chat_id]
         bot.send_message(chat_id, "✅ **পপআন্ডার সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
@@ -711,7 +766,7 @@ def handle_admin_inputs(message):
         new_notice = message.text.strip()
         data = load_data(force_refresh=True)
         data["update_notice"] = new_notice
-        save_data(data)
+        save_data(data, sync_github=True)
         del admin_state[chat_id]
         bot.send_message(chat_id, "✅ **ভিডিও আপডেট নোটিশ সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
@@ -722,7 +777,7 @@ def handle_admin_inputs(message):
         if new_c and new_c not in cats:
             cats.append(new_c)
             data["categories"] = cats
-            save_data(data)
+            save_data(data, sync_github=True)
             del admin_state[chat_id]
             bot.send_message(chat_id, f"✅ **'{new_c}' ক্যাটাগরি যুক্ত হয়েছে!**", reply_markup=get_admin_keyboard())
         return
@@ -750,7 +805,7 @@ def handle_admin_inputs(message):
             "time": datetime.now().strftime("%I:%M %p")
         }
         data.setdefault("videos", []).insert(0, new_item)
-        save_data(data)
+        save_data(data, sync_github=True)
         del admin_state[chat_id]
         bot.send_message(chat_id, "✅ **কামিং সুন পোস্ট যুক্ত হয়েছে!**", reply_markup=get_admin_keyboard())
         return
@@ -783,14 +838,14 @@ def handle_admin_inputs(message):
             "time": datetime.now().strftime("%I:%M %p")
         }
         data.setdefault("videos", []).insert(0, new_video)
-        save_data(data)
+        save_data(data, sync_github=True)
         del admin_state[chat_id]
-        bot.reply_to(message, "🎉 **ভিডিও আপলোড সম্পন্ন!**", reply_markup=get_admin_keyboard())
+        bot.reply_to(message, "🎉 **ভিডিও আপলোড সম্পন্ন ও GitHub CDN-এ সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'welcome_video' and message.video:
         data = load_data(force_refresh=True)
         data['welcome_video'] = message.video.file_id
-        save_data(data)
+        save_data(data, sync_github=False)
         del admin_state[chat_id]
         bot.send_message(chat_id, "✅ **ওয়েলকাম ভিডিও সেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
