@@ -19,6 +19,8 @@
             --input-bg: #1c1e24;
             --chip-bg: #1c1e24;
             --chip-color: #cbd5e1;
+            --badge-bg: rgba(229, 9, 20, 0.15);
+            --badge-text: #ef4444;
         }
 
         body.light-mode {
@@ -32,6 +34,8 @@
             --input-bg: #e2e8f0;
             --chip-bg: #e2e8f0;
             --chip-color: #334155;
+            --badge-bg: #ffe4e6;
+            --badge-text: #e11d48;
         }
 
         * {
@@ -150,9 +154,9 @@
             display: flex;
             gap: 8px;
             overflow-x: auto;
-            padding-bottom: 12px;
+            padding-bottom: 10px;
             scrollbar-width: none;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         .category-scroll::-webkit-scrollbar { display: none; }
 
@@ -174,6 +178,46 @@
             color: #ffffff !important;
             border-color: #e50914 !important;
             box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
+        }
+
+        .category-glow-divider {
+            display: none;
+            width: 100%;
+            height: 2px;
+            background: radial-gradient(circle, #e50914 0%, rgba(229, 9, 20, 0.4) 60%, transparent 100%);
+            box-shadow: 0 0 10px #e50914;
+            margin: 6px 0 12px 0;
+            border-radius: 2px;
+        }
+
+        .sub-category-scroll {
+            display: none;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            scrollbar-width: none;
+            margin-bottom: 8px;
+        }
+        .sub-category-scroll::-webkit-scrollbar { display: none; }
+
+        .sub-category-chip {
+            padding: 6px 14px;
+            background: var(--chip-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            color: var(--chip-color);
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .sub-category-chip.active {
+            background: #e50914 !important;
+            color: #ffffff !important;
+            border-color: #e50914 !important;
+            box-shadow: 0 3px 10px rgba(229, 9, 20, 0.35);
         }
 
         .search-box {
@@ -218,6 +262,11 @@
             flex-direction: column;
             cursor: pointer;
             box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
+            transition: transform 0.2s;
+        }
+
+        .video-card:active {
+            transform: scale(0.98);
         }
 
         .thumb-wrapper {
@@ -247,12 +296,26 @@
             line-height: 1.4;
         }
 
+        .video-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .category-tag {
+            background: var(--badge-bg);
+            color: var(--badge-text);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+
         .video-date-row {
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 11px;
-            color: var(--text-muted);
         }
 
         .video-date-row i { color: #ef4444; }
@@ -419,6 +482,61 @@
             font-size: 13px;
         }
 
+        .coming-soon-popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(6px);
+            z-index: 100000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .coming-soon-card {
+            background: #181920;
+            width: 88%;
+            max-width: 330px;
+            border-radius: 24px;
+            padding: 28px 22px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+        }
+
+        .coming-soon-icon {
+            font-size: 44px;
+            color: #0099ff;
+            margin-bottom: 16px;
+        }
+
+        .coming-soon-title {
+            color: #ffffff;
+            font-size: 17px;
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 14px;
+        }
+
+        .coming-soon-desc {
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 22px;
+        }
+
+        .coming-soon-btn {
+            background: #0099ff;
+            color: #ffffff;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 25px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
         .custom-popup-overlay {
             display: none;
             position: fixed;
@@ -520,6 +638,8 @@
         </div>
 
         <div class="category-scroll" id="categoryTabs"></div>
+        <div class="category-glow-divider" id="categoryGlowDivider"></div>
+        <div class="sub-category-scroll" id="subCategoryTabs"></div>
 
         <div class="search-box">
             <i class="fa-solid fa-magnifying-glass search-icon"></i>
@@ -576,6 +696,17 @@
         </div>
     </div>
 
+    <!-- কামিং সুন পপ-আপ -->
+    <div id="comingSoonPopup" class="coming-soon-popup-overlay">
+        <div class="coming-soon-card">
+            <div class="coming-soon-icon"><i class="fa-solid fa-bullhorn"></i></div>
+            <div class="coming-soon-title" id="csPopupTitle"></div>
+            <div class="coming-soon-desc" id="csPopupNotice"></div>
+            <button class="coming-soon-btn" onclick="closeComingSoonPopup()">Close</button>
+        </div>
+    </div>
+
+    <!-- ভেরিফিকেশন ফেইল পপ-আপ -->
     <div id="verifyFailPopup" class="custom-popup-overlay">
         <div class="custom-popup-card">
             <div class="popup-close-circle"><i class="fa-solid fa-xmark"></i></div>
@@ -590,10 +721,10 @@
 
     <script>
         const CURRENT_RENDER_URL = "https://my-bot-server-yeui.onrender.com";
+        const GITHUB_CDN_DATA_URL = "https://enamulhossen188-ux.github.io/data.json";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
-        // টেলিগ্রাম WebView-এর ভেতরে Adsterra পপআন্ডার স্ক্রিপ্টের সব ওপেন কল সরাসরি সচল করার ব্রিজ
         const nativeWindowOpen = window.open;
         window.open = function(url, target, features) {
             if (url && typeof url === 'string' && url.startsWith('http') && !url.endsWith('.js')) {
@@ -605,8 +736,9 @@
             return nativeWindowOpen ? nativeWindowOpen.apply(window, arguments) : null;
         };
 
-        let appData = { videos: [], ads: {}, categories: [] };
+        let appData = { videos: [], ads: {}, categories: [], sub_categories: {} };
         let activeCategory = '';
+        let activeSubCategory = 'ALL';
         let currentSelectedVideo = null;
 
         let taskCompleted = { 1: false, 2: false };
@@ -668,15 +800,8 @@
             let u = url.trim();
             if (u.startsWith("data:image")) return u;
 
-            if (u.includes("/thumb/")) {
-                const cleanFileId = u.split("/").pop().replace(/^\/+/, '');
-                return `${CURRENT_RENDER_URL}/thumb/${cleanFileId}`;
-            }
-
-            if (u.startsWith("http://") || u.startsWith("https://")) {
-                if (!u.includes("api.telegram.org")) {
-                    return u;
-                }
+            if (u.includes("github.io") || (u.startsWith("http") && !u.includes("/thumb/") && !u.includes("api.telegram.org"))) {
+                return u;
             }
 
             const cleanFileId = u.split("/").pop().replace(/^\/+/, '');
@@ -700,7 +825,6 @@
             document.head.appendChild(sc);
         }
 
-        // বটে বসানো পপআন্ডার <script> কোডটি হুবহু লোড ও চালু করার ফাংশন
         function initPopunderFromBot(popCode) {
             if (!popCode || !popCode.trim()) return;
             const raw = popCode.trim();
@@ -779,24 +903,31 @@
             if (ads.popunder_ad) initPopunderFromBot(ads.popunder_ad);
         }
 
+        // প্রথমে আনলিমিটেড GitHub CDN থেকে ডাটা লোড করবে; যদি এখনো সিঙ্ক না হয়ে থাকে তবে Render থেকে ফলব্যাক নেবে
         async function initData() {
+            const cacheBucket = Math.floor(Date.now() / 60000);
             try {
-                const res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${Date.now()}`, {
-                    cache: 'no-store'
-                });
+                let res = await fetch(`${GITHUB_CDN_DATA_URL}?v=${cacheBucket}`);
+                if (!res.ok) throw new Error("GitHub data not ready yet");
                 appData = await res.json();
-                
-                const cats = appData.categories || ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"];
-                if (cats.length > 0 && !activeCategory) {
-                    activeCategory = cats[0];
+            } catch (e) {
+                try {
+                    const fallbackRes = await fetch(`${CURRENT_RENDER_URL}/api/data?v=${cacheBucket}`);
+                    appData = await fallbackRes.json();
+                } catch (err) {
+                    console.error("ডাটা লোড ত্রুটি:", err);
                 }
-                
-                renderCategoryTabs();
-                renderVideos();
-                renderAllAds();
-            } catch (err) {
-                console.error("ডাটা লোড ত্রুটি:", err);
             }
+
+            const cats = appData.categories || ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"];
+            if (cats.length > 0 && !activeCategory) {
+                activeCategory = cats[0];
+            }
+
+            renderCategoryTabs();
+            renderSubCategories();
+            renderVideos();
+            renderAllAds();
         }
 
         function renderCategoryTabs() {
@@ -810,9 +941,50 @@
             tabsContainer.innerHTML = html;
         }
 
+        function renderSubCategories() {
+            const subContainer = document.getElementById("subCategoryTabs");
+            const divider = document.getElementById("categoryGlowDivider");
+            const subMap = appData.sub_categories || {};
+
+            const activeKey = Object.keys(subMap).find(
+                k => k.trim().toUpperCase() === activeCategory.trim().toUpperCase()
+            );
+            const userSubList = activeKey ? subMap[activeKey] : [];
+
+            if (userSubList && userSubList.length > 0) {
+                divider.style.display = "block";
+                subContainer.style.display = "flex";
+
+                const uniqueSubs = [...new Set(userSubList.map(s => s.trim()))];
+
+                if (!uniqueSubs.some(s => s.toUpperCase() === activeSubCategory.toUpperCase())) {
+                    activeSubCategory = uniqueSubs[0];
+                }
+
+                let html = '';
+                uniqueSubs.forEach(sub => {
+                    const isActive = (activeSubCategory.trim().toUpperCase() === sub.trim().toUpperCase());
+                    html += `<div class="sub-category-chip ${isActive ? 'active' : ''}" onclick="filterSubCategory('${sub}')">${sub}</div>`;
+                });
+                subContainer.innerHTML = html;
+            } else {
+                divider.style.display = "none";
+                subContainer.style.display = "none";
+                activeSubCategory = 'ALL';
+            }
+        }
+
         function filterCategory(cat) {
             activeCategory = cat;
+            activeSubCategory = 'ALL';
             renderCategoryTabs();
+            renderSubCategories();
+            renderVideos();
+        }
+
+        function filterSubCategory(sub) {
+            activeSubCategory = sub;
+            renderSubCategories();
             renderVideos();
         }
 
@@ -849,6 +1021,14 @@
                 });
             }
 
+            if (activeSubCategory && activeSubCategory !== 'ALL') {
+                list = list.filter(v => {
+                    const subField = (v.sub_category || '').trim().toUpperCase();
+                    const titleText = (v.title || '').trim().toUpperCase();
+                    return !subField || subField === activeSubCategory.trim().toUpperCase() || titleText.includes(activeSubCategory.trim().toUpperCase());
+                });
+            }
+
             if (query) {
                 list = list.filter(v => (v.title || '').toLowerCase().includes(query));
             }
@@ -861,7 +1041,7 @@
                 list.forEach(item => {
                     const card = document.createElement("div");
                     card.className = "video-card";
-                    card.onclick = () => openDetail(item);
+                    card.onclick = () => handleItemClick(item);
                     
                     const thumbUrl = resolveThumb(item.thumb, item.title);
 
@@ -871,9 +1051,12 @@
                         </div>
                         <div class="card-details">
                             <div class="video-title">${item.title}</div>
-                            <div class="video-date-row">
-                                <i class="fa-regular fa-clock"></i>
-                                <span>${item.date || '13 October 2026'}</span>
+                            <div class="video-meta-row">
+                                <span class="category-tag">${item.sub_category || item.category || 'BPS5'}</span>
+                                <div class="video-date-row">
+                                    <i class="fa-regular fa-clock"></i>
+                                    <span>${item.date || ''}</span>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -884,6 +1067,21 @@
 
         function handleSearch() {
             renderVideos();
+        }
+
+        function handleItemClick(item) {
+            const isCS = item.is_coming_soon || (item.category && item.category.trim().toUpperCase() === "COMING SOON");
+            if (isCS) {
+                document.getElementById("csPopupTitle").innerText = item.title;
+                document.getElementById("csPopupNotice").innerText = item.notice || "এই পর্বটি খুব শীঘ্রই আসছে। আমাদের সাথেই থাকুন!";
+                document.getElementById("comingSoonPopup").style.display = "flex";
+            } else {
+                openDetail(item);
+            }
+        }
+
+        function closeComingSoonPopup() {
+            document.getElementById("comingSoonPopup").style.display = "none";
         }
 
         function openDetail(video) {
@@ -1106,4 +1304,4 @@
         initData();
     </script>
 </body>
-                </html>
+        </html>
