@@ -300,7 +300,7 @@
             gap: 6px;
         }
 
-        /* ==================== স্ক্রিনশটের হুবহু ডিটেইলস ও টাস্ক ডিজাইন ==================== */
+        /* ==================== ডিটেইলস ও টাস্ক স্ক্রিন ==================== */
         .detail-view {
             display: none;
             padding: 2px 0;
@@ -457,11 +457,6 @@
 
         .visit-action-btn:active {
             transform: scale(0.95);
-        }
-
-        .visit-action-btn.running {
-            background: #0284c7;
-            pointer-events: none;
         }
 
         .visit-action-btn.done {
@@ -625,7 +620,6 @@
         <div class="empty-msg" id="emptyMessage" style="display: none;">কোনো ভিডিও খুঁজে পাওয়া যায়নি!</div>
     </div>
 
-    <!-- ডিটেইলস ও টাস্ক স্ক্রিন (স্ক্রিনশটের হুবহু ডিজাইন) -->
     <div class="detail-view" id="detailView">
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         
@@ -705,6 +699,16 @@
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
+        // টাস্ক পেজে থাকলে পপআন্ডার অ্যাড ব্লক রাখার ফ্ল্যাগ
+        window.isTaskPageActive = false;
+        const nativeWindowOpen = window.open;
+        window.open = function(url, target, features) {
+            if (window.isTaskPageActive) {
+                return null;
+            }
+            return nativeWindowOpen ? nativeWindowOpen.apply(window, arguments) : null;
+        };
+
         let appData = { videos: [], ads: {}, categories: [], sub_categories: {} };
         let activeCategory = '';
         let activeSubCategory = 'ALL';
@@ -713,7 +717,7 @@
         let taskCompleted = { 1: false, 2: false };
         let activeTask = null;
         let taskStartTime = 0;
-        let countdownTimer = null;
+        let backgroundTimer = null;
 
         function toggleSidebar() {
             const sb = document.getElementById("sidebarMenu");
@@ -770,6 +774,78 @@
             return `${CURRENT_RENDER_URL}/thumb/${cleanFileId}`;
         }
 
+        function injectScriptCode(codeStr, isPopunder = false) {
+            if (!codeStr || !codeStr.trim()) return;
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.async = true;
+            if (isPopunder) sc.className = "popunder-dynamic-script";
+
+            let raw = codeStr.trim();
+            let srcMatch = raw.match(/src=["'](.*?)["']/);
+            if (srcMatch) {
+                sc.src = srcMatch[1];
+            } else if (raw.startsWith("http")) {
+                sc.src = raw;
+            } else {
+                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            }
+            document.head.appendChild(sc);
+        }
+
+        // পপআন্ডার অ্যাড কেবল হোম পেজে চলবে; টাস্ক পেজে ঢুকলেই স্বয়ংক্রিয়ভাবে বন্ধ হবে
+        function initPopunderFromBot(popCode) {
+            if (!popCode || !popCode.trim()) return;
+            const raw = popCode.trim();
+
+            if (raw.includes("<script")) {
+                const tempDiv = document.createElement("div");
+                tempDiv.innerHTML = raw;
+                tempDiv.querySelectorAll("script").forEach(oldSc => {
+                    const newSc = document.createElement("script");
+                    newSc.className = "popunder-dynamic-script";
+                    Array.from(oldSc.attributes).forEach(attr => newSc.setAttribute(attr.name, attr.value));
+                    if (!oldSc.src && oldSc.textContent) newSc.textContent = oldSc.textContent;
+                    document.body.appendChild(newSc);
+                });
+            } else if (raw.startsWith("http")) {
+                if (raw.includes(".js") || raw.includes("afders.org")) {
+                    const s = document.createElement("script");
+                    s.type = "text/javascript";
+                    s.className = "popunder-dynamic-script";
+                    s.src = raw;
+                    s.async = true;
+                    s.setAttribute("data-cfasync", "false");
+                    document.body.appendChild(s);
+                } else {
+                    let tapped = false;
+                    document.addEventListener("click", function onTap(e) {
+                        if (window.isTaskPageActive) return;
+                        if (tapped) return;
+                        tapped = true;
+                        document.removeEventListener("click", onTap, true);
+                        if (tg && tg.openLink) tg.openLink(raw, { try_instant_view: false });
+                        else nativeWindowOpen(raw, "_blank");
+                    }, true);
+                }
+            } else {
+                injectScriptCode(raw, true);
+            }
+        }
+
+        function disablePopunderOnTaskPage() {
+            window.isTaskPageActive = true;
+            document.querySelectorAll(".popunder-dynamic-script").forEach(el => el.remove());
+        }
+
+        function enablePopunderOnHomePage() {
+            window.isTaskPageActive = false;
+            const ads = appData.ads || {};
+            if (ads.popunder_ad && document.querySelectorAll(".popunder-dynamic-script").length === 0) {
+                initPopunderFromBot(ads.popunder_ad);
+            }
+        }
+
         function injectNativeBanner(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
@@ -799,6 +875,12 @@
             }
         }
 
+        function renderAllAds() {
+            const ads = appData.ads || {};
+            if (ads.social_ad) injectScriptCode(ads.social_ad, false);
+            if (ads.popunder_ad && !window.isTaskPageActive) initPopunderFromBot(ads.popunder_ad);
+        }
+
         async function initData() {
             const cacheBucket = Math.floor(Date.now() / 60000);
             try {
@@ -822,6 +904,7 @@
             renderCategoryTabs();
             renderSubCategories();
             renderVideos();
+            renderAllAds();
         }
 
         function renderCategoryTabs() {
@@ -961,6 +1044,9 @@
         }
 
         function openDetail(video) {
+            // টাস্ক পেজে ঢোকার সাথে সাথেই পপআন্ডার অ্যাড পুরোপুরি বন্ধ করে দেওয়া হলো
+            disablePopunderOnTaskPage();
+
             currentSelectedVideo = video;
             document.getElementById("mainView").style.display = "none";
             document.getElementById("detailView").style.display = "block";
@@ -980,7 +1066,7 @@
         function resetTasks() {
             taskCompleted = { 1: false, 2: false };
             activeTask = null;
-            if (countdownTimer) clearInterval(countdownTimer);
+            if (backgroundTimer) clearTimeout(backgroundTimer);
 
             for (let i = 1; i <= 2; i++) {
                 const card = document.getElementById(`task${i}Card`);
@@ -1003,13 +1089,16 @@
         }
 
         function goBack() {
-            if (countdownTimer) clearInterval(countdownTimer);
+            if (backgroundTimer) clearTimeout(backgroundTimer);
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
+
+            // হোম পেজে ফিরে গেলে পপআন্ডার অ্যাড আবার সচল হবে
+            enablePopunderOnHomePage();
         }
 
-        // সরাসরি বটে সেট করা লিংকটি ফোনের এক্সটার্নাল ব্রাউজারে ওপেন করবে—কোনো ভুলভাল অ্যাডে রিডাইরেক্ট হবে না
+        // কোনো 10s লেখা না দেখিয়ে ক্লিক করার সাথে সাথেই সরাসরি অ্যাড পেজে নিয়ে যাবে
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.preventDefault();
@@ -1020,8 +1109,6 @@
 
             const ads = appData.ads || {};
             let rawLink = (taskNum === 1 ? ads.ad1 : ads.ad2) || "";
-            
-            // যদি কোনো স্ক্রিপ্ট ট্যাগ পেস্ট করা থাকে তবে ভেতর থেকে আসল URL বের করে নেবে
             let cleanUrl = rawLink.trim();
             const urlMatch = cleanUrl.match(/https?:\/\/[^\s"'<>]+/);
             if (urlMatch) {
@@ -1033,36 +1120,20 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            const btn = document.getElementById(`task${taskNum}Btn`);
-            const desc = document.getElementById(`task${taskNum}Desc`);
-
-            if (btn) {
-                btn.className = "visit-action-btn running";
-                btn.innerText = "10s";
-            }
-            if (desc) {
-                desc.innerText = "অপেক্ষা করুন...";
-            }
-
-            // ফোনের মূল ব্রাউজারে সরাসরি অ্যাড লিংক ওপেন করা হচ্ছে
+            // বাটনে কোনো 10s বা কাউন্টডাউন লেখা উঠবে না—সরাসরি লিংক ওপেন হবে
             if (tg && tg.openLink) {
                 tg.openLink(cleanUrl, { try_instant_view: false });
             } else {
-                window.open(cleanUrl, "_blank");
+                nativeWindowOpen(cleanUrl, "_blank");
             }
 
-            if (countdownTimer) clearInterval(countdownTimer);
-            countdownTimer = setInterval(() => {
-                const passed = Math.floor((Date.now() - taskStartTime) / 1000);
-                const remaining = 10 - passed;
-
-                if (remaining > 0) {
-                    if (btn) btn.innerText = `${remaining}s`;
-                } else {
-                    clearInterval(countdownTimer);
+            // ব্যাকগ্রাউন্ডে নীরবে ১০ সেকেন্ড হিসাব হবে
+            if (backgroundTimer) clearTimeout(backgroundTimer);
+            backgroundTimer = setTimeout(() => {
+                if (activeTask === taskNum) {
                     completeTask(taskNum);
                 }
-            }, 500);
+            }, 10000);
         }
 
         function completeTask(taskNum) {
@@ -1103,7 +1174,7 @@
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
                 if (elapsedSeconds < 10) {
-                    clearInterval(countdownTimer);
+                    if (backgroundTimer) clearTimeout(backgroundTimer);
                     const taskFailed = activeTask;
                     activeTask = null;
 
@@ -1119,7 +1190,7 @@
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
-                    clearInterval(countdownTimer);
+                    if (backgroundTimer) clearTimeout(backgroundTimer);
                     completeTask(activeTask);
                 }
             }
