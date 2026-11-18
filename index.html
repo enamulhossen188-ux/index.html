@@ -9,26 +9,24 @@
 
     <style>
         :root {
-            --bg-color: #121316;
-            --surface-color: #1a1c22;
-            --card-border: rgba(255, 255, 255, 0.08);
-            --primary-red: #e50914;
-            --neon-pink: #c026d3;
+            --bg-color: #121212;
+            --surface-color: #18181b;
+            --card-border: #8b2671;
+            --primary-red: #e60000;
             --text-color: #ffffff;
-            --text-muted: #8e9bb0;
-            --input-bg: #1c1e24;
-            --chip-bg: #1c1e24;
+            --text-muted: #a1a1aa;
+            --input-bg: #1c1c21;
+            --chip-bg: #1e1e24;
             --chip-color: #cbd5e1;
-            --badge-bg: rgba(229, 9, 20, 0.15);
-            --badge-text: #ef4444;
+            --badge-bg: rgba(230, 0, 0, 0.15);
+            --badge-text: #ff3333;
         }
 
         body.light-mode {
             --bg-color: #f1f5f9;
             --surface-color: #ffffff;
-            --card-border: rgba(0, 0, 0, 0.08);
-            --primary-red: #e50914;
-            --neon-pink: #7c3aed;
+            --card-border: #8b2671;
+            --primary-red: #e60000;
             --text-color: #0f172a;
             --text-muted: #64748b;
             --input-bg: #e2e8f0;
@@ -80,14 +78,14 @@
             letter-spacing: 0.5px;
         }
 
-        .brand-title .red-text { color: #e50914; }
+        .brand-title .red-text { color: #e60000; }
         .brand-title .white-text { color: var(--text-color); }
 
         .settings-circle {
             width: 38px;
             height: 38px;
-            background: #2b1d3a;
-            border: 2px solid #a855f7;
+            background: #231424;
+            border: 1.5px solid #8b2671;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -95,16 +93,13 @@
             color: #ffffff;
             font-size: 16px;
             cursor: pointer;
-            transition: transform 0.2s ease;
         }
-
-        .settings-circle:active { transform: scale(0.92); }
 
         .sidebar-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.65);
             backdrop-filter: blur(4px);
             z-index: 9999;
         }
@@ -130,7 +125,7 @@
             font-size: 18px;
             font-weight: 700;
             padding-bottom: 12px;
-            border-bottom: 1px solid var(--card-border);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -143,7 +138,6 @@
             padding: 10px 12px;
             border-radius: 10px;
             color: var(--text-color);
-            text-decoration: none;
             font-size: 14px;
             font-weight: 600;
             background: var(--input-bg);
@@ -163,7 +157,7 @@
         .category-chip {
             padding: 8px 16px;
             background: var(--chip-bg);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 12px;
             font-size: 12px;
             font-weight: 700;
@@ -174,20 +168,17 @@
         }
 
         .category-chip.active {
-            background: #e50914 !important;
+            background: #e60000 !important;
             color: #ffffff !important;
-            border-color: #e50914 !important;
-            box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
+            border-color: #e60000 !important;
         }
 
         .category-glow-divider {
             display: none;
             width: 100%;
             height: 2px;
-            background: radial-gradient(circle, #e50914 0%, rgba(229, 9, 20, 0.4) 60%, transparent 100%);
-            box-shadow: 0 0 10px #e50914;
+            background: radial-gradient(circle, #e60000 0%, rgba(230, 0, 0, 0.4) 60%, transparent 100%);
             margin: 6px 0 12px 0;
-            border-radius: 2px;
         }
 
         .sub-category-scroll {
@@ -214,10 +205,9 @@
         }
 
         .sub-category-chip.active {
-            background: #e50914 !important;
+            background: #e60000 !important;
             color: #ffffff !important;
-            border-color: #e50914 !important;
-            box-shadow: 0 3px 10px rgba(229, 9, 20, 0.35);
+            border-color: #e60000 !important;
         }
 
         .search-box {
@@ -229,14 +219,12 @@
             width: 100%;
             padding: 12px 16px 12px 42px;
             background: var(--input-bg);
-            border: 1px solid var(--card-border);
+            border: 1px solid rgba(255,255,255,0.08);
             border-radius: 25px;
             color: var(--text-color);
             font-size: 13px;
             outline: none;
         }
-
-        .search-input::placeholder { color: var(--text-muted); }
 
         .search-icon {
             position: absolute;
@@ -255,25 +243,19 @@
 
         .video-card {
             background: var(--surface-color);
-            border: 1.5px solid #a855f7;
-            border-radius: 16px;
+            border: 1.5px solid #8b2671;
+            border-radius: 14px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
-            transition: transform 0.2s;
-        }
-
-        .video-card:active {
-            transform: scale(0.98);
         }
 
         .thumb-wrapper {
             position: relative;
             width: 100%;
             padding-top: 56.25%;
-            background: #181920;
+            background: #18181b;
         }
 
         .thumb-img {
@@ -318,11 +300,10 @@
             gap: 6px;
         }
 
-        .video-date-row i { color: #ef4444; }
-
+        /* ==================== স্ক্রিনশটের হুবহু ডিটেইলস ও টাস্ক ডিজাইন ==================== */
         .detail-view {
             display: none;
-            padding: 4px 0;
+            padding: 2px 0;
         }
 
         .back-btn {
@@ -331,106 +312,155 @@
             color: var(--text-color);
             font-size: 14px;
             cursor: pointer;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             display: inline-flex;
             align-items: center;
             gap: 6px;
             font-weight: 600;
         }
 
-        .detail-card {
-            background: var(--surface-color);
-            border: 1.5px solid #a855f7;
-            border-radius: 16px;
-            padding: 14px;
+        .detail-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .detail-thumb-box {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            border: 1.5px solid #8b2671;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #18181b;
         }
 
         #detailThumb {
             width: 100%;
-            aspect-ratio: 16 / 9;
+            height: 100%;
             object-fit: cover;
-            border-radius: 12px;
-            background: #181920;
-            margin-bottom: 12px;
+        }
+
+        .thumb-play-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 58px;
+            height: 58px;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #121212;
+            font-size: 22px;
+            padding-left: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
         }
 
         .detail-title-card {
-            border: 1.5px solid #ff007f;
-            border-radius: 10px;
-            padding: 10px 14px;
+            background: #18181b;
+            border: 1.5px solid #8b2671;
+            border-radius: 12px;
+            padding: 13px 16px;
             text-align: center;
-            margin-bottom: 14px;
-            background: rgba(255, 0, 127, 0.05);
+        }
+
+        .detail-title-card h2 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.4;
         }
 
         .unlock-info-box {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            border-left: 4px solid #ef4444;
-            background: rgba(239, 68, 68, 0.08);
-            padding: 10px 12px;
-            border-radius: 0 8px 8px 0;
-            font-size: 12px;
+            align-items: flex-start;
+            gap: 10px;
+            border-left: 4px solid #e60000;
+            background: #241417;
+            padding: 13px 14px;
+            border-radius: 8px;
+            font-size: 13.5px;
             font-weight: 500;
-            line-height: 1.4;
-            margin-bottom: 14px;
+            color: #f4f4f5;
+            line-height: 1.5;
         }
 
         .task-list {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-bottom: 16px;
+            gap: 14px;
         }
 
         .task-card-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 14px;
-            background: var(--input-bg);
-            border: 1.5px solid #ff007f;
+            padding: 16px 16px;
+            background: #18181b;
+            border: 1.5px solid #8b2671;
             border-radius: 14px;
+            transition: border-color 0.25s ease;
+        }
+
+        .task-card-row.completed-card {
+            border-color: #10b981;
         }
 
         .task-info-left {
             display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .task-title-line {
+            display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
         }
 
-        .task-icon {
-            font-size: 18px;
-            color: #94a3b8;
+        .task-check-mark {
+            font-size: 15px;
+            color: #ffffff;
+            transition: color 0.25s ease;
         }
 
-        .task-icon.completed { color: #10b981; }
-
-        .task-text h4 {
-            font-size: 14px;
-            font-weight: 600;
+        .task-check-mark.completed {
+            color: #10b981;
         }
 
-        .task-text p {
-            font-size: 11px;
-            color: var(--text-muted);
+        .task-desc-text {
+            font-size: 12.5px;
+            color: #a1a1aa;
         }
 
         .visit-action-btn {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: #fff;
+            background: #e60000;
+            color: #ffffff;
             border: none;
             border-radius: 8px;
-            padding: 8px 18px;
-            font-size: 12px;
+            padding: 11px 28px;
+            font-size: 13.5px;
             font-weight: 700;
+            letter-spacing: 0.4px;
             cursor: pointer;
-            z-index: 10;
+            text-transform: uppercase;
+            transition: transform 0.1s ease, background 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .visit-action-btn:active {
+            transform: scale(0.95);
         }
 
         .visit-action-btn.running {
-            background: #0088cc;
+            background: #0284c7;
             pointer-events: none;
         }
 
@@ -445,33 +475,33 @@
             justify-content: center;
             gap: 8px;
             width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
             cursor: pointer;
             border: none;
-            background: #10b981;
-            color: #fff;
-            margin-bottom: 16px;
+            background: #16a34a;
+            color: #ffffff;
+            margin-top: 2px;
+            transition: all 0.25s ease;
         }
 
         .download-btn.disabled {
-            background: #1e293b;
-            color: #64748b;
-            pointer-events: none;
+            background: #233831;
+            color: #71877f;
+            cursor: not-allowed;
         }
 
         .native-ad-container {
             width: 100%;
-            min-height: 80px;
-            margin-top: 14px;
-            padding: 8px 4px;
-            background: var(--input-bg);
-            border: 1px solid var(--card-border);
+            min-height: 70px;
+            margin-top: 6px;
+            padding: 8px;
+            background: #18181b;
+            border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px;
             text-align: center;
-            overflow: visible;
             display: none;
         }
 
@@ -482,62 +512,7 @@
             font-size: 13px;
         }
 
-        .coming-soon-popup-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(6px);
-            z-index: 100000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .coming-soon-card {
-            background: #181920;
-            width: 88%;
-            max-width: 330px;
-            border-radius: 24px;
-            padding: 28px 22px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
-        }
-
-        .coming-soon-icon {
-            font-size: 44px;
-            color: #0099ff;
-            margin-bottom: 16px;
-        }
-
-        .coming-soon-title {
-            color: #ffffff;
-            font-size: 17px;
-            font-weight: 700;
-            line-height: 1.4;
-            margin-bottom: 14px;
-        }
-
-        .coming-soon-desc {
-            color: #cbd5e1;
-            font-size: 13px;
-            line-height: 1.6;
-            margin-bottom: 22px;
-        }
-
-        .coming-soon-btn {
-            background: #0099ff;
-            color: #ffffff;
-            border: none;
-            width: 100%;
-            padding: 12px;
-            border-radius: 25px;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .custom-popup-overlay {
+        .coming-soon-popup-overlay, .custom-popup-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -548,19 +523,19 @@
             justify-content: center;
         }
 
-        .custom-popup-card {
-            background: #18191f;
+        .coming-soon-card, .custom-popup-card {
+            background: #18181b;
             width: 86%;
             max-width: 320px;
             border-radius: 20px;
             padding: 24px 20px;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1.5px solid #8b2671;
         }
 
         .popup-close-circle {
             width: 50px; height: 50px;
-            background: #e61937;
+            background: #e60000;
             color: #fff;
             border-radius: 50%;
             display: flex;
@@ -570,14 +545,14 @@
             margin: 0 auto 14px auto;
         }
 
-        .popup-title {
+        .popup-title, .coming-soon-title {
             color: #ffffff;
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 700;
             margin-bottom: 10px;
         }
 
-        .popup-desc {
+        .popup-desc, .coming-soon-desc {
             color: #cbd5e1;
             font-size: 13px;
             line-height: 1.6;
@@ -585,11 +560,11 @@
         }
 
         .popup-highlight {
-            color: #ef4444;
+            color: #ff3333;
             font-weight: 700;
         }
 
-        .popup-action-btn {
+        .popup-action-btn, .coming-soon-btn {
             background: #ffffff;
             color: #0f172a;
             border: none;
@@ -650,46 +625,51 @@
         <div class="empty-msg" id="emptyMessage" style="display: none;">কোনো ভিডিও খুঁজে পাওয়া যায়নি!</div>
     </div>
 
+    <!-- ডিটেইলস ও টাস্ক স্ক্রিন (স্ক্রিনশটের হুবহু ডিজাইন) -->
     <div class="detail-view" id="detailView">
         <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
-        <div class="detail-card">
-            <img id="detailThumb" src="" alt="Thumbnail" onerror="handleImageFallback(this)">
+        
+        <div class="detail-wrapper">
+            <div class="detail-thumb-box">
+                <img id="detailThumb" src="" alt="Thumbnail" onerror="handleImageFallback(this)">
+                <div class="thumb-play-circle"><i class="fa-solid fa-play"></i></div>
+            </div>
 
             <div class="detail-title-card">
-                <h2 id="detailTitle" style="font-size: 15px; font-weight: 700;"></h2>
+                <h2 id="detailTitle"></h2>
             </div>
 
             <div class="unlock-info-box">
-                <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
-                <span>ভিডিওটি আনলক করার জন্য নিচের ২টি অ্যাড দেখে নিন ১০ সেকেন্ড করে।</span>
+                <span style="font-size: 16px;">🔒</span>
+                <span>ভিডিওটি ডাউনলোড করার জন্য নিচের এড দেখে নিন ১০ সেকেন্ড করে।</span>
             </div>
 
             <div class="task-list">
-                <div class="task-card-row">
+                <div class="task-card-row" id="task1Card">
                     <div class="task-info-left">
-                        <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
-                        <div class="task-text">
-                            <h4>Task 1</h4>
-                            <p id="task1Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                        <div class="task-title-line">
+                            <i id="task1Icon" class="fa-solid fa-check task-check-mark"></i>
+                            <span>Task 1</span>
                         </div>
+                        <p id="task1Desc" class="task-desc-text">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
                     </div>
-                    <button id="task1Btn" class="visit-action-btn" onclick="runTaskDirect(1, event)">VISIT</button>
+                    <button type="button" id="task1Btn" class="visit-action-btn" onclick="runTaskDirect(1, event)">VISIT</button>
                 </div>
 
-                <div class="task-card-row">
+                <div class="task-card-row" id="task2Card">
                     <div class="task-info-left">
-                        <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
-                        <div class="task-text">
-                            <h4>Task 2</h4>
-                            <p id="task2Desc">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                        <div class="task-title-line">
+                            <i id="task2Icon" class="fa-solid fa-check task-check-mark"></i>
+                            <span>Task 2</span>
                         </div>
+                        <p id="task2Desc" class="task-desc-text">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
                     </div>
-                    <button id="task2Btn" class="visit-action-btn" onclick="runTaskDirect(2, event)">VISIT</button>
+                    <button type="button" id="task2Btn" class="visit-action-btn" onclick="runTaskDirect(2, event)">VISIT</button>
                 </div>
             </div>
 
-            <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
-                <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
+            <button type="button" id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
+                <i class="fa-solid fa-play"></i> ডাউনলোড ভিডিও
             </button>
 
             <div id="nativeAdBox" class="native-ad-container"></div>
@@ -699,7 +679,7 @@
     <!-- কামিং সুন পপ-আপ -->
     <div id="comingSoonPopup" class="coming-soon-popup-overlay">
         <div class="coming-soon-card">
-            <div class="coming-soon-icon"><i class="fa-solid fa-bullhorn"></i></div>
+            <div style="font-size: 38px; color: #0099ff; margin-bottom: 12px;"><i class="fa-solid fa-bullhorn"></i></div>
             <div class="coming-soon-title" id="csPopupTitle"></div>
             <div class="coming-soon-desc" id="csPopupNotice"></div>
             <button class="coming-soon-btn" onclick="closeComingSoonPopup()">Close</button>
@@ -724,17 +704,6 @@
         const GITHUB_CDN_DATA_URL = "https://enamulhossen188-ux.github.io/data.json";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
-
-        const nativeWindowOpen = window.open;
-        window.open = function(url, target, features) {
-            if (url && typeof url === 'string' && url.startsWith('http') && !url.endsWith('.js')) {
-                if (tg && tg.openLink) {
-                    tg.openLink(url);
-                    return { closed: false, focus: function() {} };
-                }
-            }
-            return nativeWindowOpen ? nativeWindowOpen.apply(window, arguments) : null;
-        };
 
         let appData = { videos: [], ads: {}, categories: [], sub_categories: {} };
         let activeCategory = '';
@@ -761,12 +730,7 @@
         function toggleTheme() {
             document.body.classList.toggle("light-mode");
             const isLight = document.body.classList.contains("light-mode");
-            const icon = document.getElementById("themeIcon");
-            if (isLight) {
-                icon.className = "fa-solid fa-moon";
-            } else {
-                icon.className = "fa-solid fa-gear";
-            }
+            document.getElementById("themeIcon").className = isLight ? "fa-solid fa-moon" : "fa-solid fa-gear";
         }
 
         function showBotNotice() {
@@ -778,8 +742,8 @@
             const cleanTitle = (title || 'Bachelor Point').replace(/[\'<>\"]/g, '').substring(0, 30);
             const svgContent = `
                 <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
-                    <rect width="640" height="360" fill="#181920"/>
-                    <circle cx="320" cy="150" r="42" fill="#e50914" fill-opacity="0.9"/>
+                    <rect width="640" height="360" fill="#18181b"/>
+                    <circle cx="320" cy="150" r="42" fill="#e60000" fill-opacity="0.9"/>
                     <polygon points="312,135 336,150 312,165" fill="#ffffff"/>
                     <text x="320" y="240" font-family="-apple-system, sans-serif" font-size="20" font-weight="700" fill="#ffffff" text-anchor="middle">${cleanTitle}</text>
                 </svg>
@@ -799,72 +763,11 @@
             }
             let u = url.trim();
             if (u.startsWith("data:image")) return u;
-
             if (u.includes("github.io") || (u.startsWith("http") && !u.includes("/thumb/") && !u.includes("api.telegram.org"))) {
                 return u;
             }
-
             const cleanFileId = u.split("/").pop().replace(/^\/+/, '');
             return `${CURRENT_RENDER_URL}/thumb/${cleanFileId}`;
-        }
-
-        function injectScriptCode(codeStr) {
-            if (!codeStr || !codeStr.trim()) return;
-            const sc = document.createElement("script");
-            sc.type = "text/javascript";
-            sc.async = true;
-            let raw = codeStr.trim();
-            let srcMatch = raw.match(/src=["'](.*?)["']/);
-            if (srcMatch) {
-                sc.src = srcMatch[1];
-            } else if (raw.startsWith("http")) {
-                sc.src = raw;
-            } else {
-                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
-            }
-            document.head.appendChild(sc);
-        }
-
-        function initPopunderFromBot(popCode) {
-            if (!popCode || !popCode.trim()) return;
-            const raw = popCode.trim();
-
-            if (raw.includes("<script")) {
-                const tempDiv = document.createElement("div");
-                tempDiv.innerHTML = raw;
-                const scripts = tempDiv.querySelectorAll("script");
-                scripts.forEach(oldSc => {
-                    const newSc = document.createElement("script");
-                    Array.from(oldSc.attributes).forEach(attr => {
-                        newSc.setAttribute(attr.name, attr.value);
-                    });
-                    if (!oldSc.src && oldSc.textContent) {
-                        newSc.textContent = oldSc.textContent;
-                    }
-                    document.body.appendChild(newSc);
-                });
-            } else if (raw.startsWith("http")) {
-                if (raw.includes(".js") || raw.includes("afders.org")) {
-                    const s = document.createElement("script");
-                    s.type = "text/javascript";
-                    s.src = raw;
-                    s.async = true;
-                    s.setAttribute("data-cfasync", "false");
-                    document.body.appendChild(s);
-                } else {
-                    let tapped = false;
-                    document.addEventListener("click", function onTap(e) {
-                        if (tapped) return;
-                        if (e.target && e.target.closest(".visit-action-btn")) return;
-                        tapped = true;
-                        document.removeEventListener("click", onTap, true);
-                        if (tg && tg.openLink) tg.openLink(raw);
-                        else nativeWindowOpen(raw, "_blank");
-                    }, true);
-                }
-            } else {
-                injectScriptCode(raw);
-            }
         }
 
         function injectNativeBanner(container, codeStr) {
@@ -877,8 +780,7 @@
 
             let raw = codeStr.trim();
             const doc = new DOMParser().parseFromString(raw, "text/html");
-            const divs = doc.querySelectorAll("div");
-            divs.forEach(d => container.appendChild(d.cloneNode(true)));
+            doc.querySelectorAll("div").forEach(d => container.appendChild(d.cloneNode(true)));
 
             const scripts = doc.querySelectorAll("script");
             if (scripts.length > 0) {
@@ -897,18 +799,11 @@
             }
         }
 
-        function renderAllAds() {
-            const ads = appData.ads || {};
-            if (ads.social_ad) injectScriptCode(ads.social_ad);
-            if (ads.popunder_ad) initPopunderFromBot(ads.popunder_ad);
-        }
-
-        // প্রথমে আনলিমিটেড GitHub CDN থেকে ডাটা লোড করবে; যদি এখনো সিঙ্ক না হয়ে থাকে তবে Render থেকে ফলব্যাক নেবে
         async function initData() {
             const cacheBucket = Math.floor(Date.now() / 60000);
             try {
                 let res = await fetch(`${GITHUB_CDN_DATA_URL}?v=${cacheBucket}`);
-                if (!res.ok) throw new Error("GitHub data not ready yet");
+                if (!res.ok) throw new Error("GitHub data fallback");
                 appData = await res.json();
             } catch (e) {
                 try {
@@ -927,7 +822,6 @@
             renderCategoryTabs();
             renderSubCategories();
             renderVideos();
-            renderAllAds();
         }
 
         function renderCategoryTabs() {
@@ -954,13 +848,10 @@
             if (userSubList && userSubList.length > 0) {
                 divider.style.display = "block";
                 subContainer.style.display = "flex";
-
                 const uniqueSubs = [...new Set(userSubList.map(s => s.trim()))];
-
                 if (!uniqueSubs.some(s => s.toUpperCase() === activeSubCategory.toUpperCase())) {
                     activeSubCategory = uniqueSubs[0];
                 }
-
                 let html = '';
                 uniqueSubs.forEach(sub => {
                     const isActive = (activeSubCategory.trim().toUpperCase() === sub.trim().toUpperCase());
@@ -994,29 +885,16 @@
             const query = document.getElementById("searchInput").value.toLowerCase().trim();
 
             let list = appData.videos || [];
-            
             if (activeCategory) {
                 const target = activeCategory.trim().toUpperCase();
-                
                 list = list.filter(v => {
                     const itemCat = (v.category || '').trim().toUpperCase();
                     const itemTitle = (v.title || '').trim().toLowerCase();
-
-                    if (target === "BPS5") {
-                        return itemCat === "BPS5" || itemTitle.includes("bachelor point") || itemTitle.includes("ব্যাচেলর point");
-                    }
-                    if (target === "DRAMA") {
-                        return (itemCat === "DRAMA" || itemTitle.includes("নাটক")) && !itemTitle.includes("bachelor point");
-                    }
-                    if (target.includes("SERIES")) {
-                        return (itemCat.includes("SERIES") || itemTitle.includes("season") || itemTitle.includes("সিজন")) && !itemTitle.includes("bachelor point");
-                    }
-                    if (target.includes("MOVIE")) {
-                        return itemCat.includes("MOVIE") || itemTitle.includes("movie");
-                    }
-                    if (target.includes("COMING")) {
-                        return v.is_coming_soon || itemCat.includes("COMING");
-                    }
+                    if (target === "BPS5") return itemCat === "BPS5" || itemTitle.includes("bachelor point") || itemTitle.includes("ব্যাচেলর point");
+                    if (target === "DRAMA") return (itemCat === "DRAMA" || itemTitle.includes("নাটক")) && !itemTitle.includes("bachelor point");
+                    if (target.includes("SERIES")) return (itemCat.includes("SERIES") || itemTitle.includes("season") || itemTitle.includes("সিজন")) && !itemTitle.includes("bachelor point");
+                    if (target.includes("MOVIE")) return itemCat.includes("MOVIE") || itemTitle.includes("movie");
+                    if (target.includes("COMING")) return v.is_coming_soon || itemCat.includes("COMING");
                     return itemCat === target;
                 });
             }
@@ -1042,9 +920,7 @@
                     const card = document.createElement("div");
                     card.className = "video-card";
                     card.onclick = () => handleItemClick(item);
-                    
                     const thumbUrl = resolveThumb(item.thumb, item.title);
-
                     card.innerHTML = `
                         <div class="thumb-wrapper">
                             <img class="thumb-img" src="${thumbUrl}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
@@ -1107,25 +983,23 @@
             if (countdownTimer) clearInterval(countdownTimer);
 
             for (let i = 1; i <= 2; i++) {
+                const card = document.getElementById(`task${i}Card`);
                 const btn = document.getElementById(`task${i}Btn`);
                 const icon = document.getElementById(`task${i}Icon`);
                 const desc = document.getElementById(`task${i}Desc`);
                 
+                if (card) card.classList.remove("completed-card");
                 if (btn) {
                     btn.className = "visit-action-btn";
-                    btn.innerHTML = "VISIT";
+                    btn.innerText = "VISIT";
                 }
-                if (icon) {
-                    icon.className = "fa-solid fa-circle-check task-icon";
-                }
-                if (desc) {
-                    desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
-                }
+                if (icon) icon.className = "fa-solid fa-check task-check-mark";
+                if (desc) desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
             }
 
             const dlBtn = document.getElementById("downloadBtn");
             dlBtn.className = "download-btn disabled";
-            dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+            dlBtn.innerHTML = `<i class="fa-solid fa-play"></i> ডাউনলোড ভিডিও`;
         }
 
         function goBack() {
@@ -1135,54 +1009,55 @@
             document.getElementById("mainView").style.display = "block";
         }
 
+        // সরাসরি বটে সেট করা লিংকটি ফোনের এক্সটার্নাল ব্রাউজারে ওপেন করবে—কোনো ভুলভাল অ্যাডে রিডাইরেক্ট হবে না
         function runTaskDirect(taskNum, event) {
-            if (event) event.stopPropagation();
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
 
             if (taskCompleted[taskNum]) return;
 
+            const ads = appData.ads || {};
+            let rawLink = (taskNum === 1 ? ads.ad1 : ads.ad2) || "";
+            
+            // যদি কোনো স্ক্রিপ্ট ট্যাগ পেস্ট করা থাকে তবে ভেতর থেকে আসল URL বের করে নেবে
+            let cleanUrl = rawLink.trim();
+            const urlMatch = cleanUrl.match(/https?:\/\/[^\s"'<>]+/);
+            if (urlMatch) {
+                cleanUrl = urlMatch[0];
+            } else if (!cleanUrl.startsWith("http")) {
+                cleanUrl = "https://www.google.com";
+            }
+
             activeTask = taskNum;
             taskStartTime = Date.now();
-
-            const ads = appData.ads || {};
-            let taskUrl = "";
-            if (taskNum === 1) taskUrl = ads.ad1 || "";
-            else if (taskNum === 2) taskUrl = ads.ad2 || "";
-
-            taskUrl = (taskUrl || "").trim();
-
-            if (!taskUrl || !taskUrl.startsWith("http") || taskUrl.includes(".js") || taskUrl.includes("afders.org") || taskUrl.includes("<script")) {
-                taskUrl = "https://www.google.com";
-            }
-
-            try {
-                if (tg && tg.openLink) {
-                    tg.openLink(taskUrl);
-                } else {
-                    nativeWindowOpen(taskUrl, "_blank");
-                }
-            } catch (e) {
-                nativeWindowOpen(taskUrl, "_blank");
-            }
 
             const btn = document.getElementById(`task${taskNum}Btn`);
             const desc = document.getElementById(`task${taskNum}Desc`);
 
             if (btn) {
                 btn.className = "visit-action-btn running";
-                btn.innerHTML = `10s`;
+                btn.innerText = "10s";
             }
             if (desc) {
                 desc.innerText = "অপেক্ষা করুন...";
             }
 
-            if (countdownTimer) clearInterval(countdownTimer);
+            // ফোনের মূল ব্রাউজারে সরাসরি অ্যাড লিংক ওপেন করা হচ্ছে
+            if (tg && tg.openLink) {
+                tg.openLink(cleanUrl, { try_instant_view: false });
+            } else {
+                window.open(cleanUrl, "_blank");
+            }
 
+            if (countdownTimer) clearInterval(countdownTimer);
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
                 const remaining = 10 - passed;
 
                 if (remaining > 0) {
-                    if (btn) btn.innerHTML = `${remaining}s`;
+                    if (btn) btn.innerText = `${remaining}s`;
                 } else {
                     clearInterval(countdownTimer);
                     completeTask(taskNum);
@@ -1191,20 +1066,18 @@
         }
 
         function completeTask(taskNum) {
+            const card = document.getElementById(`task${taskNum}Card`);
             const btn = document.getElementById(`task${taskNum}Btn`);
             const icon = document.getElementById(`task${taskNum}Icon`);
             const desc = document.getElementById(`task${taskNum}Desc`);
 
+            if (card) card.classList.add("completed-card");
             if (btn) {
                 btn.className = "visit-action-btn done";
-                btn.innerHTML = `DONE`;
+                btn.innerText = "DONE";
             }
-            if (icon) {
-                icon.classList.add("completed");
-            }
-            if (desc) {
-                desc.innerText = "টাস্ক সম্পন্ন হয়েছে ✅";
-            }
+            if (icon) icon.classList.add("completed");
+            if (desc) desc.innerText = "টাস্ক সম্পন্ন হয়েছে ✅";
 
             taskCompleted[taskNum] = true;
             activeTask = null;
@@ -1239,11 +1112,9 @@
 
                     if (btn) {
                         btn.className = "visit-action-btn";
-                        btn.innerHTML = `VISIT`;
+                        btn.innerText = "VISIT";
                     }
-                    if (desc) {
-                        desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
-                    }
+                    if (desc) desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
 
                     const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
@@ -1267,7 +1138,7 @@
             const userId = tg?.initDataUnsafe?.user?.id;
             if (!userId) {
                 alert("ইউজার আইডি পাওয়া যায়নি! টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
-                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.innerHTML = `<i class="fa-solid fa-play"></i> ডাউনলোড ভিডিও`;
                 dlBtn.classList.remove("disabled");
                 return;
             }
@@ -1290,13 +1161,12 @@
                     }, 500);
                 } else {
                     alert("ভিডিও পাঠানো যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
-                    dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                    dlBtn.innerHTML = `<i class="fa-solid fa-play"></i> ডাউনলোড ভিডিও`;
                     dlBtn.classList.remove("disabled");
                 }
             } catch (err) {
-                console.error("ভিডিও সেন্ড এরর:", err);
                 alert("সার্ভারে সংযোগ দেওয়া যাচ্ছে না। অনুগ্রহ করে ১ সেকেন্ড পর আবার চেষ্টা করুন।");
-                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.innerHTML = `<i class="fa-solid fa-play"></i> ডাউনলোড ভিডিও`;
                 dlBtn.classList.remove("disabled");
             }
         }
@@ -1304,4 +1174,4 @@
         initData();
     </script>
 </body>
-        </html>
+    </html>
