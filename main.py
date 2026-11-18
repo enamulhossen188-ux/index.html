@@ -25,10 +25,10 @@ BOT_TOKEN = "8995171178:AAFxdUeC4bR7L7AZn4_tLqU38t4burawv8c"
 ADMIN_ID = "7255626228"
 APP_URL = "https://enamulhossen188-ux.github.io/index.html"
 DB_CHANNEL_ID = -1004330425245
-RENDER_SERVER_URL = "https://index-html-eb7b.onrender.com"
+RENDER_SERVER_URL = "https://my-bot-server-bnj8.onrender.com"
 
 # GitHub Unlimited CDN কনফিগারেশন
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_USER = "enamulhossen188-ux"
 GITHUB_REPO = "index.html"
 GITHUB_BRANCH = "main"
