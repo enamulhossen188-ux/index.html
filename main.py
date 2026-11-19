@@ -307,53 +307,127 @@ def get_category_keyboard():
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return markup
 
-def get_thumb_view_data(page=0):
+# ==================== ক্যাটাগরি ভিত্তিক ফিল্টারিং লজিক ====================
+def filter_videos_by_category(videos, cat_name):
+    if not cat_name or cat_name == "ALL":
+        return videos
+    target = cat_name.strip().upper()
+    filtered = []
+    for v in videos:
+        item_cat = str(v.get("category", "")).strip().upper()
+        item_title = str(v.get("title", "")).strip().lower()
+        if target == "BPS5":
+            if item_cat == "BPS5" or "bachelor point" in item_title or "ব্যাচেলর" in item_title:
+                filtered.append(v)
+        elif target == "COMING SOON" or "COMING" in target:
+            if v.get("is_coming_soon") or "COMING" in item_cat:
+                filtered.append(v)
+        else:
+            if item_cat == target:
+                filtered.append(v)
+    return filtered
+
+def get_section_category_keyboard(mode):
+    """mode = 'thumb' অথবা 'del' — আলাদা ক্যাটাগরি বাটন দেখাবে"""
     data = load_data(force_refresh=True)
     videos = data.get("videos", [])
-    if not videos: return None, None
+    cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
+    
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    cat_buttons = []
+    for c in cats:
+        count = len(filter_videos_by_category(videos, c))
+        cat_buttons.append(types.InlineKeyboardButton(f"📁 {c} ({count})", callback_data=f"{mode}cat|{c}|0"))
+    
+    for i in range(0, len(cat_buttons), 2):
+        markup.row(*cat_buttons[i:i+2])
+        
+    markup.add(types.InlineKeyboardButton(f"📋 সব ভিডিও একসাথে ({len(videos)})", callback_data=f"{mode}cat|ALL|0"))
+    markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
+    return markup
+
+def format_short_btn_title(title, max_len=36):
+    """বাটনে যেন পর্ব নম্বর (শেষের অংশ) কখনোই কাটা না পড়ে"""
+    t = str(title or "Video").strip()
+    if len(t) <= max_len:
+        return t
+    return t[:14] + "..." + t[-(max_len - 17):]
+
+def get_thumb_view_data(cat_name="ALL", page=0):
+    data = load_data(force_refresh=True)
+    all_videos = data.get("videos", [])
+    videos = filter_videos_by_category(all_videos, cat_name)
+    if not videos:
+        return None, None
 
     per_page = 8
+    total_pages = (len(videos) + per_page - 1) // per_page
+    if page >= total_pages: page = max(0, total_pages - 1)
     start_idx = page * per_page
     end_idx = start_idx + per_page
     current_videos = videos[start_idx:end_idx]
 
-    text_msg = f"🖼 **থাম্বনেইল পরিবর্তনের তালিকা (পেজ: {page+1}/{(len(videos)+per_page-1)//per_page}):**\n\nযে ভিডিওর থাম্বনেইল বদলাতে চান তাতে চাপ দিন:\n"
+    label = "সব ভিডিও" if cat_name == "ALL" else cat_name
+    text_msg = f"🖼 **থাম্বনেইল পরিবর্তন [{label}] (পেজ: {page+1}/{total_pages}):**\n\n"
     markup = types.InlineKeyboardMarkup()
 
     for idx, v in enumerate(current_videos, start=start_idx + 1):
-        t_label = f"🖼 {idx}. {v.get('title', 'Video')[:26]}"
-        markup.add(types.InlineKeyboardButton(t_label, callback_data=f"setthumb_{v.get('id')}_{page}"))
+        full_title = v.get('title', 'Video')
+        text_msg += f"**{idx}.** {full_title}\n"
+        btn_label = f"🖼 {idx}. {format_short_btn_title(full_title)}"
+        markup.add(types.InlineKeyboardButton(btn_label, callback_data=f"setthumb|{v.get('id')}|{cat_name}|{page}"))
+
+    text_msg += "\n👇 যে ভিডিওর থাম্বনেইল বদলাতে চান তার নম্বরে চাপ দিন:"
 
     nav_buttons = []
-    if page > 0: nav_buttons.append(types.InlineKeyboardButton("⬅️ Previous", callback_data=f"thumbpage_{page-1}"))
-    if end_idx < len(videos): nav_buttons.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"thumbpage_{page+1}"))
-    if nav_buttons: markup.row(*nav_buttons)
+    if page > 0:
+        nav_buttons.append(types.InlineKeyboardButton("⬅️ Previous", callback_data=f"thumbcat|{cat_name}|{page-1}"))
+    if end_idx < len(videos):
+        nav_buttons.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"thumbcat|{cat_name}|{page+1}"))
+    if nav_buttons:
+        markup.row(*nav_buttons)
+
+    markup.add(types.InlineKeyboardButton("🔙 ক্যাটাগরি তালিকায় ফিরুন", callback_data="back_to_thumb_cats"))
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return text_msg, markup
 
-def get_delete_view_data(page=0):
+def get_delete_view_data(cat_name="ALL", page=0):
     data = load_data(force_refresh=True)
-    videos = data.get("videos", [])
-    if not videos: return None, None
+    all_videos = data.get("videos", [])
+    videos = filter_videos_by_category(all_videos, cat_name)
+    if not videos:
+        return None, None
 
     per_page = 8
+    total_pages = (len(videos) + per_page - 1) // per_page
+    if page >= total_pages: page = max(0, total_pages - 1)
     start_idx = page * per_page
     end_idx = start_idx + per_page
     current_videos = videos[start_idx:end_idx]
 
-    text_msg = f"🗑️ **ডিলিট মেনু (পেজ: {page+1}/{(len(videos)+per_page-1)//per_page}):**\n\n"
+    label = "সব ভিডিও" if cat_name == "ALL" else cat_name
+    text_msg = f"🗑️ **ভিডিও ডিলিট মেনু [{label}] (পেজ: {page+1}/{total_pages}):**\n\n"
     markup = types.InlineKeyboardMarkup()
 
     for idx, v in enumerate(current_videos, start=start_idx + 1):
+        full_title = v.get('title', 'Video')
         is_cs = v.get("is_coming_soon") or v.get("category") == "COMING SOON"
         tag = " [📢 COMING SOON]" if is_cs else ""
-        text_msg += f"**{idx}.** {v.get('title')}{tag}\n"
-        markup.add(types.InlineKeyboardButton(f"🗑️ {v.get('title')[:26]}", callback_data=f"delvid_{v.get('id')}_{page}"))
+        text_msg += f"**{idx}.** {full_title}{tag}\n"
+        btn_label = f"🗑️ {idx}. {format_short_btn_title(full_title)}"
+        markup.add(types.InlineKeyboardButton(btn_label, callback_data=f"delvid|{v.get('id')}|{cat_name}|{page}"))
+
+    text_msg += "\n👇 যে ভিডিওটি ডিলিট করতে চান তার নম্বরে চাপ দিন:"
 
     nav_buttons = []
-    if page > 0: nav_buttons.append(types.InlineKeyboardButton("⬅️ Previous", callback_data=f"delpage_{page-1}"))
-    if end_idx < len(videos): nav_buttons.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"delpage_{page+1}"))
-    if nav_buttons: markup.row(*nav_buttons)
+    if page > 0:
+        nav_buttons.append(types.InlineKeyboardButton("⬅️ Previous", callback_data=f"delcat|{cat_name}|{page-1}"))
+    if end_idx < len(videos):
+        nav_buttons.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"delcat|{cat_name}|{page+1}"))
+    if nav_buttons:
+        markup.row(*nav_buttons)
+
+    markup.add(types.InlineKeyboardButton("🔙 ক্যাটাগরি তালিকায় ফিরুন", callback_data="back_to_del_cats"))
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return text_msg, markup
 
@@ -555,39 +629,69 @@ def handle_callbacks(call):
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
 
-    if call.data.startswith("thumbpage_"):
-        page = int(call.data.split("_")[1])
-        txt, kb = get_thumb_view_data(page)
-        if kb: bot.edit_message_text(txt, chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
+    # ==================== থাম্বনেইল ক্যাটাগরি ও পেজ নেভিগেশন ====================
+    if call.data == "back_to_thumb_cats":
+        kb = get_section_category_keyboard("thumb")
+        bot.edit_message_text("🖼 **থাম্বনেইল পরিবর্তনের জন্য ক্যাটাগরি বেছে নিন:**", chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
         bot.answer_callback_query(call.id)
         return
 
-    if call.data.startswith("setthumb_"):
-        parts = call.data.split("_")
+    if call.data.startswith("thumbcat|"):
+        parts = call.data.split("|")
+        cat_name = parts[1]
+        page = int(parts[2])
+        txt, kb = get_thumb_view_data(cat_name, page)
+        if kb:
+            bot.edit_message_text(txt, chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
+        else:
+            bot.answer_callback_query(call.id, "❌ এই ক্যাটাগরিতে কোনো ভিডিও নেই!", show_alert=True)
+        bot.answer_callback_query(call.id)
+        return
+
+    if call.data.startswith("setthumb|"):
+        parts = call.data.split("|")
         vid_id = parts[1]
         admin_state[chat_id] = {'step': 'upload_new_thumb', 'vid_id': vid_id}
         bot.send_message(chat_id, "📷 **এই ভিডিওটির জন্য আসল থাম্বনেইল ছবিটি পাঠিয়ে দিন:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
 
-    if call.data.startswith("delpage_"):
-        page = int(call.data.split("_")[1])
-        txt, kb = get_delete_view_data(page)
-        if kb: bot.edit_message_text(txt, chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
+    # ==================== ডিলিট ক্যাটাগরি ও পেজ নেভিগেশন ====================
+    if call.data == "back_to_del_cats":
+        kb = get_section_category_keyboard("del")
+        bot.edit_message_text("🗑️ **ভিডিও ডিলিট করার জন্য ক্যাটাগরি বেছে নিন:**", chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
         bot.answer_callback_query(call.id)
         return
-    if call.data.startswith("delvid_"):
-        parts = call.data.split("_")
+
+    if call.data.startswith("delcat|"):
+        parts = call.data.split("|")
+        cat_name = parts[1]
+        page = int(parts[2])
+        txt, kb = get_delete_view_data(cat_name, page)
+        if kb:
+            bot.edit_message_text(txt, chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
+        else:
+            bot.answer_callback_query(call.id, "❌ এই ক্যাটাগরিতে কোনো ভিডিও নেই!", show_alert=True)
+        bot.answer_callback_query(call.id)
+        return
+
+    if call.data.startswith("delvid|"):
+        parts = call.data.split("|")
         del_id = parts[1]
-        page = int(parts[2]) if len(parts) > 2 else 0
+        cat_name = parts[2]
+        page = int(parts[3]) if len(parts) > 3 else 0
         data = load_data(force_refresh=True)
         data["videos"] = [v for v in data.get("videos", []) if str(v.get('id')) != str(del_id)]
         save_data(data, sync_github=True)
         bot.answer_callback_query(call.id, "✅ সফলভাবে ডিলিট করা হয়েছে!", show_alert=True)
-        txt, kb = get_delete_view_data(page)
-        if kb: bot.edit_message_text(txt, chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
-        else: bot.edit_message_text("❌ আর কোনো ভিডিও নেই!", chat_id, call.message.message_id)
+        txt, kb = get_delete_view_data(cat_name, page)
+        if kb:
+            bot.edit_message_text(txt, chat_id, call.message.message_id, reply_markup=kb, parse_mode="Markdown")
+        else:
+            kb_cats = get_section_category_keyboard("del")
+            bot.edit_message_text("✅ এই ক্যাটাগরির সব ভিডিও ডিলিট হয়েছে! অন্য ক্যাটাগরি বেছে নিন:", chat_id, call.message.message_id, reply_markup=kb_cats)
         return
+
     if call.data.startswith("delcat_"):
         cat_to_del = call.data.replace("delcat_", "")
         data = load_data(force_refresh=True)
@@ -632,18 +736,20 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup)
         return
     elif message.text == "🖼 Update Thumb":
-        txt, kb = get_thumb_view_data(0)
-        if not kb:
+        data = load_data(force_refresh=True)
+        if not data.get("videos"):
             bot.send_message(chat_id, "❌ কোনো ভিডিও পাওয়া যায়নি!", reply_markup=get_admin_keyboard())
             return
-        bot.send_message(chat_id, txt, reply_markup=kb, parse_mode="Markdown")
+        kb = get_section_category_keyboard("thumb")
+        bot.send_message(chat_id, "🖼 **থাম্বনেইল পরিবর্তনের জন্য ক্যাটাগরি বেছে নিন:**", reply_markup=kb, parse_mode="Markdown")
         return
     elif message.text == "🔕 Delete Video":
-        txt, kb = get_delete_view_data(0)
-        if not kb:
+        data = load_data(force_refresh=True)
+        if not data.get("videos"):
             bot.send_message(chat_id, "❌ কোনো ভিডিও পাওয়া যায়নি!", reply_markup=get_admin_keyboard())
             return
-        bot.send_message(chat_id, txt, reply_markup=kb, parse_mode="Markdown")
+        kb = get_section_category_keyboard("del")
+        bot.send_message(chat_id, "🗑️ **ভিডিও ডিলিট করার জন্য ক্যাটাগরি বেছে নিন:**", reply_markup=kb, parse_mode="Markdown")
         return
     elif message.text == "📢 Add Coming Soon":
         admin_state[chat_id] = {'step': 'cs_title', 'category': 'COMING SOON', 'is_coming_soon': True}
