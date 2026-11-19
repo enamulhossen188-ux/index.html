@@ -635,7 +635,7 @@
 
             <div class="unlock-info-box">
                 <span style="font-size: 16px;">🔒</span>
-                <span>ভিডিওটি ডাউনলোড করার জন্য নিচের এড দেখে নিন ১০ সেকেন্ড করে।</span>
+                <span>ভিডিওটি ডাউনলোড করার জন্য নিচের এড দেখে নিন ১৩ সেকেন্ড করে।</span>
             </div>
 
             <div class="task-list">
@@ -645,7 +645,7 @@
                             <i id="task1Icon" class="fa-solid fa-check task-check-mark"></i>
                             <span>Task 1</span>
                         </div>
-                        <p id="task1Desc" class="task-desc-text">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                        <p id="task1Desc" class="task-desc-text">ভিজিট করে ১৩ সেকেন্ড অপেক্ষা করুন</p>
                     </div>
                     <button type="button" id="task1Btn" class="visit-action-btn" onclick="runTaskDirect(1, event)">VISIT</button>
                 </div>
@@ -656,7 +656,7 @@
                             <i id="task2Icon" class="fa-solid fa-check task-check-mark"></i>
                             <span>Task 2</span>
                         </div>
-                        <p id="task2Desc" class="task-desc-text">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
+                        <p id="task2Desc" class="task-desc-text">ভিজিট করে ১৩ সেকেন্ড অপেক্ষা করুন</p>
                     </div>
                     <button type="button" id="task2Btn" class="visit-action-btn" onclick="runTaskDirect(2, event)">VISIT</button>
                 </div>
@@ -686,8 +686,8 @@
             <div class="popup-close-circle"><i class="fa-solid fa-xmark"></i></div>
             <div class="popup-title">ভেরিফিকেশন ব্যর্থ!</div>
             <div class="popup-desc">
-                আপনি সম্পূর্ণ ১০ সেকেন্ড অপেক্ষা করেন নাই!<br>
-                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">10</span> সেঃ প্রয়োজন।
+                আপনি সম্পূর্ণ ১৩ সেকেন্ড অপেক্ষা করেন নাই!<br>
+                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">13</span> সেঃ প্রয়োজন।
             </div>
             <button class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
         </div>
@@ -696,6 +696,7 @@
     <script>
         const CURRENT_RENDER_URL = "https://my-bot-server-bnj8.onrender.com";
         const GITHUB_CDN_DATA_URL = "https://enamulhossen188-ux.github.io/data.json";
+        const TASK_DURATION_SEC = 13;
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
@@ -793,7 +794,6 @@
             document.head.appendChild(sc);
         }
 
-        // পপআন্ডার অ্যাড কেবল হোম পেজে চলবে; টাস্ক পেজে ঢুকলেই স্বয়ংক্রিয়ভাবে বন্ধ হবে
         function initPopunderFromBot(popCode) {
             if (!popCode || !popCode.trim()) return;
             const raw = popCode.trim();
@@ -1044,7 +1044,6 @@
         }
 
         function openDetail(video) {
-            // টাস্ক পেজে ঢোকার সাথে সাথেই পপআন্ডার অ্যাড পুরোপুরি বন্ধ করে দেওয়া হলো
             disablePopunderOnTaskPage();
 
             currentSelectedVideo = video;
@@ -1080,7 +1079,7 @@
                     btn.innerText = "VISIT";
                 }
                 if (icon) icon.className = "fa-solid fa-check task-check-mark";
-                if (desc) desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
+                if (desc) desc.innerText = `ভিজিট করে ${TASK_DURATION_SEC} সেকেন্ড অপেক্ষা করুন`;
             }
 
             const dlBtn = document.getElementById("downloadBtn");
@@ -1094,11 +1093,9 @@
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
 
-            // হোম পেজে ফিরে গেলে পপআন্ডার অ্যাড আবার সচল হবে
             enablePopunderOnHomePage();
         }
 
-        // কোনো 10s লেখা না দেখিয়ে ক্লিক করার সাথে সাথেই সরাসরি অ্যাড পেজে নিয়ে যাবে
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.preventDefault();
@@ -1120,20 +1117,18 @@
             activeTask = taskNum;
             taskStartTime = Date.now();
 
-            // বাটনে কোনো 10s বা কাউন্টডাউন লেখা উঠবে না—সরাসরি লিংক ওপেন হবে
             if (tg && tg.openLink) {
                 tg.openLink(cleanUrl, { try_instant_view: false });
             } else {
                 nativeWindowOpen(cleanUrl, "_blank");
             }
 
-            // ব্যাকগ্রাউন্ডে নীরবে ১০ সেকেন্ড হিসাব হবে
             if (backgroundTimer) clearTimeout(backgroundTimer);
             backgroundTimer = setTimeout(() => {
                 if (activeTask === taskNum) {
                     completeTask(taskNum);
                 }
-            }, 10000);
+            }, TASK_DURATION_SEC * 1000);
         }
 
         function completeTask(taskNum) {
@@ -1173,7 +1168,7 @@
             if (document.visibilityState === "visible" && activeTask !== null) {
                 const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
 
-                if (elapsedSeconds < 10) {
+                if (elapsedSeconds < TASK_DURATION_SEC) {
                     if (backgroundTimer) clearTimeout(backgroundTimer);
                     const taskFailed = activeTask;
                     activeTask = null;
@@ -1185,9 +1180,9 @@
                         btn.className = "visit-action-btn";
                         btn.innerText = "VISIT";
                     }
-                    if (desc) desc.innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
+                    if (desc) desc.innerText = `ভিজিট করে ${TASK_DURATION_SEC} সেকেন্ড অপেক্ষা করুন`;
 
-                    const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
+                    const remainingNeed = TASK_DURATION_SEC - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
                     showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
                 } else {
                     if (backgroundTimer) clearTimeout(backgroundTimer);
@@ -1245,4 +1240,4 @@
         initData();
     </script>
 </body>
-                </html>
+    </html>
