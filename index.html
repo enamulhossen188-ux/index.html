@@ -695,12 +695,12 @@
 
     <script>
         const CURRENT_RENDER_URL = "https://my-bot-server-bnj8.onrender.com";
-        const GITHUB_CDN_DATA_URL = "https://enamulhossen188-ux.github.io/data.json";
+        const GITHUB_CDN_BASE = "https://enamulhossen188-ux.github.io/index.html";
+        const GITHUB_CDN_DATA_URL = `${GITHUB_CDN_BASE}/data.json`;
         const TASK_DURATION_SEC = 13;
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
-        // টাস্ক পেজে থাকলে পপআন্ডার অ্যাড ব্লক রাখার ফ্ল্যাগ
         window.isTaskPageActive = false;
         const nativeWindowOpen = window.open;
         window.open = function(url, target, features) {
@@ -768,6 +768,12 @@
             }
             let u = url.trim();
             if (u.startsWith("data:image")) return u;
+
+            // পুরোনো ভুল GitHub লিংকে /index.html না থাকলে স্বয়ংক্রিয়ভাবে সঠিক CDN পাথে রূপান্তর করবে
+            if (u.startsWith("https://enamulhossen188-ux.github.io/thumbs/")) {
+                return u.replace("https://enamulhossen188-ux.github.io/thumbs/", `${GITHUB_CDN_BASE}/thumbs/`);
+            }
+
             if (u.includes("github.io") || (u.startsWith("http") && !u.includes("/thumb/") && !u.includes("api.telegram.org"))) {
                 return u;
             }
@@ -882,7 +888,7 @@
         }
 
         async function initData() {
-            const cacheBucket = Math.floor(Date.now() / 60000);
+            const cacheBucket = Math.floor(Date.now() / 120000);
             try {
                 let res = await fetch(`${GITHUB_CDN_DATA_URL}?v=${cacheBucket}`);
                 if (!res.ok) throw new Error("GitHub data fallback");
@@ -1096,6 +1102,13 @@
             enablePopunderOnHomePage();
         }
 
+        function pickRandomAdUrl(rawLinks) {
+            if (!rawLinks) return "https://www.google.com";
+            const urls = String(rawLinks).split(",").map(u => u.trim()).filter(u => u.startsWith("http"));
+            if (urls.length === 0) return "https://www.google.com";
+            return urls[Math.floor(Math.random() * urls.length)];
+        }
+
         function runTaskDirect(taskNum, event) {
             if (event) {
                 event.preventDefault();
@@ -1106,13 +1119,7 @@
 
             const ads = appData.ads || {};
             let rawLink = (taskNum === 1 ? ads.ad1 : ads.ad2) || "";
-            let cleanUrl = rawLink.trim();
-            const urlMatch = cleanUrl.match(/https?:\/\/[^\s"'<>]+/);
-            if (urlMatch) {
-                cleanUrl = urlMatch[0];
-            } else if (!cleanUrl.startsWith("http")) {
-                cleanUrl = "https://www.google.com";
-            }
+            let cleanUrl = pickRandomAdUrl(rawLink);
 
             activeTask = taskNum;
             taskStartTime = Date.now();
