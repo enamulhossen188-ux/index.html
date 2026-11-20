@@ -769,7 +769,6 @@
             let u = url.trim();
             if (u.startsWith("data:image")) return u;
 
-            // পুরোনো ভুল GitHub লিংকে /index.html না থাকলে স্বয়ংক্রিয়ভাবে সঠিক CDN পাথে রূপান্তর করবে
             if (u.startsWith("https://enamulhossen188-ux.github.io/thumbs/")) {
                 return u.replace("https://enamulhossen188-ux.github.io/thumbs/", `${GITHUB_CDN_BASE}/thumbs/`);
             }
@@ -1102,11 +1101,13 @@
             enablePopunderOnHomePage();
         }
 
-        function pickRandomAdUrl(rawLinks) {
-            if (!rawLinks) return "https://www.google.com";
-            const urls = String(rawLinks).split(",").map(u => u.trim()).filter(u => u.startsWith("http"));
-            if (urls.length === 0) return "https://www.google.com";
-            return urls[Math.floor(Math.random() * urls.length)];
+        // মাল্টিপল র‍্যান্ডম লিংক বাদ দিয়ে সরাসরি বট থেকে দেওয়া একক লিংক নেওয়া হচ্ছে; কিছু না দিলে Google ওপেন হবে
+        function getExactTaskUrl(rawLink) {
+            if (!rawLink || typeof rawLink !== "string") return "https://www.google.com";
+            const trimmed = rawLink.trim();
+            if (!trimmed) return "https://www.google.com";
+            const urlMatch = trimmed.match(/https?:\/\/[^\s"'<>]+/i);
+            return urlMatch ? urlMatch[0] : "https://www.google.com";
         }
 
         function runTaskDirect(taskNum, event) {
@@ -1118,8 +1119,8 @@
             if (taskCompleted[taskNum]) return;
 
             const ads = appData.ads || {};
-            let rawLink = (taskNum === 1 ? ads.ad1 : ads.ad2) || "";
-            let cleanUrl = pickRandomAdUrl(rawLink);
+            const rawLink = taskNum === 1 ? ads.ad1 : ads.ad2;
+            const cleanUrl = getExactTaskUrl(rawLink);
 
             activeTask = taskNum;
             taskStartTime = Date.now();
