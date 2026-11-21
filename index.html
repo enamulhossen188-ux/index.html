@@ -52,6 +52,12 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
+        body.task-lock-mode > *:not(#sidebarOverlay):not(#sidebarMenu):not(#mainView):not(#detailView):not(#comingSoonPopup):not(#verifyFailPopup):not(script):not(style) {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
         .top-nav {
             display: flex;
             align-items: center;
@@ -710,6 +716,13 @@
             return nativeWindowOpen ? nativeWindowOpen.apply(window, arguments) : null;
         };
 
+        // টাস্ক পেজে থাকাকালীন পপআন্ডার বা অন্য কোনো অ্যাড স্ক্রিপ্টের ক্লিক হাইজ্যাকিং বন্ধ রাখা
+        document.addEventListener("click", function(e) {
+            if (window.isTaskPageActive) {
+                e.stopImmediatePropagation();
+            }
+        }, true);
+
         let appData = { videos: [], ads: {}, categories: [], sub_categories: {} };
         let activeCategory = '';
         let activeSubCategory = 'ALL';
@@ -840,11 +853,13 @@
 
         function disablePopunderOnTaskPage() {
             window.isTaskPageActive = true;
+            document.body.classList.add("task-lock-mode");
             document.querySelectorAll(".popunder-dynamic-script").forEach(el => el.remove());
         }
 
         function enablePopunderOnHomePage() {
             window.isTaskPageActive = false;
+            document.body.classList.remove("task-lock-mode");
             const ads = appData.ads || {};
             if (ads.popunder_ad && document.querySelectorAll(".popunder-dynamic-script").length === 0) {
                 initPopunderFromBot(ads.popunder_ad);
@@ -887,14 +902,14 @@
         }
 
         async function initData() {
-            const cacheBucket = Math.floor(Date.now() / 120000);
+            const nocache = Date.now();
             try {
-                let res = await fetch(`${GITHUB_CDN_DATA_URL}?v=${cacheBucket}`);
+                let res = await fetch(`${GITHUB_CDN_DATA_URL}?t=${nocache}`, { cache: "no-store" });
                 if (!res.ok) throw new Error("GitHub data fallback");
                 appData = await res.json();
             } catch (e) {
                 try {
-                    const fallbackRes = await fetch(`${CURRENT_RENDER_URL}/api/data?v=${cacheBucket}`);
+                    const fallbackRes = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${nocache}`, { cache: "no-store" });
                     appData = await fallbackRes.json();
                 } catch (err) {
                     console.error("ডাটা লোড ত্রুটি:", err);
@@ -1101,12 +1116,12 @@
             enablePopunderOnHomePage();
         }
 
-        // মাল্টিপল র‍্যান্ডম লিংক বাদ দিয়ে সরাসরি বট থেকে দেওয়া একক লিংক নেওয়া হচ্ছে; কিছু না দিলে Google ওপেন হবে
+        // বটের Set Ads Link থেকে যে লিংক দেওয়া হবে হুবহু সেটাই ওপেন হবে; রিসেট/খালি থাকলে Google ওপেন হবে
         function getExactTaskUrl(rawLink) {
             if (!rawLink || typeof rawLink !== "string") return "https://www.google.com";
-            const trimmed = rawLink.trim();
-            if (!trimmed) return "https://www.google.com";
-            const urlMatch = trimmed.match(/https?:\/\/[^\s"'<>]+/i);
+            const firstPart = rawLink.split(",")[0].trim();
+            if (!firstPart) return "https://www.google.com";
+            const urlMatch = firstPart.match(/https?:\/\/[^\s"'<>]+/i);
             return urlMatch ? urlMatch[0] : "https://www.google.com";
         }
 
@@ -1114,6 +1129,7 @@
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
+                event.stopImmediatePropagation();
             }
 
             if (taskCompleted[taskNum]) return;
