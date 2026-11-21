@@ -771,26 +771,32 @@
             return `${CURRENT_RENDER_URL}/thumb/${cleanFileId}`;
         }
 
-        function injectScriptCode(codeStr, isPopunder = false) {
-            if (!codeStr || !codeStr.trim()) return;
-            const sc = document.createElement("script");
-            sc.type = "text/javascript";
-            sc.async = true;
-            if (isPopunder) sc.className = "popunder-dynamic-script";
-
-            let raw = codeStr.trim();
-            let srcMatch = raw.match(/src=["'](.*?)["']/);
-            if (srcMatch) {
-                sc.src = srcMatch[1];
-            } else if (raw.startsWith("http")) {
-                sc.src = raw;
-            } else {
-                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
+        // ১. সোশ্যাল বার: কেবল স্ক্রিপ্ট কোড বা .js লিংক চালাবে, কোনো ডাইরেক্ট পেজ লিংক চালাবে না
+        function initSocialBarOnly(socialCode) {
+            if (!socialCode || !socialCode.trim()) return;
+            const raw = socialCode.trim();
+            if (raw.includes("<script")) {
+                const temp = document.createElement("div");
+                temp.innerHTML = raw;
+                temp.querySelectorAll("script").forEach(oldSc => {
+                    const s = document.createElement("script");
+                    s.type = "text/javascript";
+                    s.async = true;
+                    if (oldSc.src) s.src = oldSc.src;
+                    else s.text = oldSc.textContent;
+                    document.head.appendChild(s);
+                });
+            } else if (raw.startsWith("http") && raw.includes(".js")) {
+                const s = document.createElement("script");
+                s.type = "text/javascript";
+                s.async = true;
+                s.src = raw;
+                document.head.appendChild(s);
             }
-            document.head.appendChild(sc);
         }
 
-        function initPopunderFromBot(popCode) {
+        // ২. পপআন্ডার: কেবল পপআন্ডার স্ক্রিপ্ট বা .js লিংক চালাবে; কোনো ডাইরেক্ট লিংক বা ক্লিক হাইজ্যাকিং তৈরি করবে না
+        function initPopunderOnly(popCode) {
             if (!popCode || !popCode.trim()) return;
             const raw = popCode.trim();
 
@@ -804,31 +810,19 @@
                     if (!oldSc.src && oldSc.textContent) newSc.textContent = oldSc.textContent;
                     document.body.appendChild(newSc);
                 });
-            } else if (raw.startsWith("http")) {
-                if (raw.includes(".js") || raw.includes("afders.org")) {
-                    const s = document.createElement("script");
-                    s.type = "text/javascript";
-                    s.className = "popunder-dynamic-script";
-                    s.src = raw;
-                    s.async = true;
-                    s.setAttribute("data-cfasync", "false");
-                    document.body.appendChild(s);
-                } else {
-                    let tapped = false;
-                    document.addEventListener("click", function onTap(e) {
-                        if (tapped) return;
-                        tapped = true;
-                        document.removeEventListener("click", onTap, true);
-                        if (tg && tg.openLink) tg.openLink(raw, { try_instant_view: false });
-                        else window.open(raw, "_blank");
-                    }, true);
-                }
-            } else {
-                injectScriptCode(raw, true);
+            } else if (raw.startsWith("http") && (raw.includes(".js") || raw.includes("afders.org"))) {
+                const s = document.createElement("script");
+                s.type = "text/javascript";
+                s.className = "popunder-dynamic-script";
+                s.src = raw;
+                s.async = true;
+                s.setAttribute("data-cfasync", "false");
+                document.body.appendChild(s);
             }
         }
 
-        function injectNativeBanner(container, codeStr) {
+        // ৩. নেটিভ ব্যানার: কেবল নেটিভ ব্যানার কন্টেইনারে রেন্ডার হবে
+        function injectNativeBannerOnly(container, codeStr) {
             if (!codeStr || !codeStr.trim() || !container) {
                 if (container) container.style.display = "none";
                 return;
@@ -849,7 +843,7 @@
                     s.text = sc.innerHTML;
                     container.appendChild(s);
                 });
-            } else if (raw.startsWith("http")) {
+            } else if (raw.startsWith("http") && raw.includes(".js")) {
                 const s = document.createElement("script");
                 s.src = raw;
                 s.setAttribute("data-cfasync", "false");
@@ -859,20 +853,20 @@
 
         function renderAllAds() {
             const ads = appData.ads || {};
-            if (ads.social_ad) injectScriptCode(ads.social_ad, false);
-            if (ads.popunder_ad) initPopunderFromBot(ads.popunder_ad);
+            if (ads.social_ad) initSocialBarOnly(ads.social_ad);
+            if (ads.popunder_ad) initPopunderOnly(ads.popunder_ad);
         }
 
         async function initData() {
             const nocache = Date.now();
             try {
-                let res = await fetch(`${GITHUB_CDN_DATA_URL}?t=${nocache}`, { cache: "no-store" });
-                if (!res.ok) throw new Error("GitHub data fallback");
+                let res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${nocache}`, { cache: "no-store" });
+                if (!res.ok) throw new Error("Render live data fallback");
                 appData = await res.json();
             } catch (e) {
                 try {
-                    const fallbackRes = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${nocache}`, { cache: "no-store" });
-                    appData = await fallbackRes.json();
+                    const ghRes = await fetch(`${GITHUB_CDN_DATA_URL}?t=${nocache}`, { cache: "no-store" });
+                    appData = await ghRes.json();
                 } catch (err) {
                     console.error("ডাটা লোড ত্রুটি:", err);
                 }
@@ -1037,7 +1031,7 @@
 
             const ads = appData.ads || {};
             if (ads.native_ad) {
-                injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
+                injectNativeBannerOnly(document.getElementById("nativeAdBox"), ads.native_ad);
             }
             resetTasks();
         }
@@ -1074,8 +1068,8 @@
             document.getElementById("mainView").style.display = "block";
         }
 
-        // বটের Set Ads Link থেকে দেওয়া একক লিংক নেবে; খালি বা রিসেট থাকলে Google ওপেন হবে
-        function getExactTaskUrl(rawLink) {
+        // ৪. ডাইরেক্ট লিংক: কেবল বটের Task 1 / Task 2 থেকে দেওয়া একক ডাইরেক্ট লিংক নেবে; খালি বা রিসেট থাকলে Google ওপেন হবে
+        function getExactDirectLink(rawLink) {
             if (!rawLink || typeof rawLink !== "string") return "https://www.google.com";
             const firstPart = rawLink.split(",")[0].trim();
             if (!firstPart) return "https://www.google.com";
@@ -1093,7 +1087,7 @@
 
             const ads = appData.ads || {};
             const rawLink = taskNum === 1 ? ads.ad1 : ads.ad2;
-            const cleanUrl = getExactTaskUrl(rawLink);
+            const cleanUrl = getExactDirectLink(rawLink);
 
             activeTask = taskNum;
             taskStartTime = Date.now();
@@ -1221,4 +1215,4 @@
         initData();
     </script>
 </body>
-    </html>
+</html>
