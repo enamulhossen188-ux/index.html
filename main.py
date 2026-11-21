@@ -45,6 +45,14 @@ thumb_memory_cache = {}
 admin_state = {}
 github_lock = threading.Lock()
 
+def extract_single_url(raw_text):
+    """একাধিক লিংক বা বাড়তি লেখা বাদ দিয়ে কেবল একটি পরিষ্কার URL বের করে; না থাকলে Google দেয়"""
+    if not raw_text:
+        return "https://www.google.com"
+    first_part = str(raw_text).split(",")[0].strip()
+    match = re.search(r'https?://[^\s"\'<>]+', first_part)
+    return match.group(0) if match else "https://www.google.com"
+
 def push_file_to_github(file_path, content_bytes, commit_msg):
     """GitHub রিপোজিটরিতে সরাসরি ফাইল (data.json বা ছবি) আপলোড/আপডেট করে সঠিক CDN URL দেয়"""
     if not GITHUB_TOKEN:
@@ -81,10 +89,18 @@ def push_file_to_github(file_path, content_bytes, commit_msg):
 
 def sync_public_data_to_github(data):
     """মিনি অ্যাপের জন্য দরকারি ভিডিও লিস্ট ও অ্যাড লিংক GitHub data.json-এ সেভ করে"""
+    ads = data.get("ads", {})
+    clean_ads = {
+        "ad1": extract_single_url(ads.get("ad1", "")),
+        "ad2": extract_single_url(ads.get("ad2", "")),
+        "social_ad": ads.get("social_ad", ""),
+        "native_ad": ads.get("native_ad", ""),
+        "popunder_ad": ads.get("popunder_ad", "")
+    }
     light_data = {
         "categories": data.get("categories", []),
         "sub_categories": data.get("sub_categories", {}),
-        "ads": data.get("ads", {}),
+        "ads": clean_ads,
         "update_notice": data.get("update_notice", ""),
         "videos": data.get("videos", [])
     }
@@ -130,8 +146,7 @@ def load_data(force_refresh=False):
         data.setdefault("ads", {})
         data.setdefault("sub_categories", {})
         for k in ["ad1", "ad2"]:
-            if not data["ads"].get(k):
-                data["ads"][k] = "https://www.google.com"
+            data["ads"][k] = extract_single_url(data["ads"].get(k, ""))
         cached_data = data
         last_cache_time = cur_time
         return cached_data
@@ -211,16 +226,24 @@ def serve_thumbnail(file_id):
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
     data = load_data(force_refresh=False)
+    ads = data.get("ads", {})
+    clean_ads = {
+        "ad1": extract_single_url(ads.get("ad1", "")),
+        "ad2": extract_single_url(ads.get("ad2", "")),
+        "social_ad": ads.get("social_ad", ""),
+        "native_ad": ads.get("native_ad", ""),
+        "popunder_ad": ads.get("popunder_ad", "")
+    }
     light_data = {
         "categories": data.get("categories", []),
         "sub_categories": data.get("sub_categories", {}),
-        "ads": data.get("ads", {}),
+        "ads": clean_ads,
         "update_notice": data.get("update_notice", ""),
         "videos": data.get("videos", [])
     }
     resp = make_response(jsonify(light_data))
     resp.headers['Access-Control-Allow-Origin'] = '*'
-    resp.headers['Cache-Control'] = 'public, max-age=180'
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return resp
 
 def deliver_single_video(chat_id, target_video):
@@ -255,7 +278,7 @@ def home():
     return "Bot Server Active 24/7 (High-Traffic GitHub CDN Mode)!"
 
 def get_action_buttons():
-    fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp() // 60)}"
+    fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
         types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)),
@@ -431,33 +454,71 @@ def get_delete_view_data(cat_name="ALL", page=0):
     return text_msg, markup
 
 def run_auto_sync_channel(admin_chat_id):
-    """সব থাম্বনেইল লিংক সঠিক GitHub CDN পাথে আপডেট করে ও ডাটাবেস সিঙ্ক করে"""
+    """অটকে না গিয়ে লাইভ প্রোগ্রেসসহ সব থাম্বনেইল লিংক GitHub CDN-এ সিঙ্ক করে"""
     try:
-        status_msg = bot.send_message(admin_chat_id, "⏳ **সব থাম্বনেইল ও ভিডিও ডাটা GitHub Unlimited CDN-এ সিঙ্ক করা হচ্ছে... অনুগ্রহ করে ১-২ মিনিট অপেক্ষা করুন।**")
+        if not GITHUB_TOKEN:
+            bot.send_message(admin_chat_id, "❌ **Render-এর Environment Variables-এ `GITHUB_TOKEN` সেট করা নেই!**", reply_markup=get_admin_keyboard())
+            return
+
+        status_msg = bot.send_message(admin_chat_id, "⏳ **ডাটাবেস যাচাই করা হচ্ছে...**")
         data = load_data(force_refresh=True)
         videos = data.get("videos", [])
         migrated_count = 0
+        failed_count = 0
         expected_prefix = f"https://{GITHUB_USER}.github.io/{GITHUB_REPO}/"
 
-        for v in videos:
-            thumb_val = str(v.get("thumb", "")).strip()
-            if not thumb_val or thumb_val.startswith("data:image"):
-                continue
+        pending_videos = [
+            v for v in videos
+            if str(v.get("thumb", "")).strip()
+            and not str(v.get("thumb", "")).strip().startswith("data:image")
+            and expected_prefix not in str(v.get("thumb", "")).strip()
+        ]
 
-            # যদি পুরোনো ভুল পাথে (index.html ছাড়া) লিংক সেভ হয়ে থাকে, তবে সেটি ঠিক করে নেবে
+        total_pending = len(pending_videos)
+        if total_pending == 0:
+            sync_public_data_to_github(data)
+            bot.edit_message_text(
+                "✅ **সবগুলো থাম্বনেইল আগে থেকেই GitHub Unlimited CDN-এ সেভ করা আছে এবং `data.json` আপডেট করা হয়েছে!**",
+                admin_chat_id,
+                status_msg.message_id
+            )
+            return
+
+        bot.edit_message_text(
+            f"⏳ **মোট {total_pending} টি থাম্বনেইল GitHub CDN-এ সিঙ্ক হচ্ছে...**\n(অনুগ্রহ করে অপেক্ষা করুন)",
+            admin_chat_id,
+            status_msg.message_id
+        )
+
+        for idx, v in enumerate(pending_videos, start=1):
+            thumb_val = str(v.get("thumb", "")).strip()
+
             if f"https://{GITHUB_USER}.github.io/thumbs/" in thumb_val:
                 v["thumb"] = thumb_val.replace(f"https://{GITHUB_USER}.github.io/thumbs/", f"{expected_prefix}thumbs/")
                 migrated_count += 1
-            elif expected_prefix not in thumb_val:
+            else:
                 clean_id = thumb_val.split("/")[-1]
                 try:
                     file_info = bot.get_file(clean_id)
                     img_bytes = bot.download_file(file_info.file_path)
                     file_name = f"thumbs/vid_{v.get('id')}.jpg"
-                    gh_url = push_file_to_github(file_name, img_bytes, f"Migrate {file_name}")
+                    gh_url = push_file_to_github(file_name, img_bytes, f"Sync {file_name}")
                     if gh_url:
                         v["thumb"] = gh_url
                         migrated_count += 1
+                    else:
+                        failed_count += 1
+                except Exception:
+                    failed_count += 1
+                time.sleep(0.4)
+
+            if idx % 5 == 0 or idx == total_pending:
+                try:
+                    bot.edit_message_text(
+                        f"⏳ **সিঙ্ক চলছে: {idx}/{total_pending} টি যাচাই সম্পন্ন...**\n✅ সফল: {migrated_count} | ⚠️ মেয়াদোত্তীর্ণ: {failed_count}",
+                        admin_chat_id,
+                        status_msg.message_id
+                    )
                 except Exception:
                     pass
 
@@ -466,9 +527,10 @@ def run_auto_sync_channel(admin_chat_id):
             bot.delete_message(admin_chat_id, status_msg.message_id)
         except Exception:
             pass
+
         bot.send_message(
             admin_chat_id,
-            f"🎉 **সফল হয়েছে!**\n\nমোট **{migrated_count}** টি থাম্বনেইল লিংক আপডেট ও সম্পূর্ণ ভিডিও ডাটাবেস GitHub Unlimited CDN-এ সেভ হয়েছে।",
+            f"🎉 **সিঙ্ক সম্পন্ন হয়েছে!**\n\n✅ নতুন করে GitHub CDN-এ সেভ হয়েছে: **{migrated_count}** টি\n⚠️ মেয়াদোত্তীর্ণ (Update Thumb দিয়ে বদলাতে হবে): **{failed_count}** টি",
             reply_markup=get_admin_keyboard()
         )
     except Exception as e:
@@ -526,7 +588,7 @@ def send_welcome(message):
 def run_broadcast_worker(admin_chat_id, media_type, file_id, caption_text, with_btn, user_list):
     notice_markup = None
     if with_btn:
-        fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp() // 60)}"
+        fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
         notice_markup = types.InlineKeyboardMarkup()
         notice_markup.add(types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)))
     
@@ -590,7 +652,7 @@ def handle_callbacks(call):
         return
     elif call.data == "set_ad_tasks":
         admin_state[chat_id] = {'step': 'ad_1'}
-        bot.send_message(chat_id, "🔗 **Task 1 এর এড লিংক পাঠান:**\n(একাধিক লিংক কমা `,` দিয়ে দিতে পারেন)\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "🔗 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
     elif call.data == "reset_ad_tasks":
@@ -842,18 +904,18 @@ def handle_admin_inputs(message):
         return
 
     if step == 'ad_1' and message.text:
-        admin_state[chat_id]['ad1'] = message.text.strip()
+        admin_state[chat_id]['ad1'] = extract_single_url(message.text)
         admin_state[chat_id]['step'] = 'ad_2'
-        bot.send_message(chat_id, "🎯 **এবার Task 2 এর লিংক পাঠান:**\n(একাধিক লিংক কমা `,` দিয়ে দিতে পারেন)")
+        bot.send_message(chat_id, "🎯 **এবার Task 2 এর লিংক পাঠান:**")
         return
     elif step == 'ad_2' and message.text:
         data = load_data(force_refresh=True)
         ads_map = data.setdefault("ads", {})
         ads_map["ad1"] = admin_state[chat_id]['ad1']
-        ads_map["ad2"] = message.text.strip()
+        ads_map["ad2"] = extract_single_url(message.text)
         save_data(data, sync_github=True)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **টাস্ক ১ এবং ২ এর লিঙ্ক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **টাস্ক ১ এবং ২ এর একক লিঙ্ক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_social_ad' and message.text:
         data = load_data(force_refresh=True)
