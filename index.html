@@ -52,12 +52,6 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        body.task-lock-mode > *:not(#sidebarOverlay):not(#sidebarMenu):not(#mainView):not(#detailView):not(#comingSoonPopup):not(#verifyFailPopup):not(script):not(style) {
-            display: none !important;
-            visibility: hidden !important;
-            pointer-events: none !important;
-        }
-
         .top-nav {
             display: flex;
             align-items: center;
@@ -627,7 +621,7 @@
     </div>
 
     <div class="detail-view" id="detailView">
-        <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
+        <button type="button" class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
         
         <div class="detail-wrapper">
             <div class="detail-thumb-box">
@@ -682,7 +676,7 @@
             <div style="font-size: 38px; color: #0099ff; margin-bottom: 12px;"><i class="fa-solid fa-bullhorn"></i></div>
             <div class="coming-soon-title" id="csPopupTitle"></div>
             <div class="coming-soon-desc" id="csPopupNotice"></div>
-            <button class="coming-soon-btn" onclick="closeComingSoonPopup()">Close</button>
+            <button type="button" class="coming-soon-btn" onclick="closeComingSoonPopup()">Close</button>
         </div>
     </div>
 
@@ -695,7 +689,7 @@
                 আপনি সম্পূর্ণ ১৩ সেকেন্ড অপেক্ষা করেন নাই!<br>
                 দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">13</span> সেঃ প্রয়োজন।
             </div>
-            <button class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
+            <button type="button" class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
         </div>
     </div>
 
@@ -706,22 +700,6 @@
         const TASK_DURATION_SEC = 13;
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
-
-        window.isTaskPageActive = false;
-        const nativeWindowOpen = window.open;
-        window.open = function(url, target, features) {
-            if (window.isTaskPageActive) {
-                return null;
-            }
-            return nativeWindowOpen ? nativeWindowOpen.apply(window, arguments) : null;
-        };
-
-        // টাস্ক পেজে থাকাকালীন পপআন্ডার বা অন্য কোনো অ্যাড স্ক্রিপ্টের ক্লিক হাইজ্যাকিং বন্ধ রাখা
-        document.addEventListener("click", function(e) {
-            if (window.isTaskPageActive) {
-                e.stopImmediatePropagation();
-            }
-        }, true);
 
         let appData = { videos: [], ads: {}, categories: [], sub_categories: {} };
         let activeCategory = '';
@@ -838,31 +816,15 @@
                 } else {
                     let tapped = false;
                     document.addEventListener("click", function onTap(e) {
-                        if (window.isTaskPageActive) return;
                         if (tapped) return;
                         tapped = true;
                         document.removeEventListener("click", onTap, true);
                         if (tg && tg.openLink) tg.openLink(raw, { try_instant_view: false });
-                        else nativeWindowOpen(raw, "_blank");
+                        else window.open(raw, "_blank");
                     }, true);
                 }
             } else {
                 injectScriptCode(raw, true);
-            }
-        }
-
-        function disablePopunderOnTaskPage() {
-            window.isTaskPageActive = true;
-            document.body.classList.add("task-lock-mode");
-            document.querySelectorAll(".popunder-dynamic-script").forEach(el => el.remove());
-        }
-
-        function enablePopunderOnHomePage() {
-            window.isTaskPageActive = false;
-            document.body.classList.remove("task-lock-mode");
-            const ads = appData.ads || {};
-            if (ads.popunder_ad && document.querySelectorAll(".popunder-dynamic-script").length === 0) {
-                initPopunderFromBot(ads.popunder_ad);
             }
         }
 
@@ -898,7 +860,7 @@
         function renderAllAds() {
             const ads = appData.ads || {};
             if (ads.social_ad) injectScriptCode(ads.social_ad, false);
-            if (ads.popunder_ad && !window.isTaskPageActive) initPopunderFromBot(ads.popunder_ad);
+            if (ads.popunder_ad) initPopunderFromBot(ads.popunder_ad);
         }
 
         async function initData() {
@@ -1064,8 +1026,6 @@
         }
 
         function openDetail(video) {
-            disablePopunderOnTaskPage();
-
             currentSelectedVideo = video;
             document.getElementById("mainView").style.display = "none";
             document.getElementById("detailView").style.display = "block";
@@ -1112,11 +1072,9 @@
             activeTask = null;
             document.getElementById("detailView").style.display = "none";
             document.getElementById("mainView").style.display = "block";
-
-            enablePopunderOnHomePage();
         }
 
-        // বটের Set Ads Link থেকে যে লিংক দেওয়া হবে হুবহু সেটাই ওপেন হবে; রিসেট/খালি থাকলে Google ওপেন হবে
+        // বটের Set Ads Link থেকে দেওয়া একক লিংক নেবে; খালি বা রিসেট থাকলে Google ওপেন হবে
         function getExactTaskUrl(rawLink) {
             if (!rawLink || typeof rawLink !== "string") return "https://www.google.com";
             const firstPart = rawLink.split(",")[0].trim();
@@ -1129,7 +1087,6 @@
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
-                event.stopImmediatePropagation();
             }
 
             if (taskCompleted[taskNum]) return;
@@ -1144,7 +1101,7 @@
             if (tg && tg.openLink) {
                 tg.openLink(cleanUrl, { try_instant_view: false });
             } else {
-                nativeWindowOpen(cleanUrl, "_blank");
+                window.open(cleanUrl, "_blank");
             }
 
             if (backgroundTimer) clearTimeout(backgroundTimer);
