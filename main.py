@@ -53,6 +53,21 @@ def extract_single_url(raw_text):
     match = re.search(r'https?://[^\s"\'<>]+', first_part)
     return match.group(0) if match else "https://www.google.com"
 
+def check_github_file_exists(file_path):
+    """GitHub রিপোজিটরিতে ফাইলটি আগে থেকেই আছে কি না তা দ্রুত যাচাই করে"""
+    if not GITHUB_TOKEN:
+        return False
+    url = f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{file_path}?ref={GITHUB_BRANCH}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    try:
+        r = requests.get(url, headers=headers, timeout=8)
+        return r.status_code == 200
+    except Exception:
+        return False
+
 def push_file_to_github(file_path, content_bytes, commit_msg):
     """GitHub রিপোজিটরিতে সরাসরি ফাইল (data.json বা ছবি) আপলোড/আপডেট করে সঠিক CDN URL দেয়"""
     if not GITHUB_TOKEN:
@@ -105,7 +120,7 @@ def sync_public_data_to_github(data):
         "videos": data.get("videos", [])
     }
     json_bytes = json.dumps(light_data, ensure_ascii=False, separators=(',', ':')).encode("utf-8")
-    push_file_to_github("data.json", json_bytes, f"Sync app data {datetime.now().strftime('%H:%M:%S')}")
+    return push_file_to_github("data.json", json_bytes, f"Sync app data {datetime.now().strftime('%H:%M:%S')}")
 
 def get_default_data():
     return {
@@ -453,8 +468,31 @@ def get_delete_view_data(cat_name="ALL", page=0):
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return text_msg, markup
 
+def save_db_checkpoint(data, sync_github=False):
+    """সিঙ্ক চলাকালীন প্রতি ব্যাচ শেষে নিরাপদে ডাটাবেস সেভ করে"""
+    global cached_data, last_cache_time
+    cached_data = data
+    last_cache_time = time.time()
+    try:
+        json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
+        sent_doc = bot.send_document(
+            DB_CHANNEL_ID,
+            ("db_backup_bot2.json", json_bytes),
+            caption=f"📦 Sync Checkpoint: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}",
+            protect_content=True
+        )
+        try:
+            bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
+        except Exception:
+            pass
+    except Exception as e:
+        print("Checkpoint Save Error:", e)
+
+    if sync_github:
+        sync_public_data_to_github(data)
+
 def run_auto_sync_channel(admin_chat_id):
-    """অটকে না গিয়ে লাইভ প্রোগ্রেসসহ সব থাম্বনেইল লিংক GitHub CDN-এ সিঙ্ক করে"""
+    """প্রতি ১০টি পরপর সেভ করে ও আগে আপলোড হওয়া ছবি স্কিপ করে দ্রুত ১১০টি থাম্বনেইল GitHub CDN-এ সিঙ্ক করে"""
     try:
         if not GITHUB_TOKEN:
             bot.send_message(admin_chat_id, "❌ **Render-এর Environment Variables-এ `GITHUB_TOKEN` সেট করা নেই!**", reply_markup=get_admin_keyboard())
@@ -485,24 +523,28 @@ def run_auto_sync_channel(admin_chat_id):
             return
 
         bot.edit_message_text(
-            f"⏳ **মোট {total_pending} টি থাম্বনেইল GitHub CDN-এ সিঙ্ক হচ্ছে...**\n(অনুগ্রহ করে অপেক্ষা করুন)",
+            f"⏳ **মোট {total_pending} টি থাম্বনেইল GitHub CDN-এ সিঙ্ক হচ্ছে...**\n(প্রতি ১০টি পরপর সেভ হবে)",
             admin_chat_id,
             status_msg.message_id
         )
 
         for idx, v in enumerate(pending_videos, start=1):
             thumb_val = str(v.get("thumb", "")).strip()
+            target_file = f"thumbs/vid_{v.get('id')}.jpg"
 
             if f"https://{GITHUB_USER}.github.io/thumbs/" in thumb_val:
                 v["thumb"] = thumb_val.replace(f"https://{GITHUB_USER}.github.io/thumbs/", f"{expected_prefix}thumbs/")
+                migrated_count += 1
+            elif check_github_file_exists(target_file):
+                # ছবিটি আগে থেকেই GitHub-এ থাকলে নতুন করে আপলোড না করে সরাসরি লিংক বসিয়ে দেবে
+                v["thumb"] = f"{expected_prefix}{target_file}"
                 migrated_count += 1
             else:
                 clean_id = thumb_val.split("/")[-1]
                 try:
                     file_info = bot.get_file(clean_id)
                     img_bytes = bot.download_file(file_info.file_path)
-                    file_name = f"thumbs/vid_{v.get('id')}.jpg"
-                    gh_url = push_file_to_github(file_name, img_bytes, f"Sync {file_name}")
+                    gh_url = push_file_to_github(target_file, img_bytes, f"Sync {target_file}")
                     if gh_url:
                         v["thumb"] = gh_url
                         migrated_count += 1
@@ -510,19 +552,19 @@ def run_auto_sync_channel(admin_chat_id):
                         failed_count += 1
                 except Exception:
                     failed_count += 1
-                time.sleep(0.4)
+                time.sleep(0.25)
 
-            if idx % 5 == 0 or idx == total_pending:
+            if idx % 10 == 0 or idx == total_pending:
+                save_db_checkpoint(data, sync_github=(idx == total_pending))
                 try:
                     bot.edit_message_text(
-                        f"⏳ **সিঙ্ক চলছে: {idx}/{total_pending} টি যাচাই সম্পন্ন...**\n✅ সফল: {migrated_count} | ⚠️ মেয়াদোত্তীর্ণ: {failed_count}",
+                        f"⏳ **সিঙ্ক চলছে: {idx}/{total_pending} টি সেভ সম্পন্ন...**\n✅ সফল: {migrated_count} | ⚠️ মেয়াদোত্তীর্ণ: {failed_count}",
                         admin_chat_id,
                         status_msg.message_id
                     )
                 except Exception:
                     pass
 
-        save_data(data, sync_github=True)
         try:
             bot.delete_message(admin_chat_id, status_msg.message_id)
         except Exception:
@@ -530,7 +572,7 @@ def run_auto_sync_channel(admin_chat_id):
 
         bot.send_message(
             admin_chat_id,
-            f"🎉 **সিঙ্ক সম্পন্ন হয়েছে!**\n\n✅ নতুন করে GitHub CDN-এ সেভ হয়েছে: **{migrated_count}** টি\n⚠️ মেয়াদোত্তীর্ণ (Update Thumb দিয়ে বদলাতে হবে): **{failed_count}** টি",
+            f"🎉 **সিঙ্ক ও `data.json` আপডেট সম্পন্ন হয়েছে!**\n\n✅ GitHub CDN-এ সেভ হয়েছে: **{migrated_count}** টি\n⚠️ মেয়াদোত্তীর্ণ (Update Thumb দিয়ে বদলাতে হবে): **{failed_count}** টি\n\n⏳ ২ মিনিট পর মিনি অ্যাপ রিফ্রেশ করলে সব থাম্বনেইল দেখা যাবে।",
             reply_markup=get_admin_keyboard()
         )
     except Exception as e:
