@@ -697,6 +697,7 @@
         const CURRENT_RENDER_URL = "https://my-bot-server-bnj8.onrender.com";
         const GITHUB_CDN_BASE = "https://enamulhossen188-ux.github.io/index.html";
         const GITHUB_CDN_DATA_URL = `${GITHUB_CDN_BASE}/data.json`;
+        const LOCAL_CACHE_KEY = "bp_miniapp_cdn_cache_v1";
         const TASK_DURATION_SEC = 13;
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
@@ -753,6 +754,7 @@
             img.src = generateSvgPoster(title);
         }
 
+        // ১০০% Render ব্যান্ডউইথ সাশ্রয়ী থাম্বনেইল লজিক: কোনো ছবিই আর Render থেকে লোড হবে না
         function resolveThumb(url, title) {
             if (!url || typeof url !== 'string' || url.trim() === "" || url.includes("placehold.co")) {
                 return generateSvgPoster(title);
@@ -764,14 +766,13 @@
                 return u.replace("https://enamulhossen188-ux.github.io/thumbs/", `${GITHUB_CDN_BASE}/thumbs/`);
             }
 
-            if (u.includes("github.io") || (u.startsWith("http") && !u.includes("/thumb/") && !u.includes("api.telegram.org"))) {
+            if (u.includes("github.io") || (u.startsWith("http") && !u.includes("/thumb/") && !u.includes("api.telegram.org") && !u.includes("onrender.com"))) {
                 return u;
             }
-            const cleanFileId = u.split("/").pop().replace(/^\/+/, '');
-            return `${CURRENT_RENDER_URL}/thumb/${cleanFileId}`;
+            return generateSvgPoster(title);
         }
 
-        // ১. সোশ্যাল বার: কেবল স্ক্রিপ্ট কোড বা .js লিংক চালাবে, কোনো ডাইরেক্ট পেজ লিংক চালাবে না
+        // ১. সোশ্যাল বার: কেবল স্ক্রিপ্ট কোড বা .js লিংক চালাবে
         function initSocialBarOnly(socialCode) {
             if (!socialCode || !socialCode.trim()) return;
             const raw = socialCode.trim();
@@ -795,7 +796,7 @@
             }
         }
 
-        // ২. পপআন্ডার: কেবল পপআন্ডার স্ক্রিপ্ট বা .js লিংক চালাবে; কোনো ডাইরেক্ট লিংক বা ক্লিক হাইজ্যাকিং তৈরি করবে না
+        // ২. পপআন্ডার: কেবল পপআন্ডার স্ক্রিপ্ট বা .js লিংক চালাবে
         function initPopunderOnly(popCode) {
             if (!popCode || !popCode.trim()) return;
             const raw = popCode.trim();
@@ -857,29 +858,39 @@
             if (ads.popunder_ad) initPopunderOnly(ads.popunder_ad);
         }
 
-        async function initData() {
-            const nocache = Date.now();
-            try {
-                let res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${nocache}`, { cache: "no-store" });
-                if (!res.ok) throw new Error("Render live data fallback");
-                appData = await res.json();
-            } catch (e) {
-                try {
-                    const ghRes = await fetch(`${GITHUB_CDN_DATA_URL}?t=${nocache}`, { cache: "no-store" });
-                    appData = await ghRes.json();
-                } catch (err) {
-                    console.error("ডাটা লোড ত্রুটি:", err);
-                }
-            }
-
+        function applyLoadedData(data) {
+            appData = data;
             const cats = appData.categories || ["BPS5", "DRAMA", "WEB SERIES", "MOVIES", "COMING SOON"];
             if (cats.length > 0 && !activeCategory) {
                 activeCategory = cats[0];
             }
-
             renderCategoryTabs();
             renderSubCategories();
             renderVideos();
+        }
+
+        async function initData() {
+            // প্রথমে লোকাল ক্যাশ থাকলে মুহূর্তের মধ্যে অ্যাপ রেন্ডার করবে (০ ব্যান্ডউইথ)
+            try {
+                const saved = localStorage.getItem(LOCAL_CACHE_KEY);
+                if (saved) {
+                    applyLoadedData(JSON.parse(saved));
+                }
+            } catch (e) {}
+
+            // এরপর ১০০% ফ্রি ও আনলিমিটেড GitHub CDN থেকে ৬০-সেকেন্ড বাকেটে লেটেস্ট ডাটা আনবে (Render-কে কোনো রিকোয়েস্ট পাঠাবে না)
+            const minuteBucket = Math.floor(Date.now() / 60000);
+            try {
+                const res = await fetch(`${GITHUB_CDN_DATA_URL}?v=${minuteBucket}`);
+                if (res.ok) {
+                    const freshData = await res.json();
+                    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(freshData));
+                    applyLoadedData(freshData);
+                }
+            } catch (e) {
+                console.error("GitHub CDN লোড ত্রুটি:", e);
+            }
+
             renderAllAds();
         }
 
@@ -1215,4 +1226,4 @@
         initData();
     </script>
 </body>
-</html>
+    </html>
