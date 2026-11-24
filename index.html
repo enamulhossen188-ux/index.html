@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bachelor Point — Watch & Download</title>
-    <!-- Telegram WebApp & AdsGram SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
@@ -13,7 +12,6 @@
             --bg-secondary: #181a22;
             --bg-card: #1e212b;
             --accent: #e50914;
-            --accent-hover: #ff1e29;
             --success: #00c853;
             --text-main: #ffffff;
             --text-muted: #9ca3af;
@@ -24,15 +22,14 @@
             background-color: var(--bg-primary);
             color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            padding-bottom: 75px;
+            padding-bottom: 80px;
             overflow-x: hidden;
         }
-        /* Header */
         .header {
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(15, 16, 21, 0.95);
+            background: rgba(15, 16, 21, 0.96);
             backdrop-filter: blur(10px);
             padding: 12px 15px;
             display: flex;
@@ -65,7 +62,6 @@
             font-size: 13px;
             cursor: pointer;
         }
-        /* Search Bar */
         .search-box {
             display: none;
             padding: 10px 15px;
@@ -83,7 +79,6 @@
             font-size: 14px;
             outline: none;
         }
-        /* Notice Ticker */
         .notice-bar {
             background: linear-gradient(90deg, #1f1215, #181a22);
             border-bottom: 1px solid #38181d;
@@ -94,7 +89,6 @@
             align-items: center;
             gap: 8px;
         }
-        /* Category Tabs */
         .cat-scroll {
             display: flex;
             gap: 8px;
@@ -107,10 +101,10 @@
             background: var(--bg-card);
             color: var(--text-muted);
             border: 1px solid var(--border);
-            padding: 7px 16px;
+            padding: 8px 18px;
             border-radius: 20px;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 700;
             white-space: nowrap;
             cursor: pointer;
             transition: 0.2s;
@@ -119,13 +113,17 @@
             background: var(--accent);
             color: #fff;
             border-color: var(--accent);
+            box-shadow: 0 3px 10px rgba(229, 9, 20, 0.35);
         }
-        /* Video Grid */
+        #nativeAdSlot {
+            padding: 0 15px 10px;
+            text-align: center;
+        }
         .video-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
-            padding: 5px 15px 20px;
+            padding: 4px 15px 20px;
         }
         .video-card {
             background: var(--bg-card);
@@ -155,7 +153,7 @@
             position: absolute;
             top: 6px;
             left: 6px;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.78);
             color: #fff;
             font-size: 10px;
             font-weight: 700;
@@ -179,13 +177,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.18);
         }
         .play-circle {
             width: 34px;
             height: 34px;
             border-radius: 50%;
-            background: rgba(229, 9, 20, 0.9);
+            background: rgba(229, 9, 20, 0.92);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -245,7 +243,7 @@
         .modal-backdrop {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.82);
+            background: rgba(0, 0, 0, 0.85);
             z-index: 300;
             display: none;
             align-items: center;
@@ -258,12 +256,10 @@
             border: 1px solid var(--border);
             border-radius: 16px;
             width: 100%;
-            max-width: 390px;
+            max-width: 395px;
             padding: 18px;
             position: relative;
-            animation: popIn 0.2s ease;
         }
-        @keyframes popIn { from { transform: scale(0.93); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal-close {
             position: absolute;
             top: 12px;
@@ -296,15 +292,16 @@
             background: var(--accent);
             color: #fff;
             border: none;
-            padding: 9px 15px;
+            padding: 9px 14px;
             border-radius: 8px;
-            font-size: 12.5px;
+            font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            min-width: 88px;
+            min-width: 96px;
             text-align: center;
         }
         .task-btn.loading { background: #d97706; cursor: wait; }
+        .task-btn.retry { background: #b91c1c; }
         .task-btn.done { background: var(--success); cursor: default; }
 
         .download-btn {
@@ -318,7 +315,6 @@
             font-weight: 800;
             margin-top: 6px;
             cursor: not-allowed;
-            transition: 0.2s;
         }
         .download-btn.unlocked {
             background: linear-gradient(90deg, #00c853, #009624);
@@ -326,6 +322,43 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0, 200, 83, 0.35);
         }
+
+        /* Warning Popup when user leaves ad early */
+        .warn-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.88);
+            z-index: 600;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .warn-backdrop.open { display: flex; }
+        .warn-box {
+            background: #1f161a;
+            border: 1.5px solid #e50914;
+            border-radius: 16px;
+            max-width: 340px;
+            width: 100%;
+            padding: 22px 18px;
+            text-align: center;
+        }
+        .warn-icon { font-size: 38px; margin-bottom: 10px; }
+        .warn-title { font-size: 17px; font-weight: 800; color: #ff4d4f; margin-bottom: 8px; }
+        .warn-desc { font-size: 13.5px; color: #e5e7eb; line-height: 1.5; margin-bottom: 18px; }
+        .warn-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+        }
+
         .empty-state {
             grid-column: 1 / -1;
             text-align: center;
@@ -352,7 +385,6 @@
 </head>
 <body>
 
-    <!-- Header -->
     <div class="header">
         <div class="header-left">
             <button class="menu-btn" onclick="toggleDrawer(true)">☰</button>
@@ -361,26 +393,23 @@
         <button class="search-toggle" onclick="toggleSearch()">🔍 খুঁজুন</button>
     </div>
 
-    <!-- Search -->
     <div class="search-box" id="searchBox">
         <input type="text" class="search-input" id="searchInput" placeholder="নাটক বা পর্বের নাম লিখুন..." oninput="renderVideos()">
     </div>
 
-    <!-- Update Notice -->
     <div class="notice-bar">
         <span>📢</span>
         <marquee id="noticeText" scrollamount="4">লোড হচ্ছে...</marquee>
     </div>
 
-    <!-- Categories -->
     <div class="cat-scroll" id="categoryTabs"></div>
 
-    <!-- Videos Grid -->
+    <div id="nativeAdSlot"></div>
+
     <div class="video-grid" id="videoGrid">
         <div class="empty-state">⏳ ভিডিও লোড হচ্ছে...</div>
     </div>
 
-    <!-- Side Drawer -->
     <div class="drawer-backdrop" id="drawerBackdrop" onclick="toggleDrawer(false)"></div>
     <div class="drawer" id="sideDrawer">
         <h3>🎬 মেনু অপশন</h3>
@@ -397,7 +426,6 @@
             <div class="modal-sub" id="modalSubText">ভিডিওটি ইনবক্সে পেতে নিচের ২টি বিজ্ঞাপন সম্পূর্ণ দেখুন।</div>
 
             <div id="tasksContainer">
-                <!-- Task 1 -->
                 <div class="task-box">
                     <div class="task-info">
                         <h4>🎯 Task 1: বিজ্ঞাপন ১ দেখুন</h4>
@@ -406,7 +434,6 @@
                     <button class="task-btn" id="btnTask1" onclick="startAdsGramTask(1)">WATCH AD</button>
                 </div>
 
-                <!-- Task 2 -->
                 <div class="task-box">
                     <div class="task-info">
                         <h4>🎯 Task 2: বিজ্ঞাপন ২ দেখুন</h4>
@@ -420,19 +447,26 @@
         </div>
     </div>
 
+    <!-- Ad Exit / Incomplete Warning Popup -->
+    <div class="warn-backdrop" id="warnModal">
+        <div class="warn-box">
+            <div class="warn-icon">⚠️</div>
+            <div class="warn-title" id="warnTitle">বিজ্ঞাপন সম্পূর্ণ হয়নি!</div>
+            <div class="warn-desc" id="warnDesc">আপনি বিজ্ঞাপন শেষ হওয়ার আগেই বের হয়ে গেছেন। ভিডিও পেতে বিজ্ঞাপনটি সম্পূর্ণ শেষ পর্যন্ত দেখুন।</div>
+            <button class="warn-btn" onclick="closeWarnPopup()">ঠিক আছে, আবার দেখব</button>
+        </div>
+    </div>
+
     <div class="toast" id="toastMsg"></div>
 
     <script>
-        // ==================== কনফিগারেশন ====================
         const GITHUB_CDN_BASE = "https://enamulhossen188-ux.github.io/index.html";
         const DATA_JSON_URL = `${GITHUB_CDN_BASE}/data.json`;
         const RENDER_API_URL = "https://my-bot-server-bnj8.onrender.com";
-        const CACHE_KEY = "bp_miniapp_cdn_cache_v2";
+        const CACHE_KEY = "bp_miniapp_cdn_cache_v3";
 
-        // আপনার দুটি AdsGram Interstitial Block ID
-        const ADSGRAM_BLOCK_1 = "int-61694";
-        const ADSGRAM_BLOCK_2 = "int-61692";
-        // ====================================================
+        const ADSGRAM_BLOCK_1 = "int-61699";
+        const ADSGRAM_BLOCK_2 = "int-61694";
 
         const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
         if (tg) {
@@ -455,20 +489,110 @@
         }
         window.addEventListener("load", initAdsGram);
 
-        let appData = { categories: ["ALL"], videos: [], update_notice: "" };
-        let selectedCategory = "ALL";
+        let appData = { categories: ["BPS5", "DRAMA", "Web Series"], videos: [], ads: {}, update_notice: "" };
+        let selectedCategory = "";
         let currentVideo = null;
         let task1Done = false;
         let task2Done = false;
         let task1Busy = false;
         let task2Busy = false;
         let isSendingVideo = false;
+        let activeAdTask = 0;
+        let externalAdsInjected = false;
+        let popunderDirectUrl = "";
+
+        // ইউজার বিজ্ঞাপন চলাকালীন মিনিমাইজ বা বের হয়ে গেলে সতর্কতা পপ-আপ
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && activeAdTask !== 0) {
+                showWarnPopup(
+                    "বিজ্ঞাপন থেকে বের হয়ে গেছেন!",
+                    "বিজ্ঞাপন চলাকালীন মাঝপথে বের হলে টাস্ক গণনা হবে না। অনুগ্রহ করে বিজ্ঞাপনটি সম্পূর্ণ দেখুন।"
+                );
+            }
+        });
+
+        function showWarnPopup(title, desc) {
+            document.getElementById("warnTitle").innerText = title;
+            document.getElementById("warnDesc").innerText = desc;
+            document.getElementById("warnModal").classList.add("open");
+        }
+
+        function closeWarnPopup() {
+            document.getElementById("warnModal").classList.remove("open");
+        }
 
         function showToast(msg) {
             const t = document.getElementById("toastMsg");
             t.innerText = msg;
             t.style.display = "block";
             setTimeout(() => { t.style.display = "none"; }, 3000);
+        }
+
+        function injectDynamicCode(rawCode, containerEl) {
+            if (!rawCode) return;
+            const trimmed = String(rawCode).trim();
+            if (!trimmed) return;
+
+            if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+                const s = document.createElement("script");
+                s.src = trimmed;
+                s.async = true;
+                (containerEl || document.body).appendChild(s);
+                return;
+            }
+
+            const temp = document.createElement("div");
+            temp.innerHTML = trimmed;
+            Array.from(temp.childNodes).forEach(node => {
+                if (node.tagName === "SCRIPT") {
+                    const s = document.createElement("script");
+                    if (node.src) s.src = node.src;
+                    else s.textContent = node.textContent;
+                    s.async = true;
+                    (containerEl || document.body).appendChild(s);
+                } else {
+                    (containerEl || document.body).appendChild(node.cloneNode(true));
+                }
+            });
+        }
+
+        function setupExternalAds() {
+            if (externalAdsInjected || !appData.ads) return;
+            externalAdsInjected = true;
+
+            const { social_ad, native_ad, popunder_ad } = appData.ads;
+
+            if (social_ad) {
+                injectDynamicCode(social_ad, document.body);
+            }
+            if (native_ad) {
+                const slot = document.getElementById("nativeAdSlot");
+                injectDynamicCode(native_ad, slot);
+            }
+            if (popunder_ad) {
+                const p = String(popunder_ad).trim();
+                if (p.startsWith("http://") || p.startsWith("https://")) {
+                    if (p.endsWith(".js")) {
+                        injectDynamicCode(p, document.body);
+                    } else {
+                        popunderDirectUrl = p;
+                    }
+                } else {
+                    injectDynamicCode(p, document.body);
+                }
+            }
+        }
+
+        let popunderTriggered = false;
+        function triggerPopunderOnClick() {
+            if (popunderDirectUrl && !popunderTriggered) {
+                popunderTriggered = true;
+                if (tg && tg.openLink) {
+                    tg.openLink(popunderDirectUrl);
+                } else {
+                    window.open(popunderDirectUrl, "_blank");
+                }
+            }
         }
 
         function generateSvgPoster(title) {
@@ -524,21 +648,26 @@
 
         function applyAppData() {
             document.getElementById("noticeText").innerText = appData.update_notice || "আমাদের সাথেই থাকুন!";
+            const cats = appData.categories && appData.categories.length ? appData.categories : ["BPS5"];
+            if (!selectedCategory || !cats.includes(selectedCategory)) {
+                selectedCategory = cats[0];
+            }
+            setupExternalAds();
             renderCategories();
             renderVideos();
         }
 
         function renderCategories() {
             const container = document.getElementById("categoryTabs");
-            const cats = ["ALL", ...(appData.categories || [])];
+            const cats = appData.categories && appData.categories.length ? appData.categories : ["BPS5"];
             container.innerHTML = cats.map(c => {
-                const label = c === "ALL" ? "সব ভিডিও" : c;
                 const active = selectedCategory === c ? "active" : "";
-                return `<div class="cat-chip ${active}" onclick="selectCategory('${c}')">${label}</div>`;
+                return `<div class="cat-chip ${active}" onclick="selectCategory('${c}')">${c}</div>`;
             }).join("");
         }
 
         function selectCategory(cat) {
+            triggerPopunderOnClick();
             selectedCategory = cat;
             renderCategories();
             renderVideos();
@@ -557,23 +686,21 @@
             const query = (document.getElementById("searchInput").value || "").toLowerCase().trim();
             let list = appData.videos || [];
 
-            if (selectedCategory !== "ALL") {
+            if (query) {
+                list = list.filter(v => String(v.title || "").toLowerCase().includes(query));
+            } else if (selectedCategory) {
                 const target = selectedCategory.toUpperCase();
                 list = list.filter(v => {
                     const vCat = String(v.category || "").toUpperCase();
                     const vTitle = String(v.title || "").toLowerCase();
                     if (target === "BPS5") return vCat === "BPS5" || vTitle.includes("bachelor") || vTitle.includes("ব্যাচেলর");
-                    if (target === "COMING SOON") return v.is_coming_soon || vCat.includes("COMING");
+                    if (target === "COMING SOON" || target.includes("COMING")) return v.is_coming_soon || vCat.includes("COMING");
                     return vCat === target;
                 });
             }
 
-            if (query) {
-                list = list.filter(v => String(v.title || "").toLowerCase().includes(query));
-            }
-
             if (!list.length) {
-                grid.innerHTML = `<div class="empty-state">😔 কোনো ভিডিও পাওয়া যায়নি</div>`;
+                grid.innerHTML = `<div class="empty-state">😔 এই সেকশনে কোনো ভিডিও পাওয়া যায়নি</div>`;
                 return;
             }
 
@@ -599,6 +726,7 @@
         }
 
         function openVideoModal(video) {
+            triggerPopunderOnClick();
             currentVideo = video;
             document.getElementById("modalVideoTitle").innerText = video.title || "Video";
 
@@ -617,6 +745,7 @@
             task1Busy = false;
             task2Busy = false;
             isSendingVideo = false;
+            activeAdTask = 0;
 
             const b1 = document.getElementById("btnTask1");
             const b2 = document.getElementById("btnTask2");
@@ -633,10 +762,12 @@
         }
 
         function closeModal() {
+            activeAdTask = 0;
             document.getElementById("taskModal").classList.remove("open");
         }
 
         function completeTask(taskNum) {
+            activeAdTask = 0;
             if (taskNum === 1) {
                 task1Done = true;
                 task1Busy = false;
@@ -655,54 +786,64 @@
             updateDownloadButton();
         }
 
-        function runFallbackTimer(taskNum) {
-            let sec = 10;
+        function failTask(taskNum, isUserSkipped) {
+            activeAdTask = 0;
+            if (taskNum === 1) task1Busy = false;
+            else task2Busy = false;
+
             const btn = document.getElementById(taskNum === 1 ? "btnTask1" : "btnTask2");
             const statusEl = document.getElementById(taskNum === 1 ? "task1StatusText" : "task2StatusText");
-            statusEl.innerText = "অ্যাড লোড হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...";
-            btn.className = "task-btn loading";
-            btn.innerText = `${sec}s`;
 
-            const timer = setInterval(() => {
-                sec--;
-                if (sec > 0) {
-                    btn.innerText = `${sec}s`;
-                } else {
-                    clearInterval(timer);
-                    completeTask(taskNum);
-                }
-            }, 1000);
+            btn.className = "task-btn retry";
+            btn.innerText = "আবার চেষ্টা করুন";
+
+            if (isUserSkipped) {
+                statusEl.innerText = "❌ বিজ্ঞাপন মাঝপথে কেটে দিয়েছেন!";
+                showWarnPopup(
+                    "বিজ্ঞাপন সম্পূর্ণ দেখেননি!",
+                    "আপনি বিজ্ঞাপন শেষ হওয়ার আগেই বের হয়ে গেছেন। ভিডিওটি পেতে 'আবার চেষ্টা করুন' চেপে বিজ্ঞাপনটি শেষ পর্যন্ত দেখুন।"
+                );
+            } else {
+                statusEl.innerText = "❌ বিজ্ঞাপন লোড হয়নি, আবার চেষ্টা করুন";
+                showToast("⚠️ বিজ্ঞাপন আসেনি, আবার চেষ্টা করুন");
+            }
         }
 
         function startAdsGramTask(taskNum) {
             if (taskNum === 1 && (task1Done || task1Busy)) return;
             if (taskNum === 2 && (task2Done || task2Busy)) return;
 
-            if (taskNum === 1) task1Busy = true;
-            else task2Busy = true;
-
             if (!AdController1 || !AdController2) initAdsGram();
             const controller = taskNum === 1 ? AdController1 : AdController2;
             const btn = document.getElementById(taskNum === 1 ? "btnTask1" : "btnTask2");
             const statusEl = document.getElementById(taskNum === 1 ? "task1StatusText" : "task2StatusText");
 
-            if (controller) {
-                btn.className = "task-btn loading";
-                btn.innerText = "LOADING...";
-                statusEl.innerText = "বিজ্ঞাপন চালু হচ্ছে...";
+            if (!controller) {
+                failTask(taskNum, false);
+                return;
+            }
 
-                controller.show().then((result) => {
-                    // বিজ্ঞাপন সম্পূর্ণ দেখা শেষ হলে টাস্ক ডান হবে
+            if (taskNum === 1) task1Busy = true;
+            else task2Busy = true;
+            activeAdTask = taskNum;
+
+            btn.className = "task-btn loading";
+            btn.innerText = "LOADING...";
+            statusEl.innerText = "বিজ্ঞাপন লোড হচ্ছে...";
+
+            controller.show().then((result) => {
+                if (result && result.done) {
                     completeTask(taskNum);
                     showToast(`✅ Task ${taskNum} সম্পন্ন হয়েছে!`);
-                }).catch((err) => {
-                    console.warn("AdsGram Show Fallback:", err);
-                    // কোনো কারণে অ্যাড না পাওয়া গেলে বা এরর হলে ফলব্যাক টাইমার চলবে
-                    runFallbackTimer(taskNum);
-                });
-            } else {
-                runFallbackTimer(taskNum);
-            }
+                } else {
+                    failTask(taskNum, true);
+                }
+            }).catch((err) => {
+                console.error("AdsGram Error:", err);
+                const errMsg = err && err.description ? String(err.description).toLowerCase() : "";
+                const skipped = errMsg.includes("skip") || errMsg.includes("close") || errMsg.includes("abort");
+                failTask(taskNum, skipped);
+            });
         }
 
         function updateDownloadButton() {
@@ -780,4 +921,4 @@
         loadAppData(false);
     </script>
 </body>
-            </html>
+    </html>
