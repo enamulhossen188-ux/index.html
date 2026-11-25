@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bachelor Point — Watch & Download</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <style>
         :root {
             --bg-primary: #0f1015;
@@ -423,23 +422,23 @@
         <div class="modal-card">
             <button class="modal-close" onclick="closeModal()">✕</button>
             <div class="modal-title" id="modalVideoTitle">Video Title</div>
-            <div class="modal-sub" id="modalSubText">ভিডিওটি ইনবক্সে পেতে নিচের ২টি বিজ্ঞাপন সম্পূর্ণ দেখুন।</div>
+            <div class="modal-sub" id="modalSubText">ভিডিওটি ইনবক্সে পেতে নিচের ২টি বিজ্ঞাপন পেজে ১০ সেকেন্ড করে অপেক্ষা করুন।</div>
 
             <div id="tasksContainer">
                 <div class="task-box">
                     <div class="task-info">
-                        <h4>🎯 Task 1: বিজ্ঞাপন ১ দেখুন</h4>
-                        <p id="task1StatusText">সম্পূর্ণ দেখলে টাস্ক আনলক হবে</p>
+                        <h4>🎯 Task 1: বিজ্ঞাপন ১ ভিজিট</h4>
+                        <p id="task1StatusText">১০ সেকেন্ড অপেক্ষা করলে আনলক হবে</p>
                     </div>
-                    <button class="task-btn" id="btnTask1" onclick="startAdsGramTask(1)">WATCH AD</button>
+                    <button class="task-btn" id="btnTask1" onclick="startDirectAdTask(1)">VISIT AD</button>
                 </div>
 
                 <div class="task-box">
                     <div class="task-info">
-                        <h4>🎯 Task 2: বিজ্ঞাপন ২ দেখুন</h4>
-                        <p id="task2StatusText">সম্পূর্ণ দেখলে ডাউনলোড চালু হবে</p>
+                        <h4>🎯 Task 2: বিজ্ঞাপন ২ ভিজিট</h4>
+                        <p id="task2StatusText">১০ সেকেন্ড অপেক্ষা করলে আনলক হবে</p>
                     </div>
-                    <button class="task-btn" id="btnTask2" onclick="startAdsGramTask(2)">WATCH AD</button>
+                    <button class="task-btn" id="btnTask2" onclick="startDirectAdTask(2)">VISIT AD</button>
                 </div>
 
                 <button class="download-btn" id="btnDownload" onclick="requestVideoDelivery()">🔒 ২টি টাস্ক সম্পন্ন করুন</button>
@@ -447,47 +446,36 @@
         </div>
     </div>
 
-    <!-- Ad Exit / Incomplete Warning Popup -->
+    <!-- Early Exit Warning Popup -->
     <div class="warn-backdrop" id="warnModal">
         <div class="warn-box">
             <div class="warn-icon">⚠️</div>
-            <div class="warn-title" id="warnTitle">বিজ্ঞাপন সম্পূর্ণ হয়নি!</div>
-            <div class="warn-desc" id="warnDesc">আপনি বিজ্ঞাপন শেষ হওয়ার আগেই বের হয়ে গেছেন। ভিডিও পেতে বিজ্ঞাপনটি সম্পূর্ণ শেষ পর্যন্ত দেখুন।</div>
-            <button class="warn-btn" onclick="closeWarnPopup()">ঠিক আছে, আবার দেখব</button>
+            <div class="warn-title" id="warnTitle">সময় পূর্ণ হয়নি!</div>
+            <div class="warn-desc" id="warnDesc">আপনি ১০ সেকেন্ড পূর্ণ হওয়ার আগেই বিজ্ঞাপন থেকে বের হয়ে গেছেন। ভিডিও পেতে বিজ্ঞাপন পেজে পুরো ১০ সেকেন্ড অপেক্ষা করুন।</div>
+            <button class="warn-btn" onclick="closeWarnPopup()">ঠিক আছে, আবার চেষ্টা করব</button>
         </div>
     </div>
 
     <div class="toast" id="toastMsg"></div>
 
     <script>
+        // ==================== কনফিগারেশন ====================
         const GITHUB_CDN_BASE = "https://enamulhossen188-ux.github.io/index.html";
         const DATA_JSON_URL = `${GITHUB_CDN_BASE}/data.json`;
         const RENDER_API_URL = "https://my-bot-server-bnj8.onrender.com";
-        const CACHE_KEY = "bp_miniapp_cdn_cache_v3";
+        const CACHE_KEY = "bp_miniapp_cdn_cache_v4";
 
-        const ADSGRAM_BLOCK_1 = "int-61699";
-        const ADSGRAM_BLOCK_2 = "int-61694";
+        // আপনার ডাইরেক্ট অ্যাড লিংক (বট থেকে সেট করা না থাকলে এগুলো চলবে)
+        const DEFAULT_AD_1 = "https://omg10.com/4/8465535";
+        const DEFAULT_AD_2 = "https://uplcm.com/4/12277207";
+        const REQUIRED_SECONDS = 10;
+        // ====================================================
 
         const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
         if (tg) {
             tg.ready();
             tg.expand();
         }
-
-        let AdController1 = null;
-        let AdController2 = null;
-
-        function initAdsGram() {
-            if (window.Adsgram) {
-                try {
-                    AdController1 = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_1 });
-                    AdController2 = window.Adsgram.init({ blockId: ADSGRAM_BLOCK_2 });
-                } catch (e) {
-                    console.error("AdsGram Init Error:", e);
-                }
-            }
-        }
-        window.addEventListener("load", initAdsGram);
 
         let appData = { categories: ["BPS5", "DRAMA", "Web Series"], videos: [], ads: {}, update_notice: "" };
         let selectedCategory = "";
@@ -497,17 +485,20 @@
         let task1Busy = false;
         let task2Busy = false;
         let isSendingVideo = false;
-        let activeAdTask = 0;
+        let activeTaskNum = 0;
+        let taskStartTime = 0;
+        let activeTimerInterval = null;
         let externalAdsInjected = false;
         let popunderDirectUrl = "";
 
-        // ইউজার বিজ্ঞাপন চলাকালীন মিনিমাইজ বা বের হয়ে গেলে সতর্কতা পপ-আপ
+        // ইউজার ১০ সেকেন্ড পূর্ণ হওয়ার আগেই মিনি অ্যাপে ফিরে এলে টাইমার বাতিল ও সতর্কতা
         document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible" && activeAdTask !== 0) {
-                showWarnPopup(
-                    "বিজ্ঞাপন থেকে বের হয়ে গেছেন!",
-                    "বিজ্ঞাপন চলাকালীন মাঝপথে বের হলে টাস্ক গণনা হবে না। অনুগ্রহ করে বিজ্ঞাপনটি সম্পূর্ণ দেখুন।"
-                );
+            if (document.visibilityState === "visible" && activeTaskNum !== 0) {
+                const elapsedSec = (Date.now() - taskStartTime) / 1000;
+                if (elapsedSec < REQUIRED_SECONDS) {
+                    const failedNum = activeTaskNum;
+                    cancelAndFailTask(failedNum, Math.ceil(REQUIRED_SECONDS - elapsedSec));
+                }
             }
         });
 
@@ -737,37 +728,42 @@
                 return;
             }
 
-            document.getElementById("modalSubText").innerText = "ভিডিওটি আপনার টেলিগ্রাম ইনবক্সে পেতে নিচের ২টি বিজ্ঞাপন সম্পূর্ণ দেখুন।";
+            document.getElementById("modalSubText").innerText = "ভিডিওটি ইনবক্সে পেতে নিচের ২টি বিজ্ঞাপন পেজে ১০ সেকেন্ড করে অপেক্ষা করুন।";
             document.getElementById("tasksContainer").style.display = "block";
 
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
             task1Done = false;
             task2Done = false;
             task1Busy = false;
             task2Busy = false;
             isSendingVideo = false;
-            activeAdTask = 0;
+            activeTaskNum = 0;
 
             const b1 = document.getElementById("btnTask1");
             const b2 = document.getElementById("btnTask2");
             b1.className = "task-btn";
-            b1.innerText = "WATCH AD";
+            b1.innerText = "VISIT AD";
             b2.className = "task-btn";
-            b2.innerText = "WATCH AD";
+            b2.innerText = "VISIT AD";
 
-            document.getElementById("task1StatusText").innerText = "সম্পূর্ণ দেখলে টাস্ক আনলক হবে";
-            document.getElementById("task2StatusText").innerText = "সম্পূর্ণ দেখলে ডাউনলোড চালু হবে";
+            document.getElementById("task1StatusText").innerText = "১০ সেকেন্ড অপেক্ষা করলে আনলক হবে";
+            document.getElementById("task2StatusText").innerText = "১০ সেকেন্ড অপেক্ষা করলে আনলক হবে";
             updateDownloadButton();
 
             document.getElementById("taskModal").classList.add("open");
         }
 
         function closeModal() {
-            activeAdTask = 0;
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
+            activeTaskNum = 0;
+            task1Busy = false;
+            task2Busy = false;
             document.getElementById("taskModal").classList.remove("open");
         }
 
         function completeTask(taskNum) {
-            activeAdTask = 0;
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
+            activeTaskNum = 0;
             if (taskNum === 1) {
                 task1Done = true;
                 task1Busy = false;
@@ -784,10 +780,12 @@
                 document.getElementById("task2StatusText").innerText = "বিজ্ঞাপন ২ সম্পন্ন হয়েছে";
             }
             updateDownloadButton();
+            showToast(`✅ Task ${taskNum} সম্পন্ন হয়েছে!`);
         }
 
-        function failTask(taskNum, isUserSkipped) {
-            activeAdTask = 0;
+        function cancelAndFailTask(taskNum, remainingSec) {
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
+            activeTaskNum = 0;
             if (taskNum === 1) task1Busy = false;
             else task2Busy = false;
 
@@ -796,54 +794,61 @@
 
             btn.className = "task-btn retry";
             btn.innerText = "আবার চেষ্টা করুন";
+            statusEl.innerText = `❌ আরও ${remainingSec} সেকেন্ড বাকি ছিল!`;
 
-            if (isUserSkipped) {
-                statusEl.innerText = "❌ বিজ্ঞাপন মাঝপথে কেটে দিয়েছেন!";
-                showWarnPopup(
-                    "বিজ্ঞাপন সম্পূর্ণ দেখেননি!",
-                    "আপনি বিজ্ঞাপন শেষ হওয়ার আগেই বের হয়ে গেছেন। ভিডিওটি পেতে 'আবার চেষ্টা করুন' চেপে বিজ্ঞাপনটি শেষ পর্যন্ত দেখুন।"
-                );
-            } else {
-                statusEl.innerText = "❌ বিজ্ঞাপন লোড হয়নি, আবার চেষ্টা করুন";
-                showToast("⚠️ বিজ্ঞাপন আসেনি, আবার চেষ্টা করুন");
-            }
+            showWarnPopup(
+                "বিজ্ঞাপন সম্পূর্ণ দেখেননি!",
+                `আপনি ১০ সেকেন্ড পূর্ণ হওয়ার আগেই (আরও ${remainingSec} সেকেন্ড বাকি থাকতে) ফিরে এসেছেন। 'আবার চেষ্টা করুন' চেপে পুরো ১০ সেকেন্ড অপেক্ষা করুন।`
+            );
         }
 
-        function startAdsGramTask(taskNum) {
+        function getAdUrl(taskNum) {
+            const ads = appData.ads || {};
+            if (taskNum === 1) {
+                return (ads.task1_url || ads.ad1 || DEFAULT_AD_1).trim();
+            }
+            return (ads.task2_url || ads.ad2 || DEFAULT_AD_2).trim();
+        }
+
+        function startDirectAdTask(taskNum) {
             if (taskNum === 1 && (task1Done || task1Busy)) return;
             if (taskNum === 2 && (task2Done || task2Busy)) return;
-
-            if (!AdController1 || !AdController2) initAdsGram();
-            const controller = taskNum === 1 ? AdController1 : AdController2;
-            const btn = document.getElementById(taskNum === 1 ? "btnTask1" : "btnTask2");
-            const statusEl = document.getElementById(taskNum === 1 ? "task1StatusText" : "task2StatusText");
-
-            if (!controller) {
-                failTask(taskNum, false);
+            if (activeTaskNum !== 0) {
+                showToast("⏳ চলমান টাস্কটি আগে শেষ করুন!");
                 return;
             }
 
+            const adUrl = getAdUrl(taskNum);
             if (taskNum === 1) task1Busy = true;
             else task2Busy = true;
-            activeAdTask = taskNum;
+
+            activeTaskNum = taskNum;
+            taskStartTime = Date.now();
+
+            const btn = document.getElementById(taskNum === 1 ? "btnTask1" : "btnTask2");
+            const statusEl = document.getElementById(taskNum === 1 ? "task1StatusText" : "task2StatusText");
 
             btn.className = "task-btn loading";
-            btn.innerText = "LOADING...";
-            statusEl.innerText = "বিজ্ঞাপন লোড হচ্ছে...";
+            btn.innerText = `${REQUIRED_SECONDS}s`;
+            statusEl.innerText = "বিজ্ঞাপন পেজে অপেক্ষা করুন...";
 
-            controller.show().then((result) => {
-                if (result && result.done) {
-                    completeTask(taskNum);
-                    showToast(`✅ Task ${taskNum} সম্পন্ন হয়েছে!`);
+            // ডাইরেক্ট অ্যাড লিংক ওপেন করা
+            if (tg && tg.openLink) {
+                tg.openLink(adUrl);
+            } else {
+                window.open(adUrl, "_blank");
+            }
+
+            if (activeTimerInterval) clearInterval(activeTimerInterval);
+            activeTimerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - taskStartTime) / 1000);
+                const left = REQUIRED_SECONDS - elapsed;
+                if (left > 0) {
+                    btn.innerText = `${left}s`;
                 } else {
-                    failTask(taskNum, true);
+                    completeTask(taskNum);
                 }
-            }).catch((err) => {
-                console.error("AdsGram Error:", err);
-                const errMsg = err && err.description ? String(err.description).toLowerCase() : "";
-                const skipped = errMsg.includes("skip") || errMsg.includes("close") || errMsg.includes("abort");
-                failTask(taskNum, skipped);
-            });
+            }, 500);
         }
 
         function updateDownloadButton() {
@@ -915,7 +920,7 @@
 
         function showHelpAlert() {
             toggleDrawer(false);
-            alert("💡 ভিডিও ডাউনলোডের নিয়ম:\n\n১. পছন্দের ভিডিওতে ক্লিক করুন।\n২. Task 1 এবং Task 2 বাটনে চেপে দুটি বিজ্ঞাপন সম্পূর্ণ দেখুন।\n৩. নিচের সবুজ DOWNLOAD বাটনে চাপলেই ভিডিওটি সরাসরি আপনার বটের ইনবক্সে চলে যাবে।");
+            alert("💡 ভিডিও ডাউনলোডের নিয়ম:\n\n১. পছন্দের ভিডিওতে ক্লিক করুন।\n২. Task 1 এবং Task 2 বাটনে চেপে প্রতিটি বিজ্ঞাপন পেজে ১০ সেকেন্ড করে অপেক্ষা করুন।\n৩. নিচের সবুজ DOWNLOAD বাটনে চাপলেই ভিডিওটি সরাসরি আপনার বটের ইনবক্সে চলে যাবে।");
         }
 
         loadAppData(false);
