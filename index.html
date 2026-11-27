@@ -232,7 +232,7 @@
             gap: 10px;
         }
 
-        /* Task Modal (4 Tasks Design) */
+        /* Task Modal */
         .modal-backdrop {
             position: fixed;
             inset: 0;
@@ -543,17 +543,13 @@
     <div class="toast" id="toastMsg"></div>
 
     <script>
-        // ==================== কনফিগারেশন ====================
-        const DATA_SOURCES = [
-            "https://enamulhossen188-ux.github.io/index.html/data.json",
-            "https://raw.githubusercontent.com/enamulhossen188-ux/index.html/main/data.json",
-            "https://bp-bot-v2.onrender.com/api/data"
-        ];
+        // ==================== কনফিগারেশন (সরাসরি Render) ====================
         const RENDER_API_URL = "https://bp-bot-v2.onrender.com";
-        const CACHE_KEY = "bp_miniapp_cdn_cache_v8";
+        const API_DATA_URL = `${RENDER_API_URL}/api/data`;
+        const CACHE_KEY = "bp_miniapp_render_v1";
         const FALLBACK_URL = "https://www.google.com";
         const REQUIRED_SECONDS = 10;
-        // ====================================================
+        // =====================================================================
 
         const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
         if (tg) {
@@ -687,29 +683,16 @@
         function resolveThumb(thumb, title) {
             if (!thumb) return generateSvgPoster(title);
             const t = String(thumb).trim();
-            if (t.startsWith("data:image")) return t;
-            if (t.includes("github.io/index.html/")) return t;
-            if (t.includes("github.io/thumbs/")) {
-                return t.replace("github.io/thumbs/", "github.io/index.html/thumbs/");
+            if (t.startsWith("data:image") || t.startsWith("http")) {
+                if (t.includes("github.io/thumbs/")) {
+                    return t.replace("github.io/thumbs/", "github.io/index.html/thumbs/");
+                }
+                return t;
             }
             return generateSvgPoster(title);
         }
 
-        async function fetchWithTimeout(url, ms = 8000) {
-            const ctrl = new AbortController();
-            const timer = setTimeout(() => ctrl.abort(), ms);
-            try {
-                const res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
-                clearTimeout(timer);
-                return res;
-            } catch (e) {
-                clearTimeout(timer);
-                throw e;
-            }
-        }
-
         async function loadAppData(bypassCache = false) {
-            // প্রথমে লোকাল ক্যাশ থাকলে ০.১ সেকেন্ডে দেখিয়ে দেবে
             try {
                 const cached = localStorage.getItem(CACHE_KEY);
                 if (cached) {
@@ -722,32 +705,28 @@
             } catch (e) {}
 
             if (bypassCache && !hasRenderedOnce) {
-                document.getElementById("videoGrid").innerHTML = `<div class="empty-state">⏳ নতুন ভিডিও লোড হচ্ছে...</div>`;
+                document.getElementById("videoGrid").innerHTML = `<div class="empty-state">⏳ ভিডিও লোড হচ্ছে...</div>`;
             }
 
-            let loaded = false;
-            // ৩টি ফাস্ট সোর্স থেকে পর্যায়ক্রমে একদম লেটেস্ট ডাটা আনবে
-            for (const baseUrl of DATA_SOURCES) {
-                try {
-                    const timeoutMs = baseUrl.includes("onrender.com") ? 25000 : 7000;
-                    const res = await fetchWithTimeout(`${baseUrl}?t=${Date.now()}`, timeoutMs);
-                    if (res.ok) {
-                        const fresh = await res.json();
-                        if (fresh && Array.isArray(fresh.videos)) {
-                            appData = fresh;
-                            localStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
-                            applyAppData();
-                            loaded = true;
-                            break;
-                        }
+            try {
+                const res = await fetch(`${API_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
+                if (res.ok) {
+                    const fresh = await res.json();
+                    if (fresh && Array.isArray(fresh.videos)) {
+                        appData = fresh;
+                        localStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
+                        applyAppData();
+                        return;
                     }
-                } catch (e) {}
+                }
+            } catch (e) {
+                console.error("Render API Error:", e);
             }
 
-            if (!loaded && !hasRenderedOnce) {
+            if (!hasRenderedOnce) {
                 document.getElementById("videoGrid").innerHTML = `
                     <div class="empty-state">
-                        ⚠️ নেটওয়ার্ক সমস্যার কারণে ভিডিও লোড হয়নি<br>
+                        ⚠️ সার্ভার সংযোগ হচ্ছে, অনুগ্রহ করে নিচের বাটনে চাপুন<br>
                         <button class="retry-load-btn" onclick="loadAppData(true)">🔄 আবার চেষ্টা করুন</button>
                     </div>`;
             }
