@@ -54,7 +54,6 @@ def extract_single_url(raw_text):
     return match.group(0) if match else "https://www.google.com"
 
 def check_github_file_exists(file_path):
-    """GitHub রিপোজিটরিতে ফাইলটি আগে থেকেই আছে কি না তা দ্রুত যাচাই করে"""
     if not GITHUB_TOKEN:
         return False
     url = f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{file_path}?ref={GITHUB_BRANCH}"
@@ -69,7 +68,6 @@ def check_github_file_exists(file_path):
         return False
 
 def push_file_to_github(file_path, content_bytes, commit_msg):
-    """GitHub রিপোজিটরিতে সরাসরি ফাইল (data.json বা ছবি) আপলোড/আপডেট করে সঠিক CDN URL দেয়"""
     if not GITHUB_TOKEN:
         return None
     with github_lock:
@@ -103,11 +101,13 @@ def push_file_to_github(file_path, content_bytes, commit_msg):
     return None
 
 def sync_public_data_to_github(data):
-    """মিনি অ্যাপের জন্য দরকারি ভিডিও লিস্ট ও অ্যাড লিংক GitHub data.json-এ সেভ করে"""
+    """মিনি অ্যাপের জন্য দরকারি ভিডিও লিস্ট ও ৪টি অ্যাড লিংক GitHub data.json-এ সেভ করে"""
     ads = data.get("ads", {})
     clean_ads = {
         "ad1": extract_single_url(ads.get("ad1", "")),
         "ad2": extract_single_url(ads.get("ad2", "")),
+        "ad3": extract_single_url(ads.get("ad3", "")),
+        "ad4": extract_single_url(ads.get("ad4", "")),
         "social_ad": ads.get("social_ad", ""),
         "native_ad": ads.get("native_ad", ""),
         "popunder_ad": ads.get("popunder_ad", "")
@@ -130,6 +130,8 @@ def get_default_data():
         "ads": {
             "ad1": "https://www.google.com",
             "ad2": "https://www.google.com",
+            "ad3": "https://www.google.com",
+            "ad4": "https://www.google.com",
             "social_ad": "",
             "native_ad": "",
             "popunder_ad": ""
@@ -160,7 +162,7 @@ def load_data(force_refresh=False):
     if data and "videos" in data:
         data.setdefault("ads", {})
         data.setdefault("sub_categories", {})
-        for k in ["ad1", "ad2"]:
+        for k in ["ad1", "ad2", "ad3", "ad4"]:
             data["ads"][k] = extract_single_url(data["ads"].get(k, ""))
         cached_data = data
         last_cache_time = cur_time
@@ -193,7 +195,6 @@ def save_data(data, sync_github=True):
     threading.Thread(target=_async_save, daemon=True).start()
 
 def upload_thumb_securely(photo_id):
-    """ছবিটি অপ্টিমাইজড সাইজে প্রাইভেট চ্যানেলে ব্যাকআপ রেখে সরাসরি GitHub CDN-এ আপলোড করে"""
     try:
         msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumb", protect_content=True)
         perm_file_id = msg.photo[1].file_id if len(msg.photo) > 1 else msg.photo[-1].file_id
@@ -245,6 +246,8 @@ def get_app_data():
     clean_ads = {
         "ad1": extract_single_url(ads.get("ad1", "")),
         "ad2": extract_single_url(ads.get("ad2", "")),
+        "ad3": extract_single_url(ads.get("ad3", "")),
+        "ad4": extract_single_url(ads.get("ad4", "")),
         "social_ad": ads.get("social_ad", ""),
         "native_ad": ads.get("native_ad", ""),
         "popunder_ad": ads.get("popunder_ad", "")
@@ -317,7 +320,7 @@ def get_admin_keyboard():
 def get_ads_keyboard():
     data = load_data()
     ads = data.get("ads", {})
-    has_custom_task = any("google.com" not in str(ads.get(k, "")) for k in ["ad1", "ad2"])
+    has_custom_task = any("google.com" not in str(ads.get(k, "")) for k in ["ad1", "ad2", "ad3", "ad4"])
     t_status = "🔗 সেট করা আছে" if has_custom_task else "🌐 গুগল (ডিফল্ট)"
     
     s_status = "✅ আছে" if ads.get("social_ad") else "❌ নেই"
@@ -326,8 +329,8 @@ def get_ads_keyboard():
 
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton(f"🔗 ১. Task 1 & 2 Link ({t_status})", callback_data="set_ad_tasks"),
-        types.InlineKeyboardButton("🗑️ ১. Task Link রিসেট (গুগল করুন)", callback_data="reset_ad_tasks"),
+        types.InlineKeyboardButton(f"🔗 ১. Task 1–4 Link সেট করুন ({t_status})", callback_data="set_ad_tasks"),
+        types.InlineKeyboardButton("🗑️ ১. সব Task Link রিসেট (গুগল করুন)", callback_data="reset_ad_tasks"),
         types.InlineKeyboardButton(f"🚀 ২. সোশ্যাল বার সেট করুন ({s_status})", callback_data="set_ad_social"),
         types.InlineKeyboardButton("🗑️ ২. সোশ্যাল বার বন্ধ করুন", callback_data="del_ad_social"),
         types.InlineKeyboardButton(f"📱 ৩. নেটিভ ব্যানার সেট করুন ({n_status})", callback_data="set_ad_native"),
@@ -469,7 +472,6 @@ def get_delete_view_data(cat_name="ALL", page=0):
     return text_msg, markup
 
 def save_db_checkpoint(data, sync_github=False):
-    """সিঙ্ক চলাকালীন প্রতি ব্যাচ শেষে নিরাপদে ডাটাবেস সেভ করে"""
     global cached_data, last_cache_time
     cached_data = data
     last_cache_time = time.time()
@@ -492,7 +494,6 @@ def save_db_checkpoint(data, sync_github=False):
         sync_public_data_to_github(data)
 
 def run_auto_sync_channel(admin_chat_id):
-    """প্রতি ১০টি পরপর সেভ করে ও আগে আপলোড হওয়া ছবি স্কিপ করে দ্রুত ১১০টি থাম্বনেইল GitHub CDN-এ সিঙ্ক করে"""
     try:
         if not GITHUB_TOKEN:
             bot.send_message(admin_chat_id, "❌ **Render-এর Environment Variables-এ `GITHUB_TOKEN` সেট করা নেই!**", reply_markup=get_admin_keyboard())
@@ -536,7 +537,6 @@ def run_auto_sync_channel(admin_chat_id):
                 v["thumb"] = thumb_val.replace(f"https://{GITHUB_USER}.github.io/thumbs/", f"{expected_prefix}thumbs/")
                 migrated_count += 1
             elif check_github_file_exists(target_file):
-                # ছবিটি আগে থেকেই GitHub-এ থাকলে নতুন করে আপলোড না করে সরাসরি লিংক বসিয়ে দেবে
                 v["thumb"] = f"{expected_prefix}{target_file}"
                 migrated_count += 1
             else:
@@ -659,7 +659,7 @@ def handle_callbacks(call):
         return
     elif call.data == "btn_help":
         bot.answer_callback_query(call.id)
-        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে দুটি টাস্ক ১৩ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
+        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে ৪টি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
         return
 
     if str(chat_id) != str(ADMIN_ID):
@@ -702,8 +702,10 @@ def handle_callbacks(call):
         ads = data.setdefault("ads", {})
         ads["ad1"] = "https://www.google.com"
         ads["ad2"] = "https://www.google.com"
+        ads["ad3"] = "https://www.google.com"
+        ads["ad4"] = "https://www.google.com"
         save_data(data, sync_github=True)
-        bot.answer_callback_query(call.id, "🌐 দুটি টাস্কই গুগলে রিসেট করা হয়েছে!", show_alert=True)
+        bot.answer_callback_query(call.id, "🌐 ৪টি টাস্কই গুগলে রিসেট করা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
     elif call.data == "set_ad_social":
@@ -951,13 +953,25 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "🎯 **এবার Task 2 এর লিংক পাঠান:**")
         return
     elif step == 'ad_2' and message.text:
+        admin_state[chat_id]['ad2'] = extract_single_url(message.text)
+        admin_state[chat_id]['step'] = 'ad_3'
+        bot.send_message(chat_id, "🎯 **এবার Task 3 এর লিংক পাঠান:**")
+        return
+    elif step == 'ad_3' and message.text:
+        admin_state[chat_id]['ad3'] = extract_single_url(message.text)
+        admin_state[chat_id]['step'] = 'ad_4'
+        bot.send_message(chat_id, "🎯 **এবার Task 4 এর লিংক পাঠান:**")
+        return
+    elif step == 'ad_4' and message.text:
         data = load_data(force_refresh=True)
         ads_map = data.setdefault("ads", {})
         ads_map["ad1"] = admin_state[chat_id]['ad1']
-        ads_map["ad2"] = extract_single_url(message.text)
+        ads_map["ad2"] = admin_state[chat_id]['ad2']
+        ads_map["ad3"] = admin_state[chat_id]['ad3']
+        ads_map["ad4"] = extract_single_url(message.text)
         save_data(data, sync_github=True)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **টাস্ক ১ এবং ২ এর একক লিঙ্ক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **৪টি টাস্কের (Task 1, 2, 3, 4) লিংক সফলভাবে সেভ ও GitHub-এ আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_social_ad' and message.text:
         data = load_data(force_refresh=True)
