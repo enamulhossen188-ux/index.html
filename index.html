@@ -377,7 +377,7 @@
             box-shadow: 0 4px 15px rgba(0, 200, 83, 0.35);
         }
 
-        /* Warning Popup when user leaves ad early */
+        /* Warning Popup */
         .warn-backdrop {
             position: fixed;
             inset: 0;
@@ -418,6 +418,17 @@
             padding: 40px 20px;
             color: var(--text-muted);
             font-size: 14px;
+        }
+        .retry-load-btn {
+            margin-top: 12px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
         }
         .toast {
             position: fixed;
@@ -536,9 +547,7 @@
         const GITHUB_CDN_BASE = "https://enamulhossen188-ux.github.io/index.html";
         const DATA_JSON_URL = `${GITHUB_CDN_BASE}/data.json`;
         const RENDER_API_URL = "https://bp-bot-v2.onrender.com";
-        const CACHE_KEY = "bp_miniapp_cdn_cache_v6";
-
-        // বট থেকে রিসেট করলে বা কোনো লিংক না থাকলে এই ডিফল্ট লিংক চলবে
+        const CACHE_KEY = "bp_miniapp_cdn_cache_v7";
         const FALLBACK_URL = "https://www.google.com";
         const REQUIRED_SECONDS = 10;
         // ====================================================
@@ -561,6 +570,7 @@
         let lastInjectedAdsSig = "";
         let popunderDirectUrl = "";
         let popunderTriggered = false;
+        let hasRenderedOnce = false;
 
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible" && activeTaskNum !== 0) {
@@ -656,7 +666,6 @@
             }
         }
 
-        // পেজের যেকোনো জায়গায় প্রথমবার টাচ/ক্লিক করলেই পপআন্ডার ট্রিগার হবে
         document.addEventListener("click", () => {
             triggerPopunderOnClick();
         }, { passive: true });
@@ -683,6 +692,19 @@
             return generateSvgPoster(title);
         }
 
+        async function fetchWithTimeout(url, ms = 6000) {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), ms);
+            try {
+                const res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+                clearTimeout(timer);
+                return res;
+            } catch (e) {
+                clearTimeout(timer);
+                throw e;
+            }
+        }
+
         async function loadAppData(bypassCache = false) {
             if (!bypassCache) {
                 try {
@@ -695,24 +717,52 @@
                         }
                     }
                 } catch (e) {}
+            } else {
+                document.getElementById("videoGrid").innerHTML = `<div class="empty-state">⏳ নতুন ভিডিও লোড হচ্ছে...</div>`;
             }
 
+            let loaded = false;
+            // ১. প্রথমে ফ্রি GitHub CDN থেকে আনার চেষ্টা করবে
             try {
-                const res = await fetch(`${DATA_JSON_URL}?t=${Date.now()}`, { cache: "no-store" });
+                const res = await fetchWithTimeout(`${DATA_JSON_URL}?t=${Date.now()}`, 6000);
                 if (res.ok) {
                     const fresh = await res.json();
                     if (fresh && Array.isArray(fresh.videos)) {
                         appData = fresh;
                         localStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
                         applyAppData();
+                        loaded = true;
                     }
                 }
-            } catch (e) {
-                console.error("CDN Fetch Error:", e);
+            } catch (e) {}
+
+            // ২. GitHub বিল্ড চলাকালীন দেরি হলে সাথে সাথে Render ব্যাকআপ API থেকে আনবে
+            if (!loaded) {
+                try {
+                    const resApi = await fetchWithTimeout(`${RENDER_API_URL}/api/data?t=${Date.now()}`, 10000);
+                    if (resApi.ok) {
+                        const freshApi = await resApi.json();
+                        if (freshApi && Array.isArray(freshApi.videos)) {
+                            appData = freshApi;
+                            localStorage.setItem(CACHE_KEY, JSON.stringify(freshApi));
+                            applyAppData();
+                            loaded = true;
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            if (!loaded && !hasRenderedOnce) {
+                document.getElementById("videoGrid").innerHTML = `
+                    <div class="empty-state">
+                        ⚠️ নেটওয়ার্ক সমস্যার কারণে ভিডিও লোড হয়নি<br>
+                        <button class="retry-load-btn" onclick="loadAppData(true)">🔄 আবার চেষ্টা করুন</button>
+                    </div>`;
             }
         }
 
         function applyAppData() {
+            hasRenderedOnce = true;
             document.getElementById("noticeText").innerText = appData.update_notice || "আমাদের সাথেই থাকুন!";
             const cats = appData.categories && appData.categories.length ? appData.categories : ["BPS5"];
             if (!selectedCategory || !cats.includes(selectedCategory)) {
@@ -749,17 +799,21 @@
         function renderVideos() {
             const grid = document.getElementById("videoGrid");
             const query = (document.getElementById("searchInput").value || "").toLowerCase().trim();
-            let list = appData.videos || [];
+            let list = Array.isArray(appData.videos) ? appData.videos : [];
 
             if (query) {
                 list = list.filter(v => String(v.title || "").toLowerCase().includes(query));
             } else if (selectedCategory) {
-                const target = selectedCategory.toUpperCase();
+                const target = selectedCategory.trim().toUpperCase();
                 list = list.filter(v => {
-                    const vCat = String(v.category || "").toUpperCase();
+                    const vCat = String(v.category || "").trim().toUpperCase();
                     const vTitle = String(v.title || "").toLowerCase();
-                    if (target === "BPS5") return vCat === "BPS5" || vTitle.includes("bachelor") || vTitle.includes("ব্যাচেলর");
-                    if (target === "COMING SOON" || target.includes("COMING")) return v.is_coming_soon || vCat.includes("COMING");
+                    if (target === "BPS5") {
+                        return vCat === "BPS5" || vTitle.includes("bachelor") || vTitle.includes("ব্যাচেলর");
+                    }
+                    if (target === "COMING SOON" || target.includes("COMING")) {
+                        return Boolean(v.is_coming_soon) || vCat.includes("COMING");
+                    }
                     return vCat === target;
                 });
             }
@@ -866,7 +920,6 @@
             );
         }
 
-        // বটের data.json-এ যে লিংক সেট বা রিসেট করা আছে, হুবহু সেটাই নিবে
         function getAdUrl(taskNum) {
             const ads = appData.ads || {};
             const key = `ad${taskNum}`;
@@ -975,6 +1028,7 @@
             localStorage.removeItem(CACHE_KEY);
             lastInjectedAdsSig = "";
             popunderTriggered = false;
+            hasRenderedOnce = false;
             showToast("🔄 নতুন ডাটা লোড হচ্ছে...");
             loadAppData(true);
         }
