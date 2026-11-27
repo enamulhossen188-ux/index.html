@@ -544,10 +544,13 @@
 
     <script>
         // ==================== কনফিগারেশন ====================
-        const GITHUB_CDN_BASE = "https://enamulhossen188-ux.github.io/index.html";
-        const DATA_JSON_URL = `${GITHUB_CDN_BASE}/data.json`;
+        const DATA_SOURCES = [
+            "https://enamulhossen188-ux.github.io/index.html/data.json",
+            "https://raw.githubusercontent.com/enamulhossen188-ux/index.html/main/data.json",
+            "https://bp-bot-v2.onrender.com/api/data"
+        ];
         const RENDER_API_URL = "https://bp-bot-v2.onrender.com";
-        const CACHE_KEY = "bp_miniapp_cdn_cache_v7";
+        const CACHE_KEY = "bp_miniapp_cdn_cache_v8";
         const FALLBACK_URL = "https://www.google.com";
         const REQUIRED_SECONDS = 10;
         // ====================================================
@@ -692,7 +695,7 @@
             return generateSvgPoster(title);
         }
 
-        async function fetchWithTimeout(url, ms = 6000) {
+        async function fetchWithTimeout(url, ms = 8000) {
             const ctrl = new AbortController();
             const timer = setTimeout(() => ctrl.abort(), ms);
             try {
@@ -706,47 +709,36 @@
         }
 
         async function loadAppData(bypassCache = false) {
-            if (!bypassCache) {
-                try {
-                    const cached = localStorage.getItem(CACHE_KEY);
-                    if (cached) {
-                        const parsed = JSON.parse(cached);
-                        if (parsed && Array.isArray(parsed.videos) && parsed.videos.length > 0) {
-                            appData = parsed;
-                            applyAppData();
-                        }
-                    }
-                } catch (e) {}
-            } else {
-                document.getElementById("videoGrid").innerHTML = `<div class="empty-state">⏳ নতুন ভিডিও লোড হচ্ছে...</div>`;
-            }
-
-            let loaded = false;
-            // ১. প্রথমে ফ্রি GitHub CDN থেকে আনার চেষ্টা করবে
+            // প্রথমে লোকাল ক্যাশ থাকলে ০.১ সেকেন্ডে দেখিয়ে দেবে
             try {
-                const res = await fetchWithTimeout(`${DATA_JSON_URL}?t=${Date.now()}`, 6000);
-                if (res.ok) {
-                    const fresh = await res.json();
-                    if (fresh && Array.isArray(fresh.videos)) {
-                        appData = fresh;
-                        localStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (parsed && Array.isArray(parsed.videos) && parsed.videos.length > 0) {
+                        appData = parsed;
                         applyAppData();
-                        loaded = true;
                     }
                 }
             } catch (e) {}
 
-            // ২. GitHub বিল্ড চলাকালীন দেরি হলে সাথে সাথে Render ব্যাকআপ API থেকে আনবে
-            if (!loaded) {
+            if (bypassCache && !hasRenderedOnce) {
+                document.getElementById("videoGrid").innerHTML = `<div class="empty-state">⏳ নতুন ভিডিও লোড হচ্ছে...</div>`;
+            }
+
+            let loaded = false;
+            // ৩টি ফাস্ট সোর্স থেকে পর্যায়ক্রমে একদম লেটেস্ট ডাটা আনবে
+            for (const baseUrl of DATA_SOURCES) {
                 try {
-                    const resApi = await fetchWithTimeout(`${RENDER_API_URL}/api/data?t=${Date.now()}`, 10000);
-                    if (resApi.ok) {
-                        const freshApi = await resApi.json();
-                        if (freshApi && Array.isArray(freshApi.videos)) {
-                            appData = freshApi;
-                            localStorage.setItem(CACHE_KEY, JSON.stringify(freshApi));
+                    const timeoutMs = baseUrl.includes("onrender.com") ? 25000 : 7000;
+                    const res = await fetchWithTimeout(`${baseUrl}?t=${Date.now()}`, timeoutMs);
+                    if (res.ok) {
+                        const fresh = await res.json();
+                        if (fresh && Array.isArray(fresh.videos)) {
+                            appData = fresh;
+                            localStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
                             applyAppData();
                             loaded = true;
+                            break;
                         }
                     }
                 } catch (e) {}
@@ -1025,10 +1017,8 @@
 
         function forceRefreshData() {
             toggleDrawer(false);
-            localStorage.removeItem(CACHE_KEY);
             lastInjectedAdsSig = "";
             popunderTriggered = false;
-            hasRenderedOnce = false;
             showToast("🔄 নতুন ডাটা লোড হচ্ছে...");
             loadAppData(true);
         }
