@@ -3,1132 +3,1048 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bachelor Point — Watch & Download</title>
+    <title>Bachelor Point</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-primary: #0f1015;
-            --bg-secondary: #181a22;
-            --bg-card: #1e212b;
-            --accent: #e50914;
-            --success: #00c853;
-            --text-main: #ffffff;
-            --text-muted: #9ca3af;
-            --border: #2a2e3b;
+            --bg-color: #121316;
+            --surface-color: #1a1c22;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary-red: #e50914;
+            --neon-pink: #c026d3;
+            --text-color: #ffffff;
+            --text-muted: #8e9bb0;
+            --input-bg: #1c1e24;
+            --chip-bg: #1c1e24;
+            --chip-color: #cbd5e1;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body.light-mode {
+            --bg-color: #f1f5f9;
+            --surface-color: #ffffff;
+            --card-border: rgba(0, 0, 0, 0.08);
+            --primary-red: #e50914;
+            --neon-pink: #7c3aed;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --input-bg: #e2e8f0;
+            --chip-bg: #e2e8f0;
+            --chip-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
-            background-color: var(--bg-primary);
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            padding-bottom: 80px;
-            overflow-x: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 14px;
+            transition: background 0.3s ease, color 0.3s ease;
         }
-        .header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: rgba(15, 16, 21, 0.96);
-            backdrop-filter: blur(10px);
-            padding: 12px 15px;
+
+        .top-nav {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
         }
-        .header-left { display: flex; align-items: center; gap: 10px; }
-        .menu-btn {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: #fff;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            font-size: 18px;
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .menu-bar-icon {
+            font-size: 22px;
+            color: var(--text-color);
             cursor: pointer;
+            padding: 4px;
+        }
+
+        .brand-title {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-title .red-text {
+            color: #e50914;
+        }
+
+        .brand-title .white-text {
+            color: var(--text-color);
+        }
+
+        .settings-circle {
+            width: 38px;
+            height: 38px;
+            background: #2b1d3a;
+            border: 2px solid #a855f7;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        .brand-title { font-size: 18px; font-weight: 800; letter-spacing: 0.3px; }
-        .brand-title span { color: var(--accent); }
-        .search-toggle {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: #fff;
-            padding: 7px 12px;
-            border-radius: 20px;
-            font-size: 13px;
+            color: #ffffff;
+            font-size: 16px;
             cursor: pointer;
+            transition: transform 0.2s ease;
         }
-        .search-box {
+
+        .settings-circle:active {
+            transform: scale(0.92);
+        }
+
+        .sidebar-overlay {
             display: none;
-            padding: 10px 15px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
         }
-        .search-box.active { display: block; }
-        .search-input {
-            width: 100%;
-            padding: 10px 14px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: var(--bg-primary);
-            color: #fff;
-            font-size: 14px;
-            outline: none;
-        }
-        .notice-bar {
-            background: linear-gradient(90deg, #1f1215, #181a22);
-            border-bottom: 1px solid #38181d;
-            padding: 8px 15px;
-            font-size: 12.5px;
-            color: #f87171;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .cat-scroll {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding: 12px 15px;
-            scrollbar-width: none;
-        }
-        .cat-scroll::-webkit-scrollbar { display: none; }
-        .cat-chip {
-            background: var(--bg-card);
-            color: var(--text-muted);
-            border: 1px solid var(--border);
-            padding: 8px 18px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 700;
-            white-space: nowrap;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .cat-chip.active {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent);
-            box-shadow: 0 3px 10px rgba(229, 9, 20, 0.35);
-        }
-        #nativeAdSlot {
-            padding: 0 15px 10px;
-            text-align: center;
-        }
-        .video-grid {
+
+        .sidebar-menu {
+            position: fixed;
+            top: 0; left: -260px;
+            width: 260px;
+            height: 100%;
+            background: var(--surface-color);
+            border-right: 1px solid var(--card-border);
+            z-index: 10000;
+            transition: left 0.3s ease;
+            padding: 24px 16px;
             display: flex;
             flex-direction: column;
             gap: 16px;
-            padding: 6px 15px 24px;
         }
-        .video-card {
-            background: var(--bg-card);
-            border-radius: 14px;
-            overflow: hidden;
-            border: 1px solid var(--border);
+
+        .sidebar-menu.open {
+            left: 0;
+        }
+
+        .sidebar-header {
+            font-size: 18px;
+            font-weight: 700;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            background: var(--input-bg);
             cursor: pointer;
-            transition: transform 0.15s;
-            padding: 10px;
         }
-        .video-card:active { transform: scale(0.985); }
-        .thumb-wrap {
+
+        .category-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            scrollbar-width: none;
+            margin-bottom: 6px;
+        }
+        .category-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-chip {
+            padding: 8px 16px;
+            background: var(--chip-bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            color: var(--chip-color);
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .category-chip.active {
+            background: #e50914 !important;
+            color: #ffffff !important;
+            border-color: #e50914 !important;
+            box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 18px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 42px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 25px;
+            color: var(--text-color);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+
+        .video-card {
+            background: var(--surface-color);
+            border: 1.5px solid #a855f7;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
+        }
+
+        .thumb-wrapper {
             position: relative;
             width: 100%;
-            aspect-ratio: 16 / 9;
-            background: #121318;
-            border-radius: 10px;
-            overflow: hidden;
+            padding-top: 56.25%;
+            background: #000;
         }
-        .thumb-wrap img {
-            width: 100%;
-            height: 100%;
+
+        .thumb-img {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover;
-            display: block;
         }
-        .badge-cat {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.78);
-            color: #fff;
-            font-size: 11px;
+
+        .card-details {
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .video-title {
+            font-size: 14px;
             font-weight: 700;
-            padding: 4px 9px;
-            border-radius: 6px;
-        }
-        .badge-cs {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: #f59e0b;
-            color: #000;
-            font-size: 11px;
-            font-weight: 800;
-            padding: 4px 9px;
-            border-radius: 6px;
-        }
-        .card-body { padding: 12px 4px 4px; }
-        .card-title {
-            font-size: 16px;
-            font-weight: 700;
+            color: var(--text-color);
             line-height: 1.4;
-            color: #ffffff;
-            margin-bottom: 8px;
         }
-        .card-meta {
-            font-size: 13px;
-            color: var(--text-muted);
+
+        .video-date-row {
             display: flex;
             align-items: center;
             gap: 6px;
-        }
-        .clock-dot {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: var(--accent);
-            color: #fff;
-            font-size: 10px;
+            font-size: 11px;
+            color: var(--text-muted);
         }
 
-        /* Side Drawer */
-        .drawer-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.7);
-            z-index: 200;
+        .video-date-row i {
+            color: #ef4444;
+        }
+
+        .detail-view {
             display: none;
+            padding: 4px 0;
         }
-        .drawer-backdrop.open { display: block; }
-        .drawer {
-            position: fixed;
-            top: 0;
-            left: -260px;
-            width: 250px;
-            height: 100%;
-            background: var(--bg-secondary);
-            z-index: 201;
-            transition: 0.25s ease;
-            padding: 20px 15px;
-            border-right: 1px solid var(--border);
-        }
-        .drawer.open { left: 0; }
-        .drawer h3 { font-size: 16px; margin-bottom: 18px; color: #fff; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .drawer-item {
-            padding: 12px;
-            border-radius: 8px;
-            background: var(--bg-card);
-            margin-bottom: 10px;
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
             font-size: 14px;
             cursor: pointer;
-            display: flex;
+            margin-bottom: 14px;
+            display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
+            font-weight: 600;
         }
 
-        /* Task Modal (4 Tasks Design) */
-        .modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 300;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 14px;
-            overflow-y: auto;
-        }
-        .modal-backdrop.open { display: flex; }
-        .modal-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
+        .detail-card {
+            background: var(--surface-color);
+            border: 1.5px solid #a855f7;
             border-radius: 16px;
-            width: 100%;
-            max-width: 410px;
             padding: 14px;
-            position: relative;
-            max-height: 92vh;
-            overflow-y: auto;
         }
-        .modal-close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.75);
-            border: 1px solid var(--border);
-            color: #fff;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .modal-thumb {
+
+        #detailThumb {
             width: 100%;
             aspect-ratio: 16 / 9;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 12px;
-            background: #121318;
-        }
-        .modal-thumb img {
-            width: 100%;
-            height: 100%;
             object-fit: cover;
-            display: block;
-        }
-        .modal-title-box {
-            background: #12141c;
-            border: 1px solid #3b2838;
-            border-radius: 10px;
-            padding: 11px 14px;
-            text-align: center;
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            color: #fff;
-        }
-        .modal-alert-box {
-            background: rgba(229, 9, 20, 0.1);
-            border-left: 3.5px solid var(--accent);
-            border-radius: 8px;
-            padding: 11px 12px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #f3f4f6;
-            margin-bottom: 14px;
-            line-height: 1.45;
-        }
-        .task-box {
-            background: #14161f;
-            border: 1px solid #4a2335;
             border-radius: 12px;
-            padding: 11px 13px;
-            margin-bottom: 10px;
+            background: #000;
+            margin-bottom: 12px;
+        }
+
+        .detail-title-card {
+            border: 1.5px solid #ff007f;
+            border-radius: 10px;
+            padding: 10px 14px;
+            text-align: center;
+            margin-bottom: 14px;
+            background: rgba(255, 0, 127, 0.05);
+        }
+
+        .unlock-info-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 4px solid #ef4444;
+            background: rgba(239, 68, 68, 0.08);
+            padding: 10px 12px;
+            border-radius: 0 8px 8px 0;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 14px;
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .task-card-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
+            padding: 12px 14px;
+            background: var(--input-bg);
+            border: 1.5px solid #ff007f;
+            border-radius: 14px;
         }
-        .task-info h4 {
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 3px;
+
+        .task-info-left {
             display: flex;
             align-items: center;
-            gap: 7px;
+            gap: 10px;
         }
-        .task-check-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #9ca3af;
-            color: #111;
+
+        .task-icon {
+            font-size: 18px;
+            color: #94a3b8;
+        }
+
+        .task-icon.completed {
+            color: #10b981;
+        }
+
+        .task-text h4 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .task-text p {
             font-size: 11px;
-            font-weight: 900;
+            color: var(--text-muted);
         }
-        .task-check-icon.completed {
-            background: var(--success);
-            color: #fff;
-        }
-        .task-info p { font-size: 11.5px; color: var(--text-muted); }
-        .task-btn {
-            background: var(--accent);
+
+        .visit-action-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: #fff;
             border: none;
-            padding: 9px 18px;
             border-radius: 8px;
-            font-size: 12.5px;
+            padding: 8px 18px;
+            font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            min-width: 88px;
-            text-align: center;
+            z-index: 10;
         }
-        .task-btn.loading { background: #d97706; cursor: wait; }
-        .task-btn.retry { background: #b91c1c; padding: 9px 10px; font-size: 11.5px; }
-        .task-btn.done { background: var(--success); cursor: default; }
+
+        .visit-action-btn.running {
+            background: #0088cc;
+            pointer-events: none;
+        }
+
+        .visit-action-btn.done {
+            background: #10b981 !important;
+            pointer-events: none;
+        }
 
         .download-btn {
-            width: 100%;
-            padding: 13px;
-            border-radius: 10px;
-            border: none;
-            background: #234232;
-            color: #7c9a89;
-            font-size: 15px;
-            font-weight: 800;
-            margin-top: 6px;
-            cursor: not-allowed;
-        }
-        .download-btn.unlocked {
-            background: linear-gradient(90deg, #00c853, #009624);
-            color: #fff;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 200, 83, 0.35);
-        }
-
-        /* Warning Popup */
-        .warn-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.88);
-            z-index: 600;
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-        }
-        .warn-backdrop.open { display: flex; }
-        .warn-box {
-            background: #1f161a;
-            border: 1.5px solid #e50914;
-            border-radius: 16px;
-            max-width: 340px;
+            gap: 8px;
             width: 100%;
-            padding: 22px 18px;
-            text-align: center;
-        }
-        .warn-icon { font-size: 38px; margin-bottom: 10px; }
-        .warn-title { font-size: 17px; font-weight: 800; color: #ff4d4f; margin-bottom: 8px; }
-        .warn-desc { font-size: 13.5px; color: #e5e7eb; line-height: 1.5; margin-bottom: 18px; }
-        .warn-btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 10px 24px;
+            padding: 12px;
             border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            background: #10b981;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+
+        .download-btn.disabled {
+            background: #1e293b;
+            color: #64748b;
+            pointer-events: none;
+        }
+
+        .native-ad-container {
+            width: 100%;
+            min-height: 80px;
+            margin-top: 14px;
+            padding: 8px 4px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            text-align: center;
+            overflow: visible;
+            display: none;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 40px;
+            font-size: 13px;
+        }
+
+        .custom-popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .custom-popup-card {
+            background: #18191f;
+            width: 86%;
+            max-width: 320px;
+            border-radius: 20px;
+            padding: 24px 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-close-circle {
+            width: 50px; height: 50px;
+            background: #e61937;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin: 0 auto 14px auto;
+        }
+
+        .popup-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .popup-desc {
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .popup-highlight {
+            color: #ef4444;
+            font-weight: 700;
+        }
+
+        .popup-action-btn {
+            background: #ffffff;
+            color: #0f172a;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 25px;
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            width: 100%;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-muted);
-            font-size: 14px;
-        }
-        .toast {
-            position: fixed;
-            bottom: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #222634;
-            color: #fff;
-            padding: 10px 18px;
-            border-radius: 25px;
-            font-size: 13px;
-            border: 1px solid var(--border);
-            z-index: 500;
-            display: none;
-            white-space: nowrap;
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div class="header-left">
-            <button class="menu-btn" onclick="toggleDrawer(true)">☰</button>
-            <div class="brand-title">BACHELOR <span>POINT</span></div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar-menu" id="sidebarMenu">
+        <div class="sidebar-header">
+            <span>মেনু অপশন</span>
+            <i class="fa-solid fa-xmark" onclick="toggleSidebar()" style="cursor: pointer;"></i>
         </div>
-        <button class="search-toggle" onclick="toggleSearch()">🔍 খুঁজুন</button>
+        <div class="sidebar-item" onclick="toggleTheme()">
+            <i class="fa-solid fa-circle-half-stroke"></i>
+            <span id="themeMenuText">ডার্ক / লাইট মোড</span>
+        </div>
+        <div class="sidebar-item" onclick="showBotNotice()">
+            <i class="fa-solid fa-bullhorn"></i>
+            <span>বট নোটিশ</span>
+        </div>
+        <div class="sidebar-item" onclick="window.location.reload()">
+            <i class="fa-solid fa-rotate-right"></i>
+            <span>রিফ্রেশ করুন</span>
+        </div>
     </div>
 
-    <div class="search-box" id="searchBox">
-        <input type="text" class="search-input" id="searchInput" placeholder="নাটক বা পর্বের নাম লিখুন..." oninput="renderVideos()">
-    </div>
-
-    <div class="notice-bar">
-        <span>📢</span>
-        <marquee id="noticeText" scrollamount="4">৪ টা এড দেখে ভিডিও দেখুন। যে কোন জায়গায় চাপ দিলে এড আসলে কেটে দিবেন ধন্যবাদ</marquee>
-    </div>
-
-    <div class="cat-scroll" id="categoryTabs"></div>
-
-    <div id="nativeAdSlot"></div>
-
-    <div class="video-grid" id="videoGrid"></div>
-
-    <div class="drawer-backdrop" id="drawerBackdrop" onclick="toggleDrawer(false)"></div>
-    <div class="drawer" id="sideDrawer">
-        <h3>🎬 মেনু অপশন</h3>
-        <div class="drawer-item" onclick="forceRefreshData()">🔄 রিফ্রেশ করুন (নতুন পর্ব আনুন)</div>
-        <div class="drawer-item" onclick="showUpdateAlert()">🔔 ভিডিও আপডেট নোটিশ</div>
-        <div class="drawer-item" onclick="showHelpAlert()">💡 ডাউনলোড করার নিয়ম</div>
-    </div>
-
-    <!-- Task Unlock Modal (4 Tasks) -->
-    <div class="modal-backdrop" id="taskModal">
-        <div class="modal-card">
-            <button class="modal-close" onclick="closeModal()">✕</button>
-            <div class="modal-thumb">
-                <img id="modalVideoThumb" src="" alt="Thumbnail">
+    <div id="mainView">
+        <div class="top-nav">
+            <div class="nav-left">
+                <i class="fa-solid fa-bars menu-bar-icon" onclick="toggleSidebar()"></i>
+                <div class="brand-title">
+                    <span class="red-text">Bachelor</span> <span class="white-text">Point</span>
+                </div>
             </div>
-            <div class="modal-title-box" id="modalVideoTitle">Video Title</div>
-            <div class="modal-alert-box" id="modalSubText">🔒 ভিডিওটি আনলক করার জন্য নিচের ৪টি অ্যাড দেখে নিন ১০ সেকেন্ড করে।</div>
-
-            <div id="tasksContainer">
-                <div class="task-box">
-                    <div class="task-info">
-                        <h4><span class="task-check-icon" id="iconTask1">✓</span> Task 1</h4>
-                        <p id="task1StatusText">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
-                    </div>
-                    <button class="task-btn" id="btnTask1" onclick="startDirectAdTask(1)">VISIT</button>
-                </div>
-
-                <div class="task-box">
-                    <div class="task-info">
-                        <h4><span class="task-check-icon" id="iconTask2">✓</span> Task 2</h4>
-                        <p id="task2StatusText">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
-                    </div>
-                    <button class="task-btn" id="btnTask2" onclick="startDirectAdTask(2)">VISIT</button>
-                </div>
-
-                <div class="task-box">
-                    <div class="task-info">
-                        <h4><span class="task-check-icon" id="iconTask3">✓</span> Task 3</h4>
-                        <p id="task3StatusText">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
-                    </div>
-                    <button class="task-btn" id="btnTask3" onclick="startDirectAdTask(3)">VISIT</button>
-                </div>
-
-                <div class="task-box">
-                    <div class="task-info">
-                        <h4><span class="task-check-icon" id="iconTask4">✓</span> Task 4</h4>
-                        <p id="task4StatusText">ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন</p>
-                    </div>
-                    <button class="task-btn" id="btnTask4" onclick="startDirectAdTask(4)">VISIT</button>
-                </div>
-
-                <button class="download-btn" id="btnDownload" onclick="requestVideoDelivery()">⬇ ডাউনলোড ভিডিও</button>
+            <div class="settings-circle" onclick="toggleTheme()" title="ডার্ক / লাইট মোড">
+                <i class="fa-solid fa-gear" id="themeIcon"></i>
             </div>
         </div>
+
+        <div class="category-scroll" id="categoryTabs"></div>
+
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="ভিডিও নাম বা এপিসোড লিখে সার্চ দিন" oninput="handleSearch()">
+        </div>
+
+        <div class="video-grid" id="videoContainer"></div>
+        <div class="empty-msg" id="emptyMessage" style="display: none;">কোনো ভিডিও খুঁজে পাওয়া যায়নি!</div>
     </div>
 
-    <!-- Early Exit Warning Popup -->
-    <div class="warn-backdrop" id="warnModal">
-        <div class="warn-box">
-            <div class="warn-icon">⚠️</div>
-            <div class="warn-title" id="warnTitle">সময় পূর্ণ হয়নি!</div>
-            <div class="warn-desc" id="warnDesc">আপনি ১০ সেকেন্ড পূর্ণ হওয়ার আগেই বিজ্ঞাপন থেকে বের হয়ে গেছেন। ভিডিও পেতে বিজ্ঞাপন পেজে পুরো ১০ সেকেন্ড অপেক্ষা করুন।</div>
-            <button class="warn-btn" onclick="closeWarnPopup()">ঠিক আছে, আবার চেষ্টা করব</button>
+    <div class="detail-view" id="detailView">
+        <button class="back-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> ফিরে যান</button>
+        <div class="detail-card">
+            
+            <img id="detailThumb" src="" alt="Thumbnail" onerror="handleImageFallback(this)">
+
+            <div class="detail-title-card">
+                <h2 id="detailTitle" style="font-size: 15px; font-weight: 700;"></h2>
+            </div>
+
+            <div class="unlock-info-box">
+                <i class="fa-solid fa-lock" style="color: #ef4444;"></i>
+                <span>ভিডিওটি আনলক করার জন্য নিচের দুটি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন (মোট ২০ সেকেন্ড)।</span>
+            </div>
+
+            <div class="task-list">
+                <div class="task-card-row">
+                    <div class="task-info-left">
+                        <i id="task1Icon" class="fa-solid fa-circle-check task-icon"></i>
+                        <div class="task-text">
+                            <h4>Task 1</h4>
+                            <p id="task1Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
+                        </div>
+                    </div>
+                    <button id="task1Btn" class="visit-action-btn" onclick="runTaskDirect(1, event)">VISIT</button>
+                </div>
+
+                <div class="task-card-row">
+                    <div class="task-info-left">
+                        <i id="task2Icon" class="fa-solid fa-circle-check task-icon"></i>
+                        <div class="task-text">
+                            <h4>Task 2</h4>
+                            <p id="task2Desc">১০ সেকেন্ড অপেক্ষা করুন</p>
+                        </div>
+                    </div>
+                    <button id="task2Btn" class="visit-action-btn" onclick="runTaskDirect(2, event)">VISIT</button>
+                </div>
+            </div>
+
+            <button id="downloadBtn" class="download-btn disabled" onclick="sendToInbox()">
+                <i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও
+            </button>
+
+            <div id="nativeAdBox" class="native-ad-container"></div>
         </div>
     </div>
 
-    <div class="toast" id="toastMsg"></div>
+    <div id="verifyFailPopup" class="custom-popup-overlay">
+        <div class="custom-popup-card">
+            <div class="popup-close-circle"><i class="fa-solid fa-xmark"></i></div>
+            <div class="popup-title">ভেরিফিকেশন ব্যর্থ!</div>
+            <div class="popup-desc">
+                আপনি সম্পূর্ণ ১০ সেকেন্ড অপেক্ষা করেন নাই!<br>
+                দেখেছেন <span id="seenSecondsTxt" class="popup-highlight">0</span> সেঃ। আরও <span id="needSecondsTxt" class="popup-highlight">10</span> সেঃ প্রয়োজন।
+            </div>
+            <button class="popup-action-btn" onclick="closePopup()">বুঝতে পেরেছি</button>
+        </div>
+    </div>
 
     <script>
-        // ==================== নিরাপদ বিল্ট-ইন ডাটাবেস ====================
-        const BUILTIN_DATA = {
-            "ads": {
-                "ad1": "https://asiafilm.org/4/9e3eb16e33ea441001015c4ccab0b27b",
-                "ad2": "https://asiafilm.org/4/9e3eb16e33ea441001015c4ccab0b27b",
-                "ad3": "https://uplcm.com/4/8465535",
-                "ad4": "https://uplcm.com/4/12337085",
-                "native_ad": "",
-                "popunder_ad": "https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2",
-                "social_ad": ""
-            },
-            "categories": ["BPS5", "DRAMA", "Web Series", "MOVE"],
-            "update_notice": "৪ টা এড দেখে ভিডিও দেখুন। যে কোন জায়গায় চাপ দিলে এড আসলে কেটে দিবেন ধন্যবাদ",
-            "videos": [
-                {"category":"BPS5","date":"Nov 27, 2026","id":1795785354,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/img_1795785346636.jpg","title":"Bachelor Point - S5 E136 🎬"},
-                {"category":"BPS5","date":"Nov 27, 2026","id":1795785202,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/img_1795785194082.jpg","title":"Bachelor Point - S5 E135 🎬"},
-                {"category":"Web Series","date":"Nov 25, 2026","id":1795619439,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/img_1795619428189.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৮২ বাংলা 🎬"},
-                {"category":"Web Series","date":"Nov 24, 2026","id":1795533540,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/img_1795533528662.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৮১ বাংলা ডাবিং"},
-                {"category":"Web Series","date":"Nov 24, 2026","id":1795490688,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/img_1795490678982.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৮০ বাংলা 🎬"},
-                {"category":"Web Series","date":"Nov 22, 2026","id":1795362304,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/img_1795362293332.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৭৯ 🎬"},
-                {"category":"Web Series","date":"Nov 22, 2026","id":1795321819,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/img_1795321808569.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৭৮ বাংলা 🎬"},
-                {"category":"Web Series","date":"Nov 18, 2026","id":1795011825,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1795011825.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৭৭ বাংলা 🎬"},
-                {"category":"Web Series","date":"Nov 18, 2026","id":1794979383,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794979383.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৭৬ বাংলা 🎬"},
-                {"category":"Web Series","date":"Nov 17, 2026","id":1794885074,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794885074.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৭৫ 🎬"},
-                {"category":"Web Series","date":"Nov 17, 2026","id":1794885048,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794885048.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৭৪ 🎬"},
-                {"category":"Web Series","date":"Nov 14, 2026","id":1794635662,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794635662.jpg","title":"Sultan Salahuddin Ayyubi - S1 E73 🎬"},
-                {"category":"BPS5","date":"Nov 12, 2026","id":1794494279,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794494279.jpg","title":"bachelor point episode 134 🎬"},
-                {"category":"BPS5","date":"Nov 12, 2026","id":1794493881,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794493881.jpg","title":"bachelor point episode 133 🎬"},
-                {"category":"BPS5","date":"Nov 12, 2026","id":1794493852,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794493852.jpg","title":"bachelor point episode 132🎬"},
-                {"category":"BPS5","date":"Nov 12, 2026","id":1794493824,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794493824.jpg","title":"bachelor point episode 131 🎬"},
-                {"category":"BPS5","date":"Nov 12, 2026","id":1794493792,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794493792.jpg","title":"bachelor point episode 130 🎬"},
-                {"category":"BPS5","date":"Nov 12, 2026","id":1794493740,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794493740.jpg","title":"bachelor point episode 129 🎬"},
-                {"category":"Web Series","date":"Nov 11, 2026","id":1794408012,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794408012.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৭২ 🎬"},
-                {"category":"Web Series","date":"Nov 10, 2026","id":1794329184,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794329184.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৭১ 🎬"},
-                {"category":"Web Series","date":"Nov 10, 2026","id":1794329148,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794329148.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৭০ 🎬"},
-                {"category":"Web Series","date":"Nov 10, 2026","id":1794329112,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794329112.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৬৯ 🎬"},
-                {"category":"Web Series","date":"Nov 08, 2026","id":1794125173,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794125173.jpg","title":"সুলতান সালাউদ্দিন পর্ব ৬৮ 🎬"},
-                {"category":"Web Series","date":"Nov 08, 2026","id":1794125089,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1794125089.jpg","title":"সুলতান সালাউদ্দিন পর্ব ৬৭ 🎬"},
-                {"category":"Web Series","date":"Nov 03, 2026","id":1793718879,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1793718879.jpg","title":"সালাহউদ্দিন আইয়ুবি পর্ব ৬৬ 🎬"},
-                {"category":"Web Series","date":"Nov 02, 2026","id":1793629105,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1793629105.jpg","title":"সালাহউদ্দিন আইয়ুবি সিজন ১ পর্ব ৬৫ 🎬"},
-                {"category":"Web Series","date":"Nov 01, 2026","id":1793543536,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1793543536.jpg","title":"সালাহউদ্দিন আইয়ুবি পর্ব ৬৪ 🎬"},
-                {"category":"Web Series","date":"Oct 29, 2026","id":1793286687,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1793286687.jpg","title":"সালাহউদ্দিন আইয়ুবি পর্ব ৬৩ 🎬"},
-                {"category":"DRAMA","date":"Oct 29, 2026","id":1793283758,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1793283758.jpg","title":"আলাল দুলাল নাটক 🎬"},
-                {"category":"Web Series","date":"Oct 29, 2026","id":1793247478,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1793247478.jpg","title":"সালাহউদ্দিন আইয়ুবি পর্ব ৬২ বাংলা ডাবিং 🎬"},
-                {"category":"Web Series","date":"Oct 28, 2026","id":1793154033,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1793154033.jpg","title":"Sultan Salahuddin Ayyubi - EP 61 🎬"},
-                {"category":"Web Series","date":"Oct 26, 2026","id":1793027080,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1793027080.jpg","title":"সুলতান সালাউদ্দিন আইয়ুবী পর্ব ৬০ 🎬"},
-                {"category":"Web Series","date":"Oct 25, 2026","id":1792937429,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792937429.jpg","title":"সুলতান সালাউদ্দিন পর্ব ৫৯ 🎬"},
-                {"category":"Web Series","date":"Oct 22, 2026","id":1792680051,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792680051.jpg","title":"Sultan Salahuddin Ayyubi - EP 58 🎬"},
-                {"category":"DRAMA","date":"Oct 22, 2026","id":1792644489,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792644489.jpg","title":"Jailer 2 (2026) 🎬"},
-                {"category":"BPS5","date":"Oct 20, 2026","id":1792511482,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792511482.jpg","title":"bachelor point episode 128 🎬"},
-                {"category":"BPS5","date":"Oct 20, 2026","id":1792511459,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792511459.jpg","title":"bachelor point episode 127 🎬"},
-                {"category":"BPS5","date":"Oct 20, 2026","id":1792511418,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792511418.jpg","title":"bachelor point episode 126"},
-                {"category":"BPS5","date":"Oct 20, 2026","id":1792511393,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792511393.jpg","title":"bachelor point episode 125"},
-                {"category":"BPS5","date":"Oct 20, 2026","id":1792511369,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792511369.jpg","title":"bachelor point episode 124🎬"},
-                {"category":"BPS5","date":"Oct 20, 2026","id":1792511344,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792511344.jpg","title":"bachelor point episode 123 🎬"},
-                {"category":"BPS5","date":"Oct 20, 2026","id":1792509704,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792509704.jpg","title":"bachelor point episode 122 🎬"},
-                {"category":"BPS5","date":"Oct 20, 2026","id":1792503305,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792503305.jpg","title":"bachelor point episode 121 🎬"},
-                {"category":"DRAMA","date":"Oct 19, 2026","id":1792435452,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792435452.jpg","title":"নিঃশ্বাস"},
-                {"category":"Web Series","date":"Oct 19, 2026","id":1792379091,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792379091.jpg","title":"Sultan Salahuddin Ayyubi - Ep 57🎬"},
-                {"category":"Web Series","date":"Oct 19, 2026","id":1792378693,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792378693.jpg","title":"Sultan Salahuddin Ayyubi - Ep 56 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298865,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298865.jpg","title":"Sultan Salahuddin Ayyubi - Ep 55 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298842,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298842.jpg","title":"Sultan Salahuddin Ayyubi - Ep 54 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298809,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298809.jpg","title":"Sultan Salahuddin Ayyubi - Ep 53 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298781,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298781.jpg","title":"Sultan Salahuddin Ayyubi - Ep 52 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298752,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298752.jpg","title":"Sultan Salahuddin Ayyubi - Ep 51 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298728,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298728.jpg","title":"Sultan Salahuddin Ayyubi - Ep 50 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298667,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298667.jpg","title":"Sultan Salahuddin Ayyubi - Ep 49 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298637,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298637.jpg","title":"Sultan Salahuddin Ayyubi - Ep 48 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298610,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298610.jpg","title":"Sultan Salahuddin Ayyubi - Ep 47 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298580,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298580.jpg","title":"Sultan Salahuddin Ayyubi - Ep 46 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298556,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298556.jpg","title":"Sultan Salahuddin Ayyubi - Ep 45 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298521,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298521.jpg","title":"Sultan Salahuddin Ayyubi - Ep 44 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298489,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298489.jpg","title":"Sultan Salahuddin Ayyubi - Ep 43 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298459,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298459.jpg","title":"Sultan Salahuddin Ayyubi - Ep 42 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298434,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298434.jpg","title":"Sultan Salahuddin Ayyubi - Ep 41 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298392,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298392.jpg","title":"Sultan Salahuddin Ayyubi - Ep 40 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298241,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298241.jpg","title":"Sultan Salahuddin Ayyubi - Ep 39 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298203,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298203.jpg","title":"Sultan Salahuddin Ayyubi - Ep 38 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298175,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298175.jpg","title":"Sultan Salahuddin Ayyubi - Ep 37 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298145,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298145.jpg","title":"Sultan Salahuddin Ayyubi - Ep 36 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298112,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298112.jpg","title":"Sultan Salahuddin Ayyubi - Ep 35 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298077,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298077.jpg","title":"Sultan Salahuddin Ayyubi - Ep 34 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298048,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298048.jpg","title":"Sultan Salahuddin Ayyubi - Ep 33 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792298009,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792298009.jpg","title":"Sultan Salahuddin Ayyubi - Ep 33 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297957,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297957.jpg","title":"Sultan Salahuddin Ayyubi - Ep 31 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297854,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297854.jpg","title":"Sultan Salahuddin Ayyubi - Ep 30 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297814,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297814.jpg","title":"Sultan Salahuddin Ayyubi - Ep 29 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297768,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297768.jpg","title":"Sultan Salahuddin Ayyubi - Ep 28 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297739,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297739.jpg","title":"Sultan Salahuddin Ayyubi - Ep 27 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297709,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297709.jpg","title":"Sultan Salahuddin Ayyubi - Ep 26 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297680,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297680.jpg","title":"Sultan Salahuddin Ayyubi - Ep 25 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297651,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297651.jpg","title":"Sultan Salahuddin Ayyubi - Ep 24 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297599,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297599.jpg","title":"Sultan Salahuddin Ayyubi - Ep 23 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297569,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297569.jpg","title":"Sultan Salahuddin Ayyubi - Ep 22 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297543,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297543.jpg","title":"Sultan Salahuddin Ayyubi - Ep 21 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297515,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297515.jpg","title":"Sultan Salahuddin Ayyubi - Ep 20 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297486,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297486.jpg","title":"Sultan Salahuddin Ayyubi - Ep 19 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297458,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297458.jpg","title":"Sultan Salahuddin Ayyubi - Ep 18 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297428,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297428.jpg","title":"Sultan Salahuddin Ayyubi - Ep 17 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297398,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297398.jpg","title":"Sultan Salahuddin Ayyubi - Ep 16 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297359,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297359.jpg","title":"Sultan Salahuddin Ayyubi - Ep 15 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297330,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297330.jpg","title":"Sultan Salahuddin Ayyubi - Ep 14 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297290,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297290.jpg","title":"Sultan Salahuddin Ayyubi - Ep 13 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297250,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297250.jpg","title":"Sultan Salahuddin Ayyubi - Ep 12 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297196,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297196.jpg","title":"Sultan Salahuddin Ayyubi - Ep 11 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297152,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297152.jpg","title":"Sultan Salahuddin Ayyubi - Ep 10 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297116,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297116.jpg","title":"Sultan Salahuddin Ayyubi - Ep 08 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297057,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297057.jpg","title":"Sultan Salahuddin Ayyubi - Ep 07 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792297023,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792297023.jpg","title":"Sultan Salahuddin Ayyubi - Ep 06 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792296989,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792296989.jpg","title":"Sultan Salahuddin Ayyubi - Ep 05 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792296959,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792296959.jpg","title":"Sultan Salahuddin Ayyubi - Ep 04 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792296924,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792296924.jpg","title":"Sultan Salahuddin Ayyubi - Ep 03 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792296892,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792296892.jpg","title":"Sultan Salahuddin Ayyubi - Ep 02 🎬"},
-                {"category":"Web Series","date":"Oct 18, 2026","id":1792296833,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792296833.jpg","title":"Sultan Salahuddin Ayyubi - Ep 01 🎬"},
-                {"category":"DRAMA","date":"Oct 16, 2026","id":1792157249,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1792157249.jpg","title":"checkout 2026 Single Dama"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886744,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886744.jpg","title":"bachelor point season 5 episode 120 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886717,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886717.jpg","title":"bachelor point season 5 episode 119 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886683,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886683.jpg","title":"bachelor point season 5 episode 118 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886662,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886662.jpg","title":"bachelor point season 5 episode 117 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886640,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886640.jpg","title":"bachelor point season 5 episode 116 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886614,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886614.jpg","title":"bachelor point season 5 episode 115 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886579,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886579.jpg","title":"bachelor point season 5 episode 114 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886545,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886545.jpg","title":"bachelor point season 5 episode 113 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886515,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886515.jpg","title":"bachelor point season 5 episode 112 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886492,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886492.jpg","title":"bachelor point season 5 episode 111 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886457,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886457.jpg","title":"bachelor point season 5 episode 110 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886428,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886428.jpg","title":"bachelor point season 5 episode 109 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886401,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886401.jpg","title":"bachelor point season 5 episode 108 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886372,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886372.jpg","title":"bachelor point season 5 episode 107 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886343,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886343.jpg","title":"bachelor point season 5 episode 106 🎬"},
-                {"category":"BPS5","date":"13 October 2026","id":1791886294,"thumb":"https://enamulhossen188-ux.github.io/index.html/thumbs/vid_1791886294.jpg","title":"bachelor point season 5 episode 105 🎬"}
-            ]
-        };
+        const CURRENT_RENDER_URL = "https://bp-bot-v2.onrender.com";
+        const tg = window.Telegram?.WebApp;
+        if (tg) tg.expand();
 
-        const RENDER_API_URL = "https://bp-bot-v2.onrender.com";
-        const API_DATA_URL = `${RENDER_API_URL}/api/data`;
-        const CACHE_KEY = "bp_miniapp_safe_v3";
-        const FALLBACK_URL = "https://www.google.com";
-        const REQUIRED_SECONDS = 10;
-        // =====================================================================
+        let appData = { videos: [], ads: {}, categories: [] };
+        let activeCategory = '';
+        let currentSelectedVideo = null;
 
-        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-        if (tg) {
-            tg.ready();
-            tg.expand();
-        }
-
-        let appData = JSON.parse(JSON.stringify(BUILTIN_DATA));
-        let selectedCategory = "";
-        let currentVideo = null;
-        let tasksDone = { 1: false, 2: false, 3: false, 4: false };
-        let tasksBusy = { 1: false, 2: false, 3: false, 4: false };
-        let isSendingVideo = false;
-        let activeTaskNum = 0;
+        let task1Done = false;
+        let task2Done = false;
+        let activeTask = null;
         let taskStartTime = 0;
-        let activeTimerInterval = null;
-        let lastInjectedAdsSig = "";
-        let popunderDirectUrl = "";
-        let popunderTriggered = false;
+        let countdownTimer = null;
 
-        document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible" && activeTaskNum !== 0) {
-                const elapsedSec = (Date.now() - taskStartTime) / 1000;
-                if (elapsedSec < REQUIRED_SECONDS) {
-                    const failedNum = activeTaskNum;
-                    cancelAndFailTask(failedNum, Math.ceil(REQUIRED_SECONDS - elapsedSec));
-                }
-            }
-        });
-
-        function showWarnPopup(title, desc) {
-            document.getElementById("warnTitle").innerText = title;
-            document.getElementById("warnDesc").innerText = desc;
-            document.getElementById("warnModal").classList.add("open");
-        }
-
-        function closeWarnPopup() {
-            document.getElementById("warnModal").classList.remove("open");
-        }
-
-        function showToast(msg) {
-            const t = document.getElementById("toastMsg");
-            t.innerText = msg;
-            t.style.display = "block";
-            setTimeout(() => { t.style.display = "none"; }, 3000);
-        }
-
-        function injectDynamicCode(rawCode, containerEl) {
-            if (!rawCode) return;
-            const trimmed = String(rawCode).trim();
-            if (!trimmed) return;
-
-            if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-                const s = document.createElement("script");
-                s.src = trimmed;
-                s.async = true;
-                (containerEl || document.head || document.body).appendChild(s);
-                return;
-            }
-
-            const temp = document.createElement("div");
-            temp.innerHTML = trimmed;
-            Array.from(temp.childNodes).forEach(node => {
-                if (node.tagName === "SCRIPT") {
-                    const s = document.createElement("script");
-                    Array.from(node.attributes).forEach(attr => s.setAttribute(attr.name, attr.value));
-                    if (!node.src) s.textContent = node.textContent;
-                    (containerEl || document.head || document.body).appendChild(s);
-                } else {
-                    (containerEl || document.body).appendChild(node.cloneNode(true));
-                }
-            });
-        }
-
-        function setupExternalAds() {
-            if (!appData.ads) return;
-            const { social_ad, native_ad, popunder_ad } = appData.ads;
-            const currentSig = JSON.stringify({ social_ad, native_ad, popunder_ad });
-            if (currentSig === lastInjectedAdsSig) return;
-            lastInjectedAdsSig = currentSig;
-
-            if (social_ad) {
-                injectDynamicCode(social_ad, document.body);
-            }
-            if (native_ad) {
-                const slot = document.getElementById("nativeAdSlot");
-                slot.innerHTML = "";
-                injectDynamicCode(native_ad, slot);
-            }
-            popunderDirectUrl = "";
-            if (popunder_ad) {
-                const p = String(popunder_ad).trim();
-                if (p.startsWith("http://") || p.startsWith("https://")) {
-                    if (p.includes("<script") || p.endsWith(".js") || p.includes("/4/") || p.includes("/1/")) {
-                        injectDynamicCode(p, document.head);
-                    }
-                    popunderDirectUrl = p;
-                } else {
-                    injectDynamicCode(p, document.head);
-                }
+        function toggleSidebar() {
+            const sb = document.getElementById("sidebarMenu");
+            const overlay = document.getElementById("sidebarOverlay");
+            if (sb.classList.contains("open")) {
+                sb.classList.remove("open");
+                overlay.style.display = "none";
+            } else {
+                sb.classList.add("open");
+                overlay.style.display = "block";
             }
         }
 
-        function triggerPopunderOnClick() {
-            if (popunderDirectUrl && !popunderTriggered && !popunderDirectUrl.endsWith(".js") && !popunderDirectUrl.includes("afders.org")) {
-                popunderTriggered = true;
-                if (tg && tg.openLink) {
-                    tg.openLink(popunderDirectUrl);
-                } else {
-                    window.open(popunderDirectUrl, "_blank");
-                }
+        function toggleTheme() {
+            document.body.classList.toggle("light-mode");
+            const isLight = document.body.classList.contains("light-mode");
+            const icon = document.getElementById("themeIcon");
+            if (isLight) {
+                icon.className = "fa-solid fa-moon";
+            } else {
+                icon.className = "fa-solid fa-gear";
             }
         }
 
-        document.addEventListener("click", () => {
-            triggerPopunderOnClick();
-        }, { passive: true });
+        function showBotNotice() {
+            toggleSidebar();
+            alert(appData.update_notice || "বর্তমানে কোনো নতুন আপডেট নেই। আমাদের সাথেই থাকুন!");
+        }
 
         function generateSvgPoster(title) {
-            const safeTitle = String(title || "Video").slice(0, 26).replace(/[<>&'"]/g, "");
-            const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='225' viewBox='0 0 400 225'>
-                <rect width='400' height='225' fill='#14161f'/>
-                <circle cx='200' cy='95' r='28' fill='#e50914'/>
-                <polygon points='193,83 193,107 214,95' fill='#ffffff'/>
-                <text x='200' y='155' fill='#d1d5db' font-family='sans-serif' font-size='15' font-weight='bold' text-anchor='middle'>${safeTitle}</text>
-            </svg>`;
-            return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+            const cleanTitle = (title || 'Bachelor Point').replace(/[\'<>\"]/g, '').substring(0, 30);
+            const svgContent = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+                    <rect width="640" height="360" fill="#181920"/>
+                    <circle cx="320" cy="150" r="42" fill="#e50914" fill-opacity="0.9"/>
+                    <polygon points="312,135 336,150 312,165" fill="#ffffff"/>
+                    <text x="320" y="240" font-family="-apple-system, sans-serif" font-size="20" font-weight="700" fill="#ffffff" text-anchor="middle">${cleanTitle}</text>
+                </svg>
+            `.trim();
+            return `data:image/svg+xml;utf8,${encodeURIComponent(svgContent)}`;
         }
 
-        function resolveThumb(thumb, title) {
-            if (!thumb) return generateSvgPoster(title);
-            const t = String(thumb).trim();
-            if (t.startsWith("data:image") || t.startsWith("http")) {
-                if (t.includes("github.io/thumbs/")) {
-                    return t.replace("github.io/thumbs/", "github.io/index.html/thumbs/");
-                }
-                return t;
+        function handleImageFallback(img) {
+            const title = img.getAttribute("data-title") || "Bachelor Point";
+            img.onerror = null;
+            img.src = generateSvgPoster(title);
+        }
+
+        function resolveThumb(url, title) {
+            if (!url || url.trim() === "" || url.includes("placehold.co")) {
+                return generateSvgPoster(title);
             }
-            return generateSvgPoster(title);
+            let u = url.trim();
+            if (u.includes("/thumb/")) {
+                const fileId = u.split("/thumb/").pop();
+                return `${CURRENT_RENDER_URL}/thumb/${fileId}`;
+            }
+            return u;
         }
 
-        function initApp() {
+        // 🔥 Adsterra পপআন্ডার কার্যকর ইঞ্জিন (ক্যাপিং রিসেট ও ব্যাকগ্রাউন্ড এক্সিকিউশন) 🔥
+        function initAdsterraPopunder() {
+            const raw = (appData.ads?.popunder_ad || "").trim();
+            if (!raw) return;
+
+            // সোর্স লিঙ্ক বের করা
+            let scriptUrl = null;
+            if (raw.includes("src=")) {
+                let m = raw.match(/src=["'](.*?)["']/);
+                if (m) scriptUrl = m[1];
+            } else if (raw.startsWith("http")) {
+                scriptUrl = raw;
+            }
+
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.setAttribute("data-cfasync", "false");
+            sc.async = true;
+
+            if (scriptUrl) {
+                if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
+                // টাইমস্ট্যাম্প যোগ করে ক্যাশ ও লিমিট বাইপাস
+                sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+            } else {
+                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            }
+
+            document.head.appendChild(sc);
+        }
+
+        function injectScriptCode(codeStr) {
+            if (!codeStr || !codeStr.trim()) return;
+            const sc = document.createElement("script");
+            sc.type = "text/javascript";
+            sc.setAttribute("data-cfasync", "false");
+            sc.async = true;
+            let raw = codeStr.trim();
+            let srcMatch = raw.match(/src=["'](.*?)["']/);
+            if (srcMatch) {
+                sc.src = srcMatch[1];
+            } else if (raw.startsWith("http")) {
+                sc.src = raw;
+            } else {
+                sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
+            }
+            document.head.appendChild(sc);
+        }
+
+        function injectNativeBanner(container, codeStr) {
+            if (!codeStr || !codeStr.trim() || !container) {
+                if (container) container.style.display = "none";
+                return;
+            }
+            container.style.display = "block";
+            container.innerHTML = "";
+
+            let raw = codeStr.trim();
+            const doc = new DOMParser().parseFromString(raw, "text/html");
+            const divs = doc.querySelectorAll("div");
+            divs.forEach(d => container.appendChild(d.cloneNode(true)));
+
+            const scripts = doc.querySelectorAll("script");
+            if (scripts.length > 0) {
+                scripts.forEach(sc => {
+                    const s = document.createElement("script");
+                    if (sc.src) s.src = sc.src;
+                    s.setAttribute("data-cfasync", "false");
+                    s.text = sc.innerHTML;
+                    container.appendChild(s);
+                });
+            } else if (raw.startsWith("http")) {
+                const s = document.createElement("script");
+                s.src = raw;
+                s.setAttribute("data-cfasync", "false");
+                container.appendChild(s);
+            }
+        }
+
+        function renderAllAds() {
+            const ads = appData.ads || {};
+            initAdsterraPopunder();
+            if (ads.social_ad) injectScriptCode(ads.social_ad);
+        }
+
+        async function initData() {
             try {
-                const cached = localStorage.getItem(CACHE_KEY);
-                if (cached) {
-                    const parsed = JSON.parse(cached);
-                    if (parsed && Array.isArray(parsed.videos) && parsed.videos.length > 0) {
-                        appData = parsed;
-                    }
+                const res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                appData = await res.json();
+                
+                const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
+                if (cats.length > 0 && !activeCategory) {
+                    activeCategory = cats[0];
                 }
-            } catch (e) {}
-
-            applyAppData();
-            syncLatestFromServer(false);
-        }
-
-        async function syncLatestFromServer(showNotify = false) {
-            try {
-                const res = await fetch(`${API_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
-                if (res.ok) {
-                    const fresh = await res.json();
-                    if (fresh && Array.isArray(fresh.videos)) {
-                        appData = fresh;
-                        localStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
-                        applyAppData();
-                        if (showNotify) showToast("✅ নতুন ডাটা আপডেট হয়েছে!");
-                    }
-                }
-            } catch (e) {
-                if (showNotify) showToast("⚠️ সার্ভার সাড়া দিচ্ছে না, লোকাল লিস্ট চলছে");
+                
+                renderCategoryTabs();
+                renderVideos();
+                renderAllAds();
+            } catch (err) {
+                console.error("ডাটা লোড ত্রুটি:", err);
             }
         }
 
-        function applyAppData() {
-            document.getElementById("noticeText").innerText = appData.update_notice || "আমাদের সাথেই থাকুন!";
-            const cats = appData.categories && appData.categories.length ? appData.categories : ["BPS5"];
-            if (!selectedCategory || !cats.includes(selectedCategory)) {
-                selectedCategory = cats[0];
-            }
-            setupExternalAds();
-            renderCategories();
+        function renderCategoryTabs() {
+            const tabsContainer = document.getElementById("categoryTabs");
+            const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
+            let html = '';
+            cats.forEach((c) => {
+                const isActive = (activeCategory.trim().toUpperCase() === c.trim().toUpperCase());
+                html += `<div class="category-chip ${isActive ? 'active' : ''}" onclick="filterCategory('${c}')">${c}</div>`;
+            });
+            tabsContainer.innerHTML = html;
+        }
+
+        function filterCategory(cat) {
+            activeCategory = cat;
+            renderCategoryTabs();
             renderVideos();
-        }
-
-        function renderCategories() {
-            const container = document.getElementById("categoryTabs");
-            const cats = appData.categories && appData.categories.length ? appData.categories : ["BPS5"];
-            container.innerHTML = cats.map(c => {
-                const active = selectedCategory === c ? "active" : "";
-                return `<div class="cat-chip ${active}" onclick="selectCategory('${c}')">${c}</div>`;
-            }).join("");
-        }
-
-        function selectCategory(cat) {
-            selectedCategory = cat;
-            renderCategories();
-            renderVideos();
-        }
-
-        function toggleSearch() {
-            const box = document.getElementById("searchBox");
-            box.classList.toggle("active");
-            if (box.classList.contains("active")) {
-                document.getElementById("searchInput").focus();
-            }
         }
 
         function renderVideos() {
-            const grid = document.getElementById("videoGrid");
-            const query = (document.getElementById("searchInput").value || "").toLowerCase().trim();
-            let list = Array.isArray(appData.videos) ? appData.videos : [];
+            const container = document.getElementById("videoContainer");
+            const empty = document.getElementById("emptyMessage");
+            const query = document.getElementById("searchInput").value.toLowerCase().trim();
 
+            let list = appData.videos || [];
+            if (activeCategory) {
+                list = list.filter(v => (v.category || '').trim().toUpperCase() === activeCategory.trim().toUpperCase());
+            }
             if (query) {
-                list = list.filter(v => String(v.title || "").toLowerCase().includes(query));
-            } else if (selectedCategory) {
-                const target = selectedCategory.trim().toUpperCase();
-                list = list.filter(v => {
-                    const vCat = String(v.category || "").trim().toUpperCase();
-                    const vTitle = String(v.title || "").toLowerCase();
-                    if (target === "BPS5") {
-                        return vCat === "BPS5" || vTitle.includes("bachelor") || vTitle.includes("ব্যাচেলর");
-                    }
-                    if (target === "COMING SOON" || target.includes("COMING")) {
-                        return Boolean(v.is_coming_soon) || vCat.includes("COMING");
-                    }
-                    return vCat === target;
+                list = list.filter(v => (v.title || '').toLowerCase().includes(query));
+            }
+
+            container.innerHTML = "";
+            if (list.length === 0) {
+                empty.style.display = "block";
+            } else {
+                empty.style.display = "none";
+                list.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "video-card";
+                    card.onclick = () => openDetail(item);
+                    
+                    const thumbUrl = resolveThumb(item.thumb, item.title);
+                    card.innerHTML = `
+                        <div class="thumb-wrapper">
+                            <img class="thumb-img" src="${thumbUrl}" data-title="${item.title || ''}" alt="Thumb" loading="lazy" onerror="handleImageFallback(this)">
+                        </div>
+                        <div class="card-details">
+                            <div class="video-title">${item.title}</div>
+                            <div class="video-date-row">
+                                <i class="fa-regular fa-clock"></i>
+                                <span>${item.date || '13 October 2026'}</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
                 });
             }
-
-            if (!list.length) {
-                grid.innerHTML = `<div class="empty-state">😔 এই সেকশনে কোনো ভিডিও পাওয়া যায়নি</div>`;
-                return;
-            }
-
-            grid.innerHTML = list.map(v => {
-                const title = v.title || "Video";
-                const thumbSrc = resolveThumb(v.thumb, title);
-                const isCs = v.is_coming_soon || String(v.category || "").toUpperCase() === "COMING SOON";
-                return `
-                    <div class="video-card" onclick="openVideoById(${v.id})">
-                        <div class="thumb-wrap">
-                            <img src="${thumbSrc}" loading="lazy" onerror="this.onerror=null;this.src='${generateSvgPoster(title)}'">
-                            <span class="badge-cat">${v.category || "VIDEO"}</span>
-                            ${isCs ? '<span class="badge-cs">COMING SOON</span>' : ''}
-                        </div>
-                        <div class="card-body">
-                            <div class="card-title">${title}</div>
-                            <div class="card-meta"><span class="clock-dot">🕒</span> ${v.date || "New"}</div>
-                        </div>
-                    </div>
-                `;
-            }).join("");
         }
 
-        function openVideoById(vidId) {
-            const video = (appData.videos || []).find(item => String(item.id) === String(vidId));
-            if (video) openVideoModal(video);
+        function handleSearch() {
+            renderVideos();
         }
 
-        function openVideoModal(video) {
-            currentVideo = video;
-            const title = video.title || "Video";
-            document.getElementById("modalVideoTitle").innerText = title;
-            const modalImg = document.getElementById("modalVideoThumb");
-            modalImg.src = resolveThumb(video.thumb, title);
-            modalImg.onerror = function() { this.onerror = null; this.src = generateSvgPoster(title); };
+        function openDetail(video) {
+            currentSelectedVideo = video;
+            document.getElementById("mainView").style.display = "none";
+            document.getElementById("detailView").style.display = "block";
 
-            if (video.is_coming_soon || String(video.category || "").toUpperCase() === "COMING SOON") {
-                document.getElementById("modalSubText").innerText = video.notice || "এই পর্বটি শীঘ্রই আসছে! সাথেই থাকুন।";
-                document.getElementById("tasksContainer").style.display = "none";
-                document.getElementById("taskModal").classList.add("open");
-                return;
-            }
+            const detailImg = document.getElementById("detailThumb");
+            detailImg.setAttribute("data-title", video.title || "");
+            detailImg.src = resolveThumb(video.thumb, video.title);
+            document.getElementById("detailTitle").innerText = video.title;
 
-            document.getElementById("modalSubText").innerText = "🔒 ভিডিওটি আনলক করার জন্য নিচের ৪টি অ্যাড দেখে নিন ১০ সেকেন্ড করে।";
-            document.getElementById("tasksContainer").style.display = "block";
-
-            if (activeTimerInterval) clearInterval(activeTimerInterval);
-            tasksDone = { 1: false, 2: false, 3: false, 4: false };
-            tasksBusy = { 1: false, 2: false, 3: false, 4: false };
-            isSendingVideo = false;
-            activeTaskNum = 0;
-
-            for (let i = 1; i <= 4; i++) {
-                const btn = document.getElementById(`btnTask${i}`);
-                btn.className = "task-btn";
-                btn.innerText = "VISIT";
-                document.getElementById(`iconTask${i}`).classList.remove("completed");
-                document.getElementById(`task${i}StatusText`).innerText = "ভিজিট করে ১০ সেকেন্ড অপেক্ষা করুন";
-            }
-            updateDownloadButton();
-
-            document.getElementById("taskModal").classList.add("open");
-        }
-
-        function closeModal() {
-            if (activeTimerInterval) clearInterval(activeTimerInterval);
-            activeTaskNum = 0;
-            tasksBusy = { 1: false, 2: false, 3: false, 4: false };
-            document.getElementById("taskModal").classList.remove("open");
-        }
-
-        function completeTask(taskNum) {
-            if (activeTimerInterval) clearInterval(activeTimerInterval);
-            activeTaskNum = 0;
-            tasksDone[taskNum] = true;
-            tasksBusy[taskNum] = false;
-
-            const btn = document.getElementById(`btnTask${taskNum}`);
-            btn.className = "task-btn done";
-            btn.innerText = "DONE ✅";
-            document.getElementById(`iconTask${taskNum}`).classList.add("completed");
-            document.getElementById(`task${taskNum}StatusText`).innerText = `বিজ্ঞাপন ${taskNum} সম্পন্ন হয়েছে`;
-
-            updateDownloadButton();
-            showToast(`✅ Task ${taskNum} সম্পন্ন হয়েছে!`);
-        }
-
-        function cancelAndFailTask(taskNum, remainingSec) {
-            if (activeTimerInterval) clearInterval(activeTimerInterval);
-            activeTaskNum = 0;
-            tasksBusy[taskNum] = false;
-
-            const btn = document.getElementById(`btnTask${taskNum}`);
-            const statusEl = document.getElementById(`task${taskNum}StatusText`);
-
-            btn.className = "task-btn retry";
-            btn.innerText = "আবার চেষ্টা করুন";
-            statusEl.innerText = `❌ আরও ${remainingSec} সেকেন্ড বাকি ছিল!`;
-
-            showWarnPopup(
-                "বিজ্ঞাপন সম্পূর্ণ দেখেননি!",
-                `আপনি ১০ সেকেন্ড পূর্ণ হওয়ার আগেই (আরও ${remainingSec} সেকেন্ড বাকি থাকতে) ফিরে এসেছেন। 'আবার চেষ্টা করুন' চেপে পুরো ১০ সেকেন্ড অপেক্ষা করুন।`
-            );
-        }
-
-        function getAdUrl(taskNum) {
             const ads = appData.ads || {};
-            const key = `ad${taskNum}`;
-            const val = String(ads[key] || "").trim();
-            return val ? val : FALLBACK_URL;
+            if (ads.native_ad) {
+                injectNativeBanner(document.getElementById("nativeAdBox"), ads.native_ad);
+            }
+            resetTasks();
         }
 
-        function startDirectAdTask(taskNum) {
-            if (tasksDone[taskNum] || tasksBusy[taskNum]) return;
-            if (activeTaskNum !== 0) {
-                showToast("⏳ চলমান টাস্কটি আগে শেষ করুন!");
-                return;
+        function resetTasks() {
+            task1Done = false;
+            task2Done = false;
+            activeTask = null;
+            if (countdownTimer) clearInterval(countdownTimer);
+
+            const btn1 = document.getElementById("task1Btn");
+            const btn2 = document.getElementById("task2Btn");
+            const dlBtn = document.getElementById("downloadBtn");
+
+            btn1.className = "visit-action-btn";
+            btn1.innerHTML = "VISIT";
+            document.getElementById("task1Icon").className = "fa-solid fa-circle-check task-icon";
+            document.getElementById("task1Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+
+            btn2.className = "visit-action-btn";
+            btn2.innerHTML = "VISIT";
+            document.getElementById("task2Icon").className = "fa-solid fa-circle-check task-icon";
+            document.getElementById("task2Desc").innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+
+            dlBtn.className = "download-btn disabled";
+            dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+        }
+
+        function goBack() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            activeTask = null;
+            document.getElementById("detailView").style.display = "none";
+            document.getElementById("mainView").style.display = "block";
+        }
+
+        // 🔥 Task 1 ও 2: শুধুমাত্র VISIT বাটনে চাপ দিলেই নির্ধারিত ডিরেক্ট লিংক ওপেন হবে 🔥
+        function runTaskDirect(taskNum, event) {
+            if (event) {
+                event.stopPropagation();
             }
 
-            const adUrl = getAdUrl(taskNum);
-            tasksBusy[taskNum] = true;
-            activeTaskNum = taskNum;
+            if (taskNum === 1 && task1Done) return;
+            if (taskNum === 2 && task2Done) return;
+
+            activeTask = taskNum;
             taskStartTime = Date.now();
 
-            const btn = document.getElementById(`btnTask${taskNum}`);
-            const statusEl = document.getElementById(`task${taskNum}StatusText`);
+            const ads = appData.ads || {};
+            const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            btn.className = "task-btn loading";
-            btn.innerText = `${REQUIRED_SECONDS}s`;
-            statusEl.innerText = "বিজ্ঞাপন পেজে অপেক্ষা করুন...";
-
-            if (tg && tg.openLink) {
-                tg.openLink(adUrl);
-            } else {
-                window.open(adUrl, "_blank");
+            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
+            if (directUrl && directUrl.startsWith("http")) {
+                if (tg && tg.openLink) {
+                    tg.openLink(directUrl);
+                } else {
+                    window.open(directUrl, "_blank");
+                }
             }
 
-            if (activeTimerInterval) clearInterval(activeTimerInterval);
-            activeTimerInterval = setInterval(() => {
-                const elapsed = Math.floor((Date.now() - taskStartTime) / 1000);
-                const left = REQUIRED_SECONDS - elapsed;
-                if (left > 0) {
-                    btn.innerText = `${left}s`;
+            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
+            const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
+
+            btn.className = "visit-action-btn running";
+            btn.innerHTML = `10s`;
+            desc.innerText = "অপেক্ষা করুন...";
+
+            if (countdownTimer) clearInterval(countdownTimer);
+
+            // ১০ সেকেন্ড কাউন্টডাউন
+            countdownTimer = setInterval(() => {
+                const passed = Math.floor((Date.now() - taskStartTime) / 1000);
+                const remaining = 10 - passed;
+
+                if (remaining > 0) {
+                    btn.innerHTML = `${remaining}s`;
                 } else {
+                    clearInterval(countdownTimer);
                     completeTask(taskNum);
                 }
             }, 500);
         }
 
-        function allTasksCompleted() {
-            return tasksDone[1] && tasksDone[2] && tasksDone[3] && tasksDone[4];
-        }
+        function completeTask(taskNum) {
+            const btn = document.getElementById(taskNum === 1 ? "task1Btn" : "task2Btn");
+            const icon = document.getElementById(taskNum === 1 ? "task1Icon" : "task2Icon");
+            const desc = document.getElementById(taskNum === 1 ? "task1Desc" : "task2Desc");
 
-        function updateDownloadButton() {
-            const dlBtn = document.getElementById("btnDownload");
-            if (allTasksCompleted()) {
-                dlBtn.className = "download-btn unlocked";
-                dlBtn.innerText = "⬇ ডাউনলোড ভিডিও";
-            } else {
+            btn.className = "visit-action-btn done";
+            btn.innerHTML = `DONE`;
+            icon.classList.add("completed");
+            desc.innerText = "টাস্ক সম্পন্ন হয়েছে ✅";
+
+            if (taskNum === 1) task1Done = true;
+            if (taskNum === 2) task2Done = true;
+
+            activeTask = null;
+            if (task1Done && task2Done) {
+                const dlBtn = document.getElementById("downloadBtn");
                 dlBtn.className = "download-btn";
-                dlBtn.innerText = "⬇ ডাউনলোড ভিডিও";
             }
         }
 
-        async function requestVideoDelivery() {
-            if (!allTasksCompleted() || isSendingVideo || !currentVideo) return;
+        function showFailedPopup(seenSec, needSec) {
+            document.getElementById("seenSecondsTxt").innerText = seenSec;
+            document.getElementById("needSecondsTxt").innerText = needSec;
+            document.getElementById("verifyFailPopup").style.display = "flex";
+        }
 
-            const userId = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
+        function closePopup() {
+            document.getElementById("verifyFailPopup").style.display = "none";
+        }
+
+        function handleVisibilityOrFocus() {
+            if (document.visibilityState === "visible" && activeTask !== null) {
+                const elapsedSeconds = Math.floor((Date.now() - taskStartTime) / 1000);
+
+                if (elapsedSeconds < 10) {
+                    clearInterval(countdownTimer);
+                    const taskFailed = activeTask;
+                    activeTask = null;
+
+                    const btn = document.getElementById(taskFailed === 1 ? "task1Btn" : "task2Btn");
+                    const desc = document.getElementById(taskFailed === 1 ? "task1Desc" : "task2Desc");
+
+                    btn.className = "visit-action-btn";
+                    btn.innerHTML = `VISIT`;
+                    desc.innerText = "১০ সেকেন্ড অপেক্ষা করুন";
+
+                    const remainingNeed = 10 - (elapsedSeconds < 0 ? 0 : elapsedSeconds);
+                    showFailedPopup(elapsedSeconds < 0 ? 0 : elapsedSeconds, remainingNeed);
+                } else {
+                    clearInterval(countdownTimer);
+                    completeTask(activeTask);
+                }
+            }
+        }
+
+        document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+        window.addEventListener("focus", handleVisibilityOrFocus);
+
+        // ইনবক্সে ভিডিও সেন্ড
+        async function sendToInbox() {
+            if (!task1Done || !task2Done) return;
+
+            const dlBtn = document.getElementById("downloadBtn");
+            dlBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ইনবক্সে পাঠানো হচ্ছে...`;
+            dlBtn.classList.add("disabled");
+
+            const userId = tg?.initDataUnsafe?.user?.id;
             if (!userId) {
-                showToast("⚠️ টেলিগ্রাম অ্যাপের ভেতর থেকে ওপেন করুন!");
+                alert("ইউজার আইডি পাওয়া যায়নি! টেলিগ্রাম অ্যাপ থেকে মিনি অ্যাপটি ওপেন করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
                 return;
             }
 
-            isSendingVideo = true;
-            const dlBtn = document.getElementById("btnDownload");
-            dlBtn.innerText = "⏳ ইনবক্সে পাঠানো হচ্ছে...";
-
             try {
-                const res = await fetch(`${RENDER_API_URL}/api/send_video`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ user_id: userId, video_id: currentVideo.id })
+                const res = await fetch(`${CURRENT_RENDER_URL}/api/send_video`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        video_id: currentSelectedVideo.id
+                    })
                 });
-                const result = await res.json();
-                if (result.success) {
-                    dlBtn.innerText = "✅ ইনবক্সে পাঠানো হয়েছে!";
-                    showToast("🎉 ভিডিও আপনার বটের ইনবক্সে পাঠানো হয়েছে!");
+
+                const data = await res.json();
+                if (data.success) {
+                    dlBtn.innerHTML = `✅ সফল হয়েছে!`;
                     setTimeout(() => {
-                        closeModal();
-                        if (tg) tg.close();
-                    }, 1200);
+                        if (tg && tg.close) tg.close();
+                    }, 500);
                 } else {
-                    isSendingVideo = false;
-                    dlBtn.innerText = "❌ আবার চেষ্টা করুন";
-                    showToast("⚠️ ভিডিও পাঠাতে সমস্যা হয়েছে, আবার চাপুন।");
+                    alert("ভিডিও পাঠানো যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।");
+                    dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                    dlBtn.classList.remove("disabled");
                 }
-            } catch (e) {
-                isSendingVideo = false;
-                dlBtn.innerText = "❌ আবার চেষ্টা করুন";
-                showToast("⚠️ নেটওয়ার্ক ত্রুটি, আবার চেষ্টা করুন।");
+            } catch (err) {
+                console.error("ভিডিও সেন্ড এরর:", err);
+                alert("সার্ভারে সংযোগ দেওয়া যাচ্ছে না। অনুগ্রহ করে ১ সেকেন্ড পর আবার চেষ্টা করুন।");
+                dlBtn.innerHTML = `<i class="fa-solid fa-download"></i> ডাউনলোড ভিডিও`;
+                dlBtn.classList.remove("disabled");
             }
         }
 
-        function toggleDrawer(open) {
-            document.getElementById("sideDrawer").classList.toggle("open", open);
-            document.getElementById("drawerBackdrop").classList.toggle("open", open);
-        }
-
-        function forceRefreshData() {
-            toggleDrawer(false);
-            localStorage.removeItem(CACHE_KEY);
-            lastInjectedAdsSig = "";
-            popunderTriggered = false;
-            showToast("🔄 নতুন পর্ব খোঁজা হচ্ছে...");
-            syncLatestFromServer(true);
-        }
-
-        function showUpdateAlert() {
-            toggleDrawer(false);
-            alert("📢 ভিডিও আপডেট:\n\n" + (appData.update_notice || "কোনো নতুন আপডেট নেই।"));
-        }
-
-        function showHelpAlert() {
-            toggleDrawer(false);
-            alert("💡 ভিডিও ডাউনলোডের নিয়ম:\n\n১. পছন্দের ভিডিওতে ক্লিক করুন।\n২. Task 1 থেকে Task 4 পর্যন্ত প্রতিটি বাটনে চেপে বিজ্ঞাপন পেজে ১০ সেকেন্ড করে অপেক্ষা করুন।\n৩. নিচের সবুজ ডাউনলোড বাটনে চাপলেই ভিডিওটি সরাসরি আপনার বটের ইনবক্সে চলে যাবে।");
-        }
-
-        initApp();
+        initData();
     </script>
 </body>
     </html>
