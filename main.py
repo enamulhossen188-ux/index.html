@@ -44,6 +44,9 @@ CACHE_DURATION = 180
 thumb_memory_cache = {}
 admin_state = {}
 github_lock = threading.Lock()
+db_save_lock = threading.Lock()
+last_local_save_time = 0
+
 
 def extract_single_url(raw_text):
     """একাধিক লিংক বা বাড়তি লেখা বাদ দিয়ে কেবল একটি পরিষ্কার URL বের করে; না থাকলে Google দেয়"""
@@ -52,6 +55,7 @@ def extract_single_url(raw_text):
     first_part = str(raw_text).split(",")[0].strip()
     match = re.search(r'https?://[^\s"\'<>]+', first_part)
     return match.group(0) if match else "https://www.google.com"
+
 
 def check_github_file_exists(file_path):
     if not GITHUB_TOKEN:
@@ -66,6 +70,7 @@ def check_github_file_exists(file_path):
         return r.status_code == 200
     except Exception:
         return False
+
 
 def push_file_to_github(file_path, content_bytes, commit_msg):
     if not GITHUB_TOKEN:
@@ -100,6 +105,7 @@ def push_file_to_github(file_path, content_bytes, commit_msg):
             print("GitHub Push Error:", e)
     return None
 
+
 def sync_public_data_to_github(data):
     """মিনি অ্যাপের জন্য দরকারি ভিডিও লিস্ট ও ৪টি অ্যাড লিংক GitHub data.json-এ সেভ করে"""
     ads = data.get("ads", {})
@@ -122,6 +128,7 @@ def sync_public_data_to_github(data):
     json_bytes = json.dumps(light_data, ensure_ascii=False, separators=(',', ':')).encode("utf-8")
     return push_file_to_github("data.json", json_bytes, f"Sync app data {datetime.now().strftime('%H:%M:%S')}")
 
+
 def get_default_data():
     return {
         "users": [],
@@ -141,6 +148,7 @@ def get_default_data():
         "videos": []
     }
 
+
 def get_db_file_content():
     try:
         chat = bot.get_chat(DB_CHANNEL_ID)
@@ -153,12 +161,17 @@ def get_db_file_content():
         print("DB Read Error:", e)
     return None
 
+
 def load_data(force_refresh=False):
     global cached_data, last_cache_time
     cur_time = time.time()
+    # সদ্য সেভ হওয়া ডাটা ৩০ সেকেন্ডের মধ্যে থাকলে টেলিগ্রামের পুরোনো পিন পড়বে না
+    if cached_data and (cur_time - last_local_save_time < 30):
+        return cached_data
     if not force_refresh and cached_data and (cur_time - last_cache_time < CACHE_DURATION):
         return cached_data
-    data = get_db_file_content()
+    with db_save_lock:
+        data = get_db_file_content()
     if data and "videos" in data:
         data.setdefault("ads", {})
         data.setdefault("sub_categories", {})
@@ -167,32 +180,40 @@ def load_data(force_refresh=False):
         cached_data = data
         last_cache_time = cur_time
         return cached_data
-    if cached_data: return cached_data
+    if cached_data:
+        return cached_data
     cached_data = get_default_data()
     return cached_data
 
+
 def save_data(data, sync_github=True):
-    global cached_data, last_cache_time
+    global cached_data, last_cache_time, last_local_save_time
     cached_data = data
     last_cache_time = time.time()
+    last_local_save_time = time.time()
+
     def _async_save():
-        try:
-            json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
-            sent_doc = bot.send_document(
-                DB_CHANNEL_ID,
-                ("db_backup_bot2.json", json_bytes),
-                caption=f"📦 Update: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}",
-                protect_content=True
-            )
-            try: bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
-            except Exception: pass
-        except Exception as e:
-            print("Save Error:", e)
+        with db_save_lock:
+            try:
+                json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
+                sent_doc = bot.send_document(
+                    DB_CHANNEL_ID,
+                    ("db_backup_bot2.json", json_bytes),
+                    caption=f"📦 Update: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}",
+                    protect_content=True
+                )
+                try:
+                    bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
+                except Exception:
+                    pass
+            except Exception as e:
+                print("Save Error:", e)
 
         if sync_github:
             sync_public_data_to_github(data)
 
     threading.Thread(target=_async_save, daemon=True).start()
+
 
 def upload_thumb_securely(photo_id):
     try:
@@ -212,6 +233,7 @@ def upload_thumb_securely(photo_id):
         print("GitHub Thumb Upload Error:", e)
 
     return f"{RENDER_SERVER_URL}/thumb/{perm_file_id}"
+
 
 @app.route('/thumb/<path:file_id>')
 def serve_thumbnail(file_id):
@@ -239,6 +261,7 @@ def serve_thumbnail(file_id):
 
     return redirect("https://placehold.co/600x400/181920/ffffff?text=Poster", code=302)
 
+
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
     data = load_data(force_refresh=False)
@@ -264,6 +287,7 @@ def get_app_data():
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return resp
 
+
 def deliver_single_video(chat_id, target_video):
     caption_text = f"🎬 **{target_video.get('title', 'Video')}**\n\nউপভোগ করুন!"
     try:
@@ -276,24 +300,29 @@ def deliver_single_video(chat_id, target_video):
         except Exception:
             return False
 
+
 @app.route('/api/send_video', methods=['POST'])
 def api_send_video():
     try:
         req_data = request.json or {}
         uid = req_data.get('user_id')
         vid = req_data.get('video_id')
-        if not uid or not vid: return jsonify({'success': False}), 400
+        if not uid or not vid:
+            return jsonify({'success': False}), 400
         data = load_data()
         target = next((v for v in data.get("videos", []) if str(v.get("id")) == str(vid)), None)
         if target and target.get("file_id"):
-            if deliver_single_video(uid, target): return jsonify({'success': True})
+            if deliver_single_video(uid, target):
+                return jsonify({'success': True})
         return jsonify({'success': False}), 404
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
 @app.route('/')
 def home():
     return "Bot Server Active 24/7 (High-Traffic GitHub CDN Mode)!"
+
 
 def get_action_buttons():
     fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
@@ -304,6 +333,7 @@ def get_action_buttons():
         types.InlineKeyboardButton("💡 যেভাবে ভিডিও ডাউনলোড করবেন", callback_data="btn_help")
     )
     return markup
+
 
 def get_admin_keyboard():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
@@ -317,12 +347,13 @@ def get_admin_keyboard():
     )
     return markup
 
+
 def get_ads_keyboard():
     data = load_data()
     ads = data.get("ads", {})
     has_custom_task = any("google.com" not in str(ads.get(k, "")) for k in ["ad1", "ad2", "ad3", "ad4"])
     t_status = "🔗 সেট করা আছে" if has_custom_task else "🌐 গুগল (ডিফল্ট)"
-    
+
     s_status = "✅ আছে" if ads.get("social_ad") else "❌ নেই"
     n_status = "✅ আছে" if ads.get("native_ad") else "❌ নেই"
     p_status = "✅ আছে" if ads.get("popunder_ad") else "❌ নেই"
@@ -341,14 +372,17 @@ def get_ads_keyboard():
     )
     return markup
 
+
 def get_category_keyboard():
     data = load_data(force_refresh=True)
     cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
     markup = types.InlineKeyboardMarkup()
-    for c in cats: markup.add(types.InlineKeyboardButton(f"🗑 Delete: {c}", callback_data=f"delcat_{c}"))
+    for c in cats:
+        markup.add(types.InlineKeyboardButton(f"🗑 Delete: {c}", callback_data=f"delcat_{c}"))
     markup.add(types.InlineKeyboardButton("➕ Add New Category", callback_data="add_new_category"))
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return markup
+
 
 def filter_videos_by_category(videos, cat_name):
     if not cat_name or cat_name == "ALL":
@@ -369,29 +403,32 @@ def filter_videos_by_category(videos, cat_name):
                 filtered.append(v)
     return filtered
 
+
 def get_section_category_keyboard(mode):
     data = load_data(force_refresh=True)
     videos = data.get("videos", [])
     cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"])
-    
+
     markup = types.InlineKeyboardMarkup(row_width=2)
     cat_buttons = []
     for c in cats:
         count = len(filter_videos_by_category(videos, c))
         cat_buttons.append(types.InlineKeyboardButton(f"📁 {c} ({count})", callback_data=f"{mode}cat|{c}|0"))
-    
+
     for i in range(0, len(cat_buttons), 2):
-        markup.row(*cat_buttons[i:i+2])
-        
+        markup.row(*cat_buttons[i:i + 2])
+
     markup.add(types.InlineKeyboardButton(f"📋 সব ভিডিও একসাথে ({len(videos)})", callback_data=f"{mode}cat|ALL|0"))
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return markup
+
 
 def format_short_btn_title(title, max_len=36):
     t = str(title or "Video").strip()
     if len(t) <= max_len:
         return t
     return t[:14] + "..." + t[-(max_len - 17):]
+
 
 def get_thumb_view_data(cat_name="ALL", page=0):
     data = load_data(force_refresh=True)
@@ -402,13 +439,14 @@ def get_thumb_view_data(cat_name="ALL", page=0):
 
     per_page = 8
     total_pages = (len(videos) + per_page - 1) // per_page
-    if page >= total_pages: page = max(0, total_pages - 1)
+    if page >= total_pages:
+        page = max(0, total_pages - 1)
     start_idx = page * per_page
     end_idx = start_idx + per_page
     current_videos = videos[start_idx:end_idx]
 
     label = "সব ভিডিও" if cat_name == "ALL" else cat_name
-    text_msg = f"🖼 **থাম্বনেইল পরিবর্তন [{label}] (পেজ: {page+1}/{total_pages}):**\n\n"
+    text_msg = f"🖼 **থাম্বনেইল পরিবর্তন [{label}] (পেজ: {page + 1}/{total_pages}):**\n\n"
     markup = types.InlineKeyboardMarkup()
 
     for idx, v in enumerate(current_videos, start=start_idx + 1):
@@ -421,15 +459,16 @@ def get_thumb_view_data(cat_name="ALL", page=0):
 
     nav_buttons = []
     if page > 0:
-        nav_buttons.append(types.InlineKeyboardButton("⬅️ Previous", callback_data=f"thumbcat|{cat_name}|{page-1}"))
+        nav_buttons.append(types.InlineKeyboardButton("⬅️ Previous", callback_data=f"thumbcat|{cat_name}|{page - 1}"))
     if end_idx < len(videos):
-        nav_buttons.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"thumbcat|{cat_name}|{page+1}"))
+        nav_buttons.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"thumbcat|{cat_name}|{page + 1}"))
     if nav_buttons:
         markup.row(*nav_buttons)
 
     markup.add(types.InlineKeyboardButton("🔙 ক্যাটাগরি তালিকায় ফিরুন", callback_data="back_to_thumb_cats"))
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return text_msg, markup
+
 
 def get_delete_view_data(cat_name="ALL", page=0):
     data = load_data(force_refresh=True)
@@ -440,13 +479,14 @@ def get_delete_view_data(cat_name="ALL", page=0):
 
     per_page = 8
     total_pages = (len(videos) + per_page - 1) // per_page
-    if page >= total_pages: page = max(0, total_pages - 1)
+    if page >= total_pages:
+        page = max(0, total_pages - 1)
     start_idx = page * per_page
     end_idx = start_idx + per_page
     current_videos = videos[start_idx:end_idx]
 
     label = "সব ভিডিও" if cat_name == "ALL" else cat_name
-    text_msg = f"🗑️ **ভিডিও ডিলিট মেনু [{label}] (পেজ: {page+1}/{total_pages}):**\n\n"
+    text_msg = f"🗑️ **ভিডিও ডিলিট মেনু [{label}] (পেজ: {page + 1}/{total_pages}):**\n\n"
     markup = types.InlineKeyboardMarkup()
 
     for idx, v in enumerate(current_videos, start=start_idx + 1):
@@ -461,9 +501,9 @@ def get_delete_view_data(cat_name="ALL", page=0):
 
     nav_buttons = []
     if page > 0:
-        nav_buttons.append(types.InlineKeyboardButton("⬅️ Previous", callback_data=f"delcat|{cat_name}|{page-1}"))
+        nav_buttons.append(types.InlineKeyboardButton("⬅️ Previous", callback_data=f"delcat|{cat_name}|{page - 1}"))
     if end_idx < len(videos):
-        nav_buttons.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"delcat|{cat_name}|{page+1}"))
+        nav_buttons.append(types.InlineKeyboardButton("Next ➡️", callback_data=f"delcat|{cat_name}|{page + 1}"))
     if nav_buttons:
         markup.row(*nav_buttons)
 
@@ -471,27 +511,31 @@ def get_delete_view_data(cat_name="ALL", page=0):
     markup.add(types.InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_admin_menu"))
     return text_msg, markup
 
+
 def save_db_checkpoint(data, sync_github=False):
-    global cached_data, last_cache_time
+    global cached_data, last_cache_time, last_local_save_time
     cached_data = data
     last_cache_time = time.time()
-    try:
-        json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
-        sent_doc = bot.send_document(
-            DB_CHANNEL_ID,
-            ("db_backup_bot2.json", json_bytes),
-            caption=f"📦 Sync Checkpoint: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}",
-            protect_content=True
-        )
+    last_local_save_time = time.time()
+    with db_save_lock:
         try:
-            bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
-        except Exception:
-            pass
-    except Exception as e:
-        print("Checkpoint Save Error:", e)
+            json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
+            sent_doc = bot.send_document(
+                DB_CHANNEL_ID,
+                ("db_backup_bot2.json", json_bytes),
+                caption=f"📦 Sync Checkpoint: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}",
+                protect_content=True
+            )
+            try:
+                bot.pin_chat_message(DB_CHANNEL_ID, sent_doc.message_id, disable_notification=True)
+            except Exception:
+                pass
+        except Exception as e:
+            print("Checkpoint Save Error:", e)
 
     if sync_github:
         sync_public_data_to_github(data)
+
 
 def run_auto_sync_channel(admin_chat_id):
     try:
@@ -578,6 +622,7 @@ def run_auto_sync_channel(admin_chat_id):
     except Exception as e:
         bot.send_message(admin_chat_id, f"❌ সিঙ্ক ত্রুটি: {str(e)}", reply_markup=get_admin_keyboard())
 
+
 @bot.message_handler(commands=['admin'])
 def open_admin_panel(message):
     if str(message.chat.id) != str(ADMIN_ID):
@@ -585,21 +630,25 @@ def open_admin_panel(message):
         return
     bot.send_message(message.chat.id, "🛠 **এডমিন প্যানেল সচল করা হয়েছে:**", reply_markup=get_admin_keyboard(), parse_mode="Markdown")
 
+
 @bot.message_handler(commands=['cancel'])
 def cancel_process(message):
     chat_id = message.chat.id
     if str(chat_id) != str(ADMIN_ID):
         bot.reply_to(message, "❌ **আপনি এই বটের মালিক নন!**")
         return
-    if chat_id in admin_state: del admin_state[chat_id]
+    if chat_id in admin_state:
+        del admin_state[chat_id]
     bot.send_message(chat_id, "🔄 আগের অসমাপ্ত কাজ বাতিল করা হয়েছে।", reply_markup=get_admin_keyboard())
+
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     try:
         data = load_data()
         uid = message.chat.id
-        if "users" not in data: data["users"] = []
+        if "users" not in data:
+            data["users"] = []
         if uid not in data["users"]:
             data["users"].append(uid)
             save_data(data, sync_github=False)
@@ -617,8 +666,10 @@ def send_welcome(message):
         welcome_caption = f"**আসসালামুআলাইকুম {first_name} 🥰**\n\nআমাদের বট ২৪ ঘণ্টা সচল। নাটক দেখতে ও ডাউনলোড করতে নিচের **WATCH NOW** বাটনে ক্লিক করুন।"
 
         if data.get("welcome_video"):
-            try: bot.send_video(uid, data["welcome_video"], caption=welcome_caption, reply_markup=markup, parse_mode="Markdown", protect_content=True)
-            except Exception: bot.send_message(uid, welcome_caption, reply_markup=markup, parse_mode="Markdown")
+            try:
+                bot.send_video(uid, data["welcome_video"], caption=welcome_caption, reply_markup=markup, parse_mode="Markdown", protect_content=True)
+            except Exception:
+                bot.send_message(uid, welcome_caption, reply_markup=markup, parse_mode="Markdown")
         else:
             bot.send_message(uid, welcome_caption, reply_markup=markup, parse_mode="Markdown")
 
@@ -627,13 +678,14 @@ def send_welcome(message):
     except Exception as e:
         print("Welcome error:", e)
 
+
 def run_broadcast_worker(admin_chat_id, media_type, file_id, caption_text, with_btn, user_list):
     notice_markup = None
     if with_btn:
         fresh_url = f"{APP_URL}?v={int(datetime.now().timestamp())}"
         notice_markup = types.InlineKeyboardMarkup()
         notice_markup.add(types.InlineKeyboardButton("🎬 WATCH NOW", web_app=types.WebAppInfo(url=fresh_url)))
-    
+
     sent = 0
     for uid in user_list:
         try:
@@ -648,6 +700,7 @@ def run_broadcast_worker(admin_chat_id, media_type, file_id, caption_text, with_
         except Exception:
             pass
     bot.send_message(admin_chat_id, f"✅ ব্যাকগ্রাউন্ডে মোট **{sent}** জনের কাছে নোটিশ পাঠানো সম্পন্ন!")
+
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callbacks(call):
@@ -674,13 +727,13 @@ def handle_callbacks(call):
             file_id = st.get('file_id')
             caption_text = st.get('caption')
             del admin_state[chat_id]
-            
+
             data = load_data()
             user_list = data.get("users", [])
             bot.delete_message(chat_id, call.message.message_id)
             btn_txt = "বাটন সহ" if with_btn else "বাটন ছাড়া"
             bot.send_message(chat_id, f"⏳ **{btn_txt} {len(user_list)} জন ইউজারের কাছে নোটিশ পাঠানো হচ্ছে... বট সম্পূর্ণ সচল থাকবে।**", reply_markup=get_admin_keyboard())
-            
+
             threading.Thread(
                 target=run_broadcast_worker,
                 args=(chat_id, media_type, file_id, caption_text, with_btn, user_list),
@@ -823,10 +876,11 @@ def handle_callbacks(call):
         bot.send_message(chat_id, "📁 **যে নতুন ক্যাটাগরি যুক্ত করতে চান তার নাম লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         return
 
+
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document'])
 def handle_admin_inputs(message):
     chat_id = message.chat.id
-    
+
     admin_buttons = [
         "🔄 Auto Sync All Thumbs", "➕ Add Video", "🖼 Update Thumb", "🔕 Delete Video",
         "📢 Add Coming Soon", "📊 Total Users", "📁 Set Category", "🎯 Set Ads Link",
@@ -836,7 +890,8 @@ def handle_admin_inputs(message):
         bot.reply_to(message, "❌ **আপনি এই বটের মালিক নন!**")
         return
 
-    if str(chat_id) != str(ADMIN_ID): return
+    if str(chat_id) != str(ADMIN_ID):
+        return
 
     if message.text == "🔄 Auto Sync All Thumbs":
         threading.Thread(target=run_auto_sync_channel, args=(chat_id,), daemon=True).start()
@@ -846,7 +901,8 @@ def handle_admin_inputs(message):
         data = load_data(force_refresh=True)
         cats = data.get("categories", ["BPS5", "MOVIES", "DRAMA", "SERIES"])
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-        for i in range(0, len(cats), 2): markup.row(*[types.KeyboardButton(c) for c in cats[i:i+2]])
+        for i in range(0, len(cats), 2):
+            markup.row(*[types.KeyboardButton(c) for c in cats[i:i + 2]])
         bot.send_message(chat_id, "📁 **ভিডিওর ক্যাটাগরি বেছে নিন:**", reply_markup=markup)
         return
     elif message.text == "🖼 Update Thumb":
@@ -894,7 +950,8 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "📢 **নোটিশের জন্য ভিডিও, ছবি অথবা শুধু মেসেজ লিখে পাঠান:**\n(বাতিল করতে /cancel লিখুন)", reply_markup=types.ReplyKeyboardRemove())
         return
 
-    if chat_id not in admin_state: return
+    if chat_id not in admin_state:
+        return
     step = admin_state[chat_id].get('step')
 
     if step == 'upload_new_thumb' and (message.photo or message.text):
@@ -1082,21 +1139,25 @@ def handle_admin_inputs(message):
         bot.send_message(chat_id, "✅ **ওয়েলকাম ভিডিও সেট হয়েছে!**", reply_markup=get_admin_keyboard())
         return
 
+
 def internal_self_pinger():
     time.sleep(15)
     while True:
         try:
             requests.get(f"{RENDER_SERVER_URL}/", timeout=10)
-        except Exception: pass
+        except Exception:
+            pass
         time.sleep(600)
+
 
 def run_polling_loop():
     while True:
         try:
             bot.remove_webhook()
             bot.infinity_polling(timeout=20, long_polling_timeout=20)
-        except Exception as e:
+        except Exception:
             time.sleep(2)
+
 
 if __name__ == "__main__":
     threading.Thread(target=internal_self_pinger, daemon=True).start()
