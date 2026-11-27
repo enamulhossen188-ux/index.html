@@ -536,15 +536,10 @@
         const GITHUB_CDN_BASE = "https://enamulhossen188-ux.github.io/index.html";
         const DATA_JSON_URL = `${GITHUB_CDN_BASE}/data.json`;
         const RENDER_API_URL = "https://bp-bot-v2.onrender.com";
-        const CACHE_KEY = "bp_miniapp_cdn_cache_v5";
+        const CACHE_KEY = "bp_miniapp_cdn_cache_v6";
 
-        // আপনার ৪টি ডাইরেক্ট অ্যাড লিংক (বট থেকে সেট করা না থাকলে এগুলো চলবে)
-        const DEFAULT_ADS = {
-            1: "https://asiafilm.org/4/9e3eb16e33ea441001015c4ccab0b27b",
-            2: "https://asiafilm.org/4/9e3eb16e33ea441001015c4ccab0b27b",
-            3: "https://asiafilm.org/4/85e659507c29b96f2944b39fdb12866f",
-            4: "https://asiafilm.org/4/85e659507c29b96f2944b39fdb12866f"
-        };
+        // বট থেকে রিসেট করলে বা কোনো লিংক না থাকলে এই ডিফল্ট লিংক চলবে
+        const FALLBACK_URL = "https://www.google.com";
         const REQUIRED_SECONDS = 10;
         // ====================================================
 
@@ -563,8 +558,9 @@
         let activeTaskNum = 0;
         let taskStartTime = 0;
         let activeTimerInterval = null;
-        let externalAdsInjected = false;
+        let lastInjectedAdsSig = "";
         let popunderDirectUrl = "";
+        let popunderTriggered = false;
 
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible" && activeTaskNum !== 0) {
@@ -602,7 +598,7 @@
                 const s = document.createElement("script");
                 s.src = trimmed;
                 s.async = true;
-                (containerEl || document.body).appendChild(s);
+                (containerEl || document.head || document.body).appendChild(s);
                 return;
             }
 
@@ -611,10 +607,9 @@
             Array.from(temp.childNodes).forEach(node => {
                 if (node.tagName === "SCRIPT") {
                     const s = document.createElement("script");
-                    if (node.src) s.src = node.src;
-                    else s.textContent = node.textContent;
-                    s.async = true;
-                    (containerEl || document.body).appendChild(s);
+                    Array.from(node.attributes).forEach(attr => s.setAttribute(attr.name, attr.value));
+                    if (!node.src) s.textContent = node.textContent;
+                    (containerEl || document.head || document.body).appendChild(s);
                 } else {
                     (containerEl || document.body).appendChild(node.cloneNode(true));
                 }
@@ -622,35 +617,36 @@
         }
 
         function setupExternalAds() {
-            if (externalAdsInjected || !appData.ads) return;
-            externalAdsInjected = true;
-
+            if (!appData.ads) return;
             const { social_ad, native_ad, popunder_ad } = appData.ads;
+            const currentSig = JSON.stringify({ social_ad, native_ad, popunder_ad });
+            if (currentSig === lastInjectedAdsSig) return;
+            lastInjectedAdsSig = currentSig;
 
             if (social_ad) {
                 injectDynamicCode(social_ad, document.body);
             }
             if (native_ad) {
                 const slot = document.getElementById("nativeAdSlot");
+                slot.innerHTML = "";
                 injectDynamicCode(native_ad, slot);
             }
+            popunderDirectUrl = "";
             if (popunder_ad) {
                 const p = String(popunder_ad).trim();
                 if (p.startsWith("http://") || p.startsWith("https://")) {
-                    if (p.endsWith(".js")) {
-                        injectDynamicCode(p, document.body);
-                    } else {
-                        popunderDirectUrl = p;
+                    if (p.includes("<script") || p.endsWith(".js") || p.includes("/4/") || p.includes("/1/")) {
+                        injectDynamicCode(p, document.head);
                     }
+                    popunderDirectUrl = p;
                 } else {
-                    injectDynamicCode(p, document.body);
+                    injectDynamicCode(p, document.head);
                 }
             }
         }
 
-        let popunderTriggered = false;
         function triggerPopunderOnClick() {
-            if (popunderDirectUrl && !popunderTriggered) {
+            if (popunderDirectUrl && !popunderTriggered && !popunderDirectUrl.endsWith(".js")) {
                 popunderTriggered = true;
                 if (tg && tg.openLink) {
                     tg.openLink(popunderDirectUrl);
@@ -659,6 +655,11 @@
                 }
             }
         }
+
+        // পেজের যেকোনো জায়গায় প্রথমবার টাচ/ক্লিক করলেই পপআন্ডার ট্রিগার হবে
+        document.addEventListener("click", () => {
+            triggerPopunderOnClick();
+        }, { passive: true });
 
         function generateSvgPoster(title) {
             const safeTitle = String(title || "Video").slice(0, 26).replace(/[<>&'"]/g, "");
@@ -732,7 +733,6 @@
         }
 
         function selectCategory(cat) {
-            triggerPopunderOnClick();
             selectedCategory = cat;
             renderCategories();
             renderVideos();
@@ -790,7 +790,6 @@
         }
 
         function openVideoModal(video) {
-            triggerPopunderOnClick();
             currentVideo = video;
             const title = video.title || "Video";
             document.getElementById("modalVideoTitle").innerText = title;
@@ -867,14 +866,12 @@
             );
         }
 
+        // বটের data.json-এ যে লিংক সেট বা রিসেট করা আছে, হুবহু সেটাই নিবে
         function getAdUrl(taskNum) {
             const ads = appData.ads || {};
             const key = `ad${taskNum}`;
             const val = String(ads[key] || "").trim();
-            if (val && !val.includes("google.com")) {
-                return val;
-            }
-            return DEFAULT_ADS[taskNum];
+            return val ? val : FALLBACK_URL;
         }
 
         function startDirectAdTask(taskNum) {
@@ -976,6 +973,8 @@
         function forceRefreshData() {
             toggleDrawer(false);
             localStorage.removeItem(CACHE_KEY);
+            lastInjectedAdsSig = "";
+            popunderTriggered = false;
             showToast("🔄 নতুন ডাটা লোড হচ্ছে...");
             loadAppData(true);
         }
