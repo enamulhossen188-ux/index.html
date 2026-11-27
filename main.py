@@ -165,7 +165,6 @@ def get_db_file_content():
 def load_data(force_refresh=False):
     global cached_data, last_cache_time
     cur_time = time.time()
-    # সদ্য সেভ হওয়া ডাটা ৩০ সেকেন্ডের মধ্যে থাকলে টেলিগ্রামের পুরোনো পিন পড়বে না
     if cached_data and (cur_time - last_local_save_time < 30):
         return cached_data
     if not force_refresh and cached_data and (cur_time - last_cache_time < CACHE_DURATION):
@@ -1147,7 +1146,7 @@ def internal_self_pinger():
             requests.get(f"{RENDER_SERVER_URL}/", timeout=10)
         except Exception:
             pass
-        time.sleep(600)
+        time.sleep(540)
 
 
 def run_polling_loop():
