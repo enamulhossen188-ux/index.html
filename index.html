@@ -530,7 +530,7 @@
     <div class="toast" id="toastMsg"></div>
 
     <script>
-        // ==================== নিরাপদ বিল্ট-ইন ডাটাবেস (কোনো স্ক্রিপ্ট ব্রেক হবে না) ====================
+        // ==================== নিরাপদ বিল্ট-ইন ডাটাবেস ====================
         const BUILTIN_DATA = {
             "ads": {
                 "ad1": "https://asiafilm.org/4/9e3eb16e33ea441001015c4ccab0b27b",
@@ -666,10 +666,10 @@
 
         const RENDER_API_URL = "https://bp-bot-v2.onrender.com";
         const API_DATA_URL = `${RENDER_API_URL}/api/data`;
-        const CACHE_KEY = "bp_miniapp_safe_v2";
+        const CACHE_KEY = "bp_miniapp_safe_v3";
         const FALLBACK_URL = "https://www.google.com";
         const REQUIRED_SECONDS = 10;
-        // =========================================================================================
+        // =====================================================================
 
         const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
         if (tg) {
@@ -816,7 +816,7 @@
                 const cached = localStorage.getItem(CACHE_KEY);
                 if (cached) {
                     const parsed = JSON.parse(cached);
-                    if (parsed && Array.isArray(parsed.videos) && parsed.videos.length >= BUILTIN_DATA.videos.length) {
+                    if (parsed && Array.isArray(parsed.videos) && parsed.videos.length > 0) {
                         appData = parsed;
                     }
                 }
@@ -831,7 +831,7 @@
                 const res = await fetch(`${API_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
                 if (res.ok) {
                     const fresh = await res.json();
-                    if (fresh && Array.isArray(fresh.videos) && fresh.videos.length > 0) {
+                    if (fresh && Array.isArray(fresh.videos)) {
                         appData = fresh;
                         localStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
                         applyAppData();
