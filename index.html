@@ -118,7 +118,6 @@
             padding: 0 15px 10px;
             text-align: center;
         }
-        /* ১ কলামের বড় ভিডিও কার্ড লিস্ট */
         .video-grid {
             display: flex;
             flex-direction: column;
@@ -537,13 +536,13 @@
         const GITHUB_CDN_BASE = "https://enamulhossen188-ux.github.io/index.html";
         const DATA_JSON_URL = `${GITHUB_CDN_BASE}/data.json`;
         const RENDER_API_URL = "https://bp-bot-v2.onrender.com";
-        const CACHE_KEY = "bp_miniapp_cdn_cache_v4";
+        const CACHE_KEY = "bp_miniapp_cdn_cache_v5";
 
         // আপনার ৪টি ডাইরেক্ট অ্যাড লিংক (বট থেকে সেট করা না থাকলে এগুলো চলবে)
         const DEFAULT_ADS = {
-            1: "https://omg10.com/4/8465535",
-            2: "https://uplcm.com/4/12277207",
-            3: "https://afders.org/1/edbe54e6b37530aecdbad3570426dfe2",
+            1: "https://asiafilm.org/4/9e3eb16e33ea441001015c4ccab0b27b",
+            2: "https://asiafilm.org/4/9e3eb16e33ea441001015c4ccab0b27b",
+            3: "https://asiafilm.org/4/85e659507c29b96f2944b39fdb12866f",
             4: "https://asiafilm.org/4/85e659507c29b96f2944b39fdb12866f"
         };
         const REQUIRED_SECONDS = 10;
@@ -567,7 +566,6 @@
         let externalAdsInjected = false;
         let popunderDirectUrl = "";
 
-        // ইউজার ১০ সেকেন্ড পূর্ণ হওয়ার আগেই মিনি অ্যাপে ফিরে এলে টাইমার বাতিল ও সতর্কতা
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible" && activeTaskNum !== 0) {
                 const elapsedSec = (Date.now() - taskStartTime) / 1000;
@@ -871,10 +869,12 @@
 
         function getAdUrl(taskNum) {
             const ads = appData.ads || {};
-            if (taskNum === 1) return (ads.task1_url || ads.ad1 || DEFAULT_ADS[1]).trim();
-            if (taskNum === 2) return (ads.task2_url || ads.ad2 || DEFAULT_ADS[2]).trim();
-            if (taskNum === 3) return (ads.task3_url || ads.ad3 || DEFAULT_ADS[3]).trim();
-            return (ads.task4_url || ads.ad4 || DEFAULT_ADS[4]).trim();
+            const key = `ad${taskNum}`;
+            const val = String(ads[key] || "").trim();
+            if (val && !val.includes("google.com")) {
+                return val;
+            }
+            return DEFAULT_ADS[taskNum];
         }
 
         function startDirectAdTask(taskNum) {
