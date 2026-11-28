@@ -27,7 +27,7 @@ DB_CHANNEL_ID = -1004330425245
 RENDER_SERVER_URL = "https://bp-bot-v2.onrender.com"
 APP_URL = "https://index-html-8p0.pages.dev"
 
-# থাম্বনেইল ব্যাকআপের জন্য GitHub কনফিগারেশন
+# থাম্বনেইল ও data.json ব্যাকআপের জন্য GitHub কনফিগারেশন
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_USER = "enamulhossen188-ux"
 GITHUB_REPO = "index.html"
@@ -88,6 +88,24 @@ def push_file_to_github(file_path, content_bytes, commit_msg):
         except Exception as e:
             print("GitHub Push Error:", e)
     return None
+
+
+def build_public_payload(data):
+    ads = data.get("ads", {})
+    clean_ads = {
+        "ad1": extract_single_url(ads.get("ad1", "")),
+        "ad2": extract_single_url(ads.get("ad2", "")),
+        "social_ad": ads.get("social_ad", ""),
+        "native_ad": ads.get("native_ad", ""),
+        "popunder_ad": ads.get("popunder_ad", "")
+    }
+    return {
+        "categories": data.get("categories", []),
+        "sub_categories": data.get("sub_categories", {}),
+        "ads": clean_ads,
+        "update_notice": data.get("update_notice", ""),
+        "videos": data.get("videos", [])
+    }
 
 
 def get_default_data():
@@ -167,6 +185,13 @@ def save_data(data):
             except Exception as e:
                 print("Save Error:", e)
 
+            # Cloudflare Pages-এর জন্য data.json সরাসরি GitHub-এ পুশ করা
+            try:
+                public_json = json.dumps(build_public_payload(data), ensure_ascii=False, indent=2).encode('utf-8')
+                push_file_to_github("data.json", public_json, "Sync data.json for Cloudflare Pages")
+            except Exception as e:
+                print("Cloudflare data.json sync error:", e)
+
     threading.Thread(target=_async_save, daemon=True).start()
 
 
@@ -226,21 +251,7 @@ def serve_thumbnail(file_id):
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
     data = load_data(force_refresh=True)
-    ads = data.get("ads", {})
-    clean_ads = {
-        "ad1": extract_single_url(ads.get("ad1", "")),
-        "ad2": extract_single_url(ads.get("ad2", "")),
-        "social_ad": ads.get("social_ad", ""),
-        "native_ad": ads.get("native_ad", ""),
-        "popunder_ad": ads.get("popunder_ad", "")
-    }
-    light_data = {
-        "categories": data.get("categories", []),
-        "sub_categories": data.get("sub_categories", {}),
-        "ads": clean_ads,
-        "update_notice": data.get("update_notice", ""),
-        "videos": data.get("videos", [])
-    }
+    light_data = build_public_payload(data)
     resp = make_response(jsonify(light_data))
     resp.headers['Access-Control-Allow-Origin'] = '*'
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
