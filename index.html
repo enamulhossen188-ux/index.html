@@ -767,10 +767,16 @@
 
         async function initData() {
             try {
-                const res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${Date.now()}`, {
-                    cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache' }
+                // প্রথমে সরাসরি Cloudflare Pages (Unlimited Bandwidth) থেকে data.json লোড হবে
+                let res = await fetch(`${CLOUDFLARE_PAGES_URL}/data.json?t=${Date.now()}`, {
+                    cache: 'no-store'
                 });
+                if (!res.ok) {
+                    // যদি data.json এখনো তৈরি না হয়ে থাকে তবে ব্যাকআপ হিসেবে Render থেকে নেবে
+                    res = await fetch(`${CURRENT_RENDER_URL}/api/data?t=${Date.now()}`, {
+                        cache: 'no-store'
+                    });
+                }
                 appData = await res.json();
                 
                 const cats = appData.categories || ["BPS5", "MOVIES", "DRAMA", "SERIES", "COMING SOON"];
