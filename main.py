@@ -25,7 +25,7 @@ BOT_TOKEN = "8995171178:AAFxdUeC4bR7L7AZn4_tLqU38t4burawv8c"
 ADMIN_ID = "7255626228"
 DB_CHANNEL_ID = -1004330425245
 RENDER_SERVER_URL = "https://bp-bot-v2.onrender.com"
-APP_URL = f"{RENDER_SERVER_URL}/app"
+APP_URL = "https://index-html-8p0.pages.dev"
 
 # থাম্বনেইল ব্যাকআপের জন্য GitHub কনফিগারেশন
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -84,7 +84,7 @@ def push_file_to_github(file_path, content_bytes, commit_msg):
         try:
             res = requests.put(url, headers=headers, json=payload, timeout=15)
             if res.status_code in [200, 201]:
-                return f"https://{GITHUB_USER}.github.io/{GITHUB_REPO}/{file_path}"
+                return f"https://index-html-8p0.pages.dev/{file_path}"
         except Exception as e:
             print("GitHub Push Error:", e)
     return None
@@ -98,8 +98,6 @@ def get_default_data():
         "ads": {
             "ad1": "https://www.google.com",
             "ad2": "https://www.google.com",
-            "ad3": "https://www.google.com",
-            "ad4": "https://www.google.com",
             "social_ad": "",
             "native_ad": "",
             "popunder_ad": ""
@@ -135,7 +133,7 @@ def load_data(force_refresh=False):
     if data and "videos" in data:
         data.setdefault("ads", {})
         data.setdefault("sub_categories", {})
-        for k in ["ad1", "ad2", "ad3", "ad4"]:
+        for k in ["ad1", "ad2"]:
             data["ads"][k] = extract_single_url(data["ads"].get(k, ""))
         cached_data = data
         last_cache_time = cur_time
@@ -173,9 +171,10 @@ def save_data(data):
 
 
 def upload_thumb_securely(photo_id):
+    # টেলিগ্রামের সর্বোচ্চ রেজোলিউশনের অরিজিনাল HD ইমেজ সংরক্ষণ
     try:
-        msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent Thumb", protect_content=True)
-        perm_file_id = msg.photo[1].file_id if len(msg.photo) > 1 else msg.photo[-1].file_id
+        msg = bot.send_photo(DB_CHANNEL_ID, photo_id, caption="🖼 Permanent HD Thumb", protect_content=True)
+        perm_file_id = msg.photo[-1].file_id
     except Exception:
         perm_file_id = photo_id
 
@@ -183,7 +182,7 @@ def upload_thumb_securely(photo_id):
         file_info = bot.get_file(perm_file_id)
         img_bytes = bot.download_file(file_info.file_path)
         file_name = f"thumbs/img_{int(time.time() * 1000)}.jpg"
-        gh_url = push_file_to_github(file_name, img_bytes, f"Upload {file_name}")
+        gh_url = push_file_to_github(file_name, img_bytes, f"Upload HD {file_name}")
         if gh_url:
             return gh_url
     except Exception as e:
@@ -194,16 +193,7 @@ def upload_thumb_securely(photo_id):
 
 @app.route('/app')
 def serve_mini_app():
-    """সরাসরি Render সার্ভার থেকে কোনো দেরি ছাড়া মিনি অ্যাপ ওপেন করবে"""
-    try:
-        with open("index.html", "r", encoding="utf-8") as f:
-            html_content = f.read()
-        resp = make_response(html_content)
-        resp.headers['Content-Type'] = 'text/html; charset=utf-8'
-        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        return resp
-    except Exception as e:
-        return f"App Load Error: {str(e)}", 500
+    return redirect(APP_URL, code=302)
 
 
 @app.route('/thumb/<path:file_id>')
@@ -235,13 +225,11 @@ def serve_thumbnail(file_id):
 
 @app.route('/api/data', methods=['GET'])
 def get_app_data():
-    data = load_data(force_refresh=False)
+    data = load_data(force_refresh=True)
     ads = data.get("ads", {})
     clean_ads = {
         "ad1": extract_single_url(ads.get("ad1", "")),
         "ad2": extract_single_url(ads.get("ad2", "")),
-        "ad3": extract_single_url(ads.get("ad3", "")),
-        "ad4": extract_single_url(ads.get("ad4", "")),
         "social_ad": ads.get("social_ad", ""),
         "native_ad": ads.get("native_ad", ""),
         "popunder_ad": ads.get("popunder_ad", "")
@@ -292,7 +280,7 @@ def api_send_video():
 
 @app.route('/')
 def home():
-    return "Bot Server Active 24/7 (Direct Render Fast Mode)!"
+    return "Bot Server Active 24/7 (Cloudflare Pages Connected)!"
 
 
 def get_action_buttons():
@@ -321,7 +309,7 @@ def get_admin_keyboard():
 def get_ads_keyboard():
     data = load_data()
     ads = data.get("ads", {})
-    has_custom_task = any("google.com" not in str(ads.get(k, "")) for k in ["ad1", "ad2", "ad3", "ad4"])
+    has_custom_task = any("google.com" not in str(ads.get(k, "")) for k in ["ad1", "ad2"])
     t_status = "🔗 সেট করা আছে" if has_custom_task else "🌐 গুগল (ডিফল্ট)"
 
     s_status = "✅ আছে" if ads.get("social_ad") else "❌ নেই"
@@ -330,8 +318,8 @@ def get_ads_keyboard():
 
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton(f"🔗 ১. Task 1–4 Link সেট করুন ({t_status})", callback_data="set_ad_tasks"),
-        types.InlineKeyboardButton("🗑️ ১. সব Task Link রিসেট (গুগল করুন)", callback_data="reset_ad_tasks"),
+        types.InlineKeyboardButton(f"🔗 ১. Task 1–2 Link সেট করুন ({t_status})", callback_data="set_ad_tasks"),
+        types.InlineKeyboardButton("🗑️ ১. ২টি Task Link রিসেট (গুগল করুন)", callback_data="reset_ad_tasks"),
         types.InlineKeyboardButton(f"🚀 ২. সোশ্যাল বার সেট করুন ({s_status})", callback_data="set_ad_social"),
         types.InlineKeyboardButton("🗑️ ২. সোশ্যাল বার বন্ধ করুন", callback_data="del_ad_social"),
         types.InlineKeyboardButton(f"📱 ৩. নেটিভ ব্যানার সেট করুন ({n_status})", callback_data="set_ad_native"),
@@ -571,7 +559,7 @@ def handle_callbacks(call):
         return
     elif call.data == "btn_help":
         bot.answer_callback_query(call.id)
-        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে ৪টি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
+        bot.send_message(chat_id, "💡 **ভিডিও ডাউনলোড নিয়ম:** অ্যাপে ভিডিও নির্বাচন করে ২টি টাস্ক ১০ সেকেন্ড করে সম্পন্ন করুন, ইনবক্সে ভিডিও চলে আসবে।")
         return
 
     if str(chat_id) != str(ADMIN_ID):
@@ -606,7 +594,7 @@ def handle_callbacks(call):
         return
     elif call.data == "set_ad_tasks":
         admin_state[chat_id] = {'step': 'ad_1'}
-        bot.send_message(chat_id, "🔗 **Task 1 এর এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "🔗 **Task 1 এর ডিরেক্ট এড লিংক পাঠান:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
     elif call.data == "reset_ad_tasks":
@@ -614,10 +602,8 @@ def handle_callbacks(call):
         ads = data.setdefault("ads", {})
         ads["ad1"] = "https://www.google.com"
         ads["ad2"] = "https://www.google.com"
-        ads["ad3"] = "https://www.google.com"
-        ads["ad4"] = "https://www.google.com"
         save_data(data)
-        bot.answer_callback_query(call.id, "🌐 ৪টি টাস্কই গুগলে রিসেট করা হয়েছে!", show_alert=True)
+        bot.answer_callback_query(call.id, "🌐 ২টি টাস্কই গুগলে রিসেট করা হয়েছে!", show_alert=True)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_ads_keyboard())
         return
     elif call.data == "set_ad_social":
@@ -679,7 +665,7 @@ def handle_callbacks(call):
         parts = call.data.split("|")
         vid_id = parts[1]
         admin_state[chat_id] = {'step': 'upload_new_thumb', 'vid_id': vid_id}
-        bot.send_message(chat_id, "📷 **এই ভিডিওটির জন্য আসল থাম্বনেইল ছবিটি পাঠিয়ে দিন:**\n(বাতিল করতে /cancel লিখুন)")
+        bot.send_message(chat_id, "📷 **এই ভিডিওটির জন্য আসল HD থাম্বনেইল ছবিটি পাঠিয়ে দিন:**\n(বাতিল করতে /cancel লিখুন)")
         bot.answer_callback_query(call.id)
         return
 
@@ -810,9 +796,14 @@ def handle_admin_inputs(message):
         return
     step = admin_state[chat_id].get('step')
 
-    if step == 'upload_new_thumb' and (message.photo or message.text):
+    if step == 'upload_new_thumb' and (message.photo or message.text or message.document):
         vid_id = admin_state[chat_id].get('vid_id')
-        thumb_url = upload_thumb_securely(message.photo[-1].file_id) if message.photo else message.text.strip()
+        if message.photo:
+            thumb_url = upload_thumb_securely(message.photo[-1].file_id)
+        elif message.document and str(message.document.mime_type or "").startswith("image/"):
+            thumb_url = upload_thumb_securely(message.document.file_id)
+        else:
+            thumb_url = message.text.strip()
         data = load_data(force_refresh=True)
         updated = False
         for v in data.get("videos", []):
@@ -823,7 +814,7 @@ def handle_admin_inputs(message):
         if updated:
             save_data(data)
             del admin_state[chat_id]
-            bot.reply_to(message, "🎉 **থাম্বনেইল সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
+            bot.reply_to(message, "🎉 **HD থাম্বনেইল সফলভাবে আপডেট হয়েছে!**", reply_markup=get_admin_keyboard())
         else:
             bot.reply_to(message, "❌ ভিডিওটি পাওয়া যায়নি!", reply_markup=get_admin_keyboard())
         return
@@ -863,28 +854,16 @@ def handle_admin_inputs(message):
     if step == 'ad_1' and message.text:
         admin_state[chat_id]['ad1'] = extract_single_url(message.text)
         admin_state[chat_id]['step'] = 'ad_2'
-        bot.send_message(chat_id, "🎯 **এবার Task 2 এর লিংক পাঠান:**")
+        bot.send_message(chat_id, "🎯 **এবার Task 2 এর ডিরেক্ট লিংক পাঠান:**")
         return
     elif step == 'ad_2' and message.text:
-        admin_state[chat_id]['ad2'] = extract_single_url(message.text)
-        admin_state[chat_id]['step'] = 'ad_3'
-        bot.send_message(chat_id, "🎯 **এবার Task 3 এর লিংক পাঠান:**")
-        return
-    elif step == 'ad_3' and message.text:
-        admin_state[chat_id]['ad3'] = extract_single_url(message.text)
-        admin_state[chat_id]['step'] = 'ad_4'
-        bot.send_message(chat_id, "🎯 **এবার Task 4 এর লিংক পাঠান:**")
-        return
-    elif step == 'ad_4' and message.text:
         data = load_data(force_refresh=True)
         ads_map = data.setdefault("ads", {})
         ads_map["ad1"] = admin_state[chat_id]['ad1']
-        ads_map["ad2"] = admin_state[chat_id]['ad2']
-        ads_map["ad3"] = admin_state[chat_id]['ad3']
-        ads_map["ad4"] = extract_single_url(message.text)
+        ads_map["ad2"] = extract_single_url(message.text)
         save_data(data)
         del admin_state[chat_id]
-        bot.send_message(chat_id, "✅ **৪টি টাস্কের (Task 1, 2, 3, 4) লিংক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
+        bot.send_message(chat_id, "✅ **২টি টাস্কের (Task 1 ও Task 2) ডিরেক্ট লিংক সফলভাবে সেভ হয়েছে!**", reply_markup=get_admin_keyboard())
         return
     elif step == 'set_social_ad' and message.text:
         data = load_data(force_refresh=True)
@@ -934,10 +913,15 @@ def handle_admin_inputs(message):
     elif step == 'cs_notice' and message.text:
         admin_state[chat_id]['notice'] = message.text.strip()
         admin_state[chat_id]['step'] = 'cs_thumb'
-        bot.send_message(chat_id, "🖼 **কামিং সুনের থাম্বনেইল ছবি পাঠান:**")
+        bot.send_message(chat_id, "🖼 **কামিং সুনের HD থাম্বনেইল ছবি পাঠান:**")
         return
-    elif step == 'cs_thumb' and (message.photo or message.text):
-        thumb_url = upload_thumb_securely(message.photo[-1].file_id) if message.photo else message.text.strip()
+    elif step == 'cs_thumb' and (message.photo or message.text or message.document):
+        if message.photo:
+            thumb_url = upload_thumb_securely(message.photo[-1].file_id)
+        elif message.document and str(message.document.mime_type or "").startswith("image/"):
+            thumb_url = upload_thumb_securely(message.document.file_id)
+        else:
+            thumb_url = message.text.strip()
         data = load_data(force_refresh=True)
         new_item = {
             "id": int(time.time()),
@@ -962,10 +946,15 @@ def handle_admin_inputs(message):
     elif step == 'title' and message.text:
         admin_state[chat_id]['title'] = message.text.strip()
         admin_state[chat_id]['step'] = 'thumb'
-        bot.send_message(chat_id, "🖼 **থাম্বনেইল ছবি পাঠান:**")
+        bot.send_message(chat_id, "🖼 **HD থাম্বনেইল ছবি পাঠান:**")
         return
-    elif step == 'thumb' and (message.photo or message.text):
-        thumb_url = upload_thumb_securely(message.photo[-1].file_id) if message.photo else message.text.strip()
+    elif step == 'thumb' and (message.photo or message.text or message.document):
+        if message.photo:
+            thumb_url = upload_thumb_securely(message.photo[-1].file_id)
+        elif message.document and str(message.document.mime_type or "").startswith("image/"):
+            thumb_url = upload_thumb_securely(message.document.file_id)
+        else:
+            thumb_url = message.text.strip()
         admin_state[chat_id]['thumb'] = thumb_url
         admin_state[chat_id]['step'] = 'video'
         bot.send_message(chat_id, "📥 **ভিডিও ফাইলটি পাঠান:**")
