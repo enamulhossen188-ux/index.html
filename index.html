@@ -607,6 +607,7 @@
 
     <script>
         const CURRENT_RENDER_URL = "https://bp-bot-v2.onrender.com";
+        const CLOUDFLARE_PAGES_URL = "https://index-html-8p0.pages.dev";
         const tg = window.Telegram?.WebApp;
         if (tg) tg.expand();
 
@@ -672,6 +673,9 @@
                 return generateSvgPoster(title);
             }
             let u = url.trim();
+            if (u.includes("enamulhossen188-ux.github.io/index.html/")) {
+                return u.replace("https://enamulhossen188-ux.github.io/index.html/", `${CLOUDFLARE_PAGES_URL}/`);
+            }
             if (u.includes("/thumb/")) {
                 const fileId = u.split("/thumb/").pop();
                 return `${CURRENT_RENDER_URL}/thumb/${fileId}`;
@@ -684,7 +688,6 @@
             const raw = (appData.ads?.popunder_ad || "").trim();
             if (!raw) return;
 
-            // সোর্স লিঙ্ক বের করা
             let scriptUrl = null;
             if (raw.includes("src=")) {
                 let m = raw.match(/src=["'](.*?)["']/);
@@ -700,7 +703,6 @@
 
             if (scriptUrl) {
                 if (scriptUrl.startsWith("//")) scriptUrl = "https:" + scriptUrl;
-                // টাইমস্ট্যাম্প যোগ করে ক্যাশ ও লিমিট বাইপাস
                 sc.src = scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
             } else {
                 sc.text = raw.replace(/<\/?script[^>]*>/gi, "");
@@ -909,7 +911,6 @@
             const ads = appData.ads || {};
             const directUrl = (taskNum === 1) ? (ads.ad1 || "") : (ads.ad2 || "");
 
-            // শুধু নির্ধারিত টাস্কের লিংকটি ওপেন হবে
             if (directUrl && directUrl.startsWith("http")) {
                 if (tg && tg.openLink) {
                     tg.openLink(directUrl);
@@ -927,7 +928,6 @@
 
             if (countdownTimer) clearInterval(countdownTimer);
 
-            // ১০ সেকেন্ড কাউন্টডাউন
             countdownTimer = setInterval(() => {
                 const passed = Math.floor((Date.now() - taskStartTime) / 1000);
                 const remaining = 10 - passed;
@@ -999,7 +999,6 @@
         document.addEventListener("visibilitychange", handleVisibilityOrFocus);
         window.addEventListener("focus", handleVisibilityOrFocus);
 
-        // ইনবক্সে ভিডিও সেন্ড
         async function sendToInbox() {
             if (!task1Done || !task2Done) return;
 
